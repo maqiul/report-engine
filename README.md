@@ -44,7 +44,7 @@ ReportEngine.slnx                  ← 根解决方案（新建）
 ├── ReportEngine.Viewer.Wpf/      ← WPF 运行时预览控件
 ├── ReportEngine.Viewer.WinForms/ ← WinForms 运行时预览控件
 ├── ReportEngine.Designer.Wpf/    ← WPF 可视化设计器（开发中）
-│   ├── MainWindow.cs              ← 4234 行（已从 5050 拆出 816 行）
+│   ├── MainWindow.cs              ← 4162 行（已从 5050 拆出 888 行）
 │   ├── UiFactory.cs               ←   工具栏/菜单/窗口静态构造
 │   ├── ElementFactory.cs          ←   元素类型 → 控件/图标映射
 │   ├── ElementIcons.cs            ←   内联 SVG 图标资源
@@ -54,7 +54,8 @@ ReportEngine.slnx                  ← 根解决方案（新建）
 │   ├── CanvasRenderer.cs          ←   模板画布绘制
 │   ├── PreviewRenderer.cs         ←   预览数据值解析
 │   ├── PreviewJsonParser.cs       ←   简易 JSON 解析
-│   └── ExportDataBuilder.cs       ←   导出数据打包
+│   ├── ExportDataBuilder.cs       ←   导出数据打包
+│   └── EnumCnMap.cs               ←   枚举 ↔ 中文显示名映射
 ├── ReportEngine.Designer.WinForms/ ← WinForms 可视化设计器（占位）
 ├── ReportEngine.Desktop/         ← 桌面启动器（exe，net8.0）
 ├── tests/
@@ -172,23 +173,26 @@ exporter.Export(template, orders, "output.xlsx");
 | 0.1.x | Core 引擎（解析 / 渲染 / 表达式 / 子报表） | ✅ |
 | 0.2.x | Excel/PDF 导出 + ZXing 条码 | ✅ |
 | 0.3.x | WPF 运行时预览（分页 / 缩放 / 打印） | 🚧 |
-| 0.4.x | WPF 可视化设计器 | 🚧（MainWindow 已从 5050 → 4234 行） |
+| 0.4.x | WPF 可视化设计器 | 🚧（MainWindow 已从 5050 → 4162 行） |
 | 0.5.x | WinForms 端对齐 | ⏳ |
 | 1.0   | 文档、单元测试、首个稳定 NuGet 发布 | ⏳ |
 
 ### v0.1.1 拆 `MainWindow.cs` 进度
 
 `ReportEngine.Designer.Wpf/MainWindow.cs` 在 v0.1.0 起步时是个 271 KB / 5050 行的"巨无霸"，
-XAML 设计器自动生成的代码 + 业务逻辑全堆在一起。v0.1.1 已经按职责拆出 10 个独立文件：
+XAML 设计器自动生成的代码 + 业务逻辑全堆在一起。v0.1.2 已按职责拆出 11 个独立文件：
 
 | 步骤 | 拆出 | 文件 | 行数变化 |
 |------|------|------|----------|
 | Step 1 | 工具栏/菜单/元素工厂/图标 | `UiFactory.cs` / `ElementFactory.cs` / `ElementIcons.cs` | 5050 → 4948（-102） |
 | Step 2.A | 画布渲染 + 预览值解析 | `BrushParser.cs` / `CanvasRenderContext.cs` / `BandStyle.cs` / `CanvasRenderer.cs` / `PreviewRenderer.cs` | 4948 → 4277（-671） |
 | Step 2.B | JSON 解析 + 导出数据打包 | `PreviewJsonParser.cs` / `ExportDataBuilder.cs` | 4277 → 4234（-43） |
+| Step 3.A | 枚举/字符串 ↔ 中文显示名映射 | `EnumCnMap.cs` | 4234 → 4162（-72） |
 
-**累计**：**-816 行 / -16.2%**。剩余 4234 行主要是 WPF 控件事件处理（拖拽/选中/缩放/快捷键），
+**累计**：**-888 行 / -17.6%**。剩余 4162 行主要是 WPF 控件事件处理（拖拽/选中/缩放/快捷键），
 与 DispatcherTimer / 剪贴板等运行时状态深度耦合，ROI 较低，暂留至 v0.4.x 重构。
+候选续拆：Step3.B 抽 `ShowColorPicker` 颜色选择弹窗（~60 行），Step3.C 抽 `ShowPageSetupDialog`
+页面设置弹窗（~150 行）。
 
 ---
 
