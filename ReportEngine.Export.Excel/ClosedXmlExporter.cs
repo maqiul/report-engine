@@ -112,6 +112,28 @@ public class ClosedXmlExporter : IExcelExporter
             ApplyTextStyle(cell, t);
         }
 
+        // 写入非文本元素（line / image / shape / barcode），用最近锚点定位
+        foreach (var el in page.Elements)
+        {
+            switch (el)
+            {
+                case RenderedLineElement line:
+                    DrawLine(ws, line, columnAnchors, rowAnchors);
+                    break;
+                case RenderedImageElement img:
+                    DrawImage(ws, img, columnAnchors, rowAnchors);
+                    break;
+                case RenderedShapeElement shape:
+                    // 形状：暂以填充背景色近似（矩形填色），等后续版本再补完整绘制
+                    DrawShape(ws, shape, columnAnchors, rowAnchors);
+                    break;
+                case RenderedBarcodeElement bc:
+                    // 条码：当前未实现，避免静默丢失，改为在单元格留文本占位
+                    DrawBarcodePlaceholder(ws, bc, columnAnchors, rowAnchors);
+                    break;
+            }
+        }
+
         // 冻结首行（如果第一行像表头）
         if (rowAnchors.Count > 1)
         {
@@ -122,6 +144,106 @@ public class ClosedXmlExporter : IExcelExporter
             // 不强制冻结，避免子报表混入造成误判
             _ = firstRowBold;
         }
+    }
+
+    /// <summary>
+    /// 渲染线段：horizontal → 单元格 top/bottom border；
+    /// vertical → 单元格 left/right border；diagonal 暂不支持。
+    /// </summary>
+    private void DrawLine(IXLWorksheet ws, RenderedLineElement line, List<double> columnAnchors, List<double> rowAnchors)
+    {
+        int col = FindAnchorIndex(columnAnchors, line.X) + 1;
+        int row = FindAnchorIndex(rowAnchors, line.Y) + 1;
+        if (col <= 0 || row <= 0) return;
+
+        var cell = ws.Cell(row, col);
+        var color = TryParseHexColor(line.LineColor, out var lc) ? lc : XLColor.Black;
+        // LineWidth 单位是 pt，XLBorderStyleValues.Thin/Dashed/Dotted 已经够用；
+        // 用 Medium 表达 >1pt，Hairline 表达 <0.5pt，简化处理
+        var style = line.LineWidth switch
+        {
+            >= 1.5 => XLBorderStyleValues.Medium,
+            < 0.5  => XLBorderStyleValues.Hair,
+            _      => XLBorderStyleValues.Thin,
+        };
+
+        switch (line.Direction)
+        {
+            case LineDirection.Horizontal:
+                cell.Style.Border.TopBorder = style;
+                cell.Style.Border.TopBorderColor = color;
+                break;
+            case LineDirection.Vertical:
+                cell.Style.Border.LeftBorder = style;
+                cell.Style.Border.LeftBorderColor = color;
+                break;
+            case LineDirection.Diagonal:
+                // Excel 单元格不支持直接画对角线；放一行占位文本提示
+                cell.Value = "[/]";
+                break;
+        }
+    }
+
+    /// <summary>
+    /// 渲染图片：Source 是本地路径或 http(s) URL，加载并嵌入工作表
+    /// </summary>
+    private void DrawImage(IXLWorksheet ws, RenderedImageElement img, List<double> columnAnchors, List<double> rowAnchors)
+    {
+        if (string.IsNullOrWhiteSpace(img.Source)) return;
+
+        try
+        {
+            int col = FindAnchorIndex(columnAnchors, img.X) + 1;
+            int row = FindAnchorIndex(rowAnchors, img.Y) + 1;
+            if (col <= 0 || row <= 0) return;
+
+            var cell = ws.Cell(row, col);
+            var picture = ws.AddPicture(img.Source)
+                .MoveTo(cell);
+            // 缩放到元素尺寸（mm → 像素，按 96 DPI 换算）
+            int pxW = Math.Max(1, (int)Math.Round(img.Width * 96.0 / 25.4));
+            int pxH = Math.Max(1, (int)Math.Round(img.Height * 96.0 / 25.4));
+            picture.Width = pxW;
+            picture.Height = pxH;
+        }
+        catch
+        {
+            // 图片加载失败：写一个 [img] 占位避免整个导出中断
+            int col = FindAnchorIndex(columnAnchors, img.X) + 1;
+            int row = FindAnchorIndex(rowAnchors, img.Y) + 1;
+            if (col > 0 && row > 0)
+                ws.Cell(row, col).Value = "[img]";
+        }
+    }
+
+    /// <summary>
+    /// 渲染形状：最小实现——只画填充背景色，矩形/椭圆统一处理
+    /// </summary>
+    private void DrawShape(IXLWorksheet ws, RenderedShapeElement shape, List<double> columnAnchors, List<double> rowAnchors)
+    {
+        int col = FindAnchorIndex(columnAnchors, shape.X) + 1;
+        int row = FindAnchorIndex(rowAnchors, shape.Y) + 1;
+        if (col <= 0 || row <= 0) return;
+
+        var cell = ws.Cell(row, col);
+        if (TryParseHexColor(shape.FillColor, out var fill))
+        {
+            cell.Style.Fill.BackgroundColor = fill;
+            cell.Style.Fill.PatternType = XLFillPatternValues.Solid;
+        }
+    }
+
+    /// <summary>
+    /// 条码占位：完整实现要把 ZXing 矩阵像素化画进工作表——超出本轮范围。
+    /// 现在先在单元格留文本（值+格式），保证不静默丢失。
+    /// </summary>
+    private void DrawBarcodePlaceholder(IXLWorksheet ws, RenderedBarcodeElement bc, List<double> columnAnchors, List<double> rowAnchors)
+    {
+        int col = FindAnchorIndex(columnAnchors, bc.X) + 1;
+        int row = FindAnchorIndex(rowAnchors, bc.Y) + 1;
+        if (col <= 0 || row <= 0) return;
+
+        ws.Cell(row, col).Value = $"[{bc.Format}] {bc.Value}";
     }
 
     private static void ApplyTextStyle(IXLCell cell, RenderedTextElement t)

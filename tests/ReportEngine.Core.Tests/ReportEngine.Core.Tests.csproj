@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\ReportEngine.Core\ReportEngine.Core.csproj" />
+    <ProjectReference Include="..\..\ReportEngine.Export.Excel\ReportEngine.Export.Excel.csproj" />
   </ItemGroup>
 
   <ItemGroup>
