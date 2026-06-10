@@ -1,0 +1,11 @@
+<Solution>
+  <Project Path="ReportEngine.Core/ReportEngine.Core.csproj" />
+  <Project Path="ReportEngine.Designer.WinForms/ReportEngine.Designer.WinForms.csproj" />
+  <Project Path="ReportEngine.Designer.Wpf/ReportEngine.Designer.Wpf.csproj" />
+  <Project Path="ReportEngine.Desktop/ReportEngine.Desktop.csproj" />
+  <Project Path="ReportEngine.Export.Excel/ReportEngine.Export.Excel.csproj" />
+  <Project Path="ReportEngine.Export.Pdf/ReportEngine.Export.Pdf.csproj" />
+  <Project Path="ReportEngine.Viewer.WinForms/ReportEngine.Viewer.WinForms.csproj" />
+  <Project Path="ReportEngine.Viewer.Wpf/ReportEngine.Viewer.Wpf.csproj" />
+  <Project Path="tests/ReportEngine.Core.Tests/ReportEngine.Core.Tests.csproj" />
+</Solution>

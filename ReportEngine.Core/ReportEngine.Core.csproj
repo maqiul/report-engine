@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net462;netstandard2.0;net8.0</TargetFrameworks>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <!-- 将来导出到 NuGet 时的包信息 -->
+  <PropertyGroup>
+    <PackageId>ReportEngine.Core</PackageId>
+    <Version>0.2.0-alpha</Version>
+    <Description>跨平台报表渲染引擎核心库（多目标：net462/netstandard2.0/net8）</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <!-- ZXing.Net: MIT、netstandard1.0，生成条形码/二维码 bit 矩阵 -->
+    <PackageReference Include="ZXing.Net" Version="0.16.9" />
+  </ItemGroup>
+
+  <!-- net462 需 System.ValueTuple 包才能使用 ValueTuple（net47+ 内置） -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net462'">
+    <PackageReference Include="System.ValueTuple" Version="4.5.0" />
+  </ItemGroup>
+
+  <!-- net462 / netstandard2.0 上 record 与 init 需要 IsExternalInit polyfill；
+       这里直接全部使用普通 class，无需 polyfill。 -->
+
+</Project>

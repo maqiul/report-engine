@@ -1,0 +1,80 @@
+{
+  "version": "1.0",
+  "page": {
+    "width": 180,
+    "height": 60,
+    "unit": "mm",
+    "orientation": "portrait",
+    "margin": { "top": 2, "bottom": 2, "left": 2, "right": 2 }
+  },
+  "dataSources": [
+    {
+      "name": "order_items",
+      "type": "json",
+      "fields": [
+        { "name": "productName", "type": "string" },
+        { "name": "quantity", "type": "number" },
+        { "name": "unitPrice", "type": "number" },
+        { "name": "subtotal", "type": "number" }
+      ]
+    }
+  ],
+  "bands": [
+    {
+      "type": "header",
+      "height": 6,
+      "elements": [
+        {
+          "type": "text",
+          "text": "  订单明细",
+          "x": 0, "y": 0, "width": 80, "height": 6,
+          "font": { "family": "Microsoft YaHei", "size": 8, "bold": true, "color": "#444444" },
+          "backgroundColor": "#f8f8f8"
+        }
+      ]
+    },
+    {
+      "type": "detail",
+      "height": 5,
+      "dataSource": "order_items",
+      "elements": [
+        {
+          "type": "text",
+          "text": "    {{order_items.productName}}",
+          "x": 0, "y": 0, "width": 80, "height": 5,
+          "font": { "size": 8 }
+        },
+        {
+          "type": "text",
+          "text": "{{order_items.quantity}}",
+          "x": 90, "y": 0, "width": 15, "height": 5,
+          "font": { "size": 8 }, "alignment": "center"
+        },
+        {
+          "type": "text",
+          "text": "{{order_items.unitPrice}}",
+          "x": 110, "y": 0, "width": 25, "height": 5,
+          "font": { "size": 8 }, "alignment": "right", "format": "number:2"
+        },
+        {
+          "type": "text",
+          "text": "{{order_items.subtotal}}",
+          "x": 140, "y": 0, "width": 30, "height": 5,
+          "font": { "size": 8 }, "alignment": "right", "format": "currency"
+        }
+      ]
+    },
+    {
+      "type": "footer",
+      "height": 5,
+      "elements": [
+        {
+          "type": "text",
+          "text": "    小计: {{SUM(order_items.subtotal)}}",
+          "x": 110, "y": 0, "width": 60, "height": 5,
+          "font": { "size": 8, "bold": true }, "alignment": "right", "format": "currency"
+        }
+      ]
+    }
+  ]
+}

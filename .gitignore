@@ -1,0 +1,104 @@
+# =========================
+# .NET / Visual Studio
+# =========================
+# Build results
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+[Ll]og/
+[Ll]ogs/
+*.user
+*.suo
+*.userprefs
+*.lock.json
+*.tmp
+
+# Visual Studio
+.vs/
+.vscode/
+# 子项目目录里的 .sln 是 VS "打开单个项目" 时残留的产物，统一忽略
+*.sln
+*.swp
+*.swo
+*_i.c
+*_p.c
+*_h.h
+*.ilk
+*.meta
+*.obj
+*.iobj
+*.ipdb
+*.pgc
+*.pgd
+*.rsp
+*.sbr
+*.tlb
+*.tli
+*.tlh
+*.tmp
+*.tmp_proj
+*.log
+*.vspscc
+*.vssscc
+.builds
+*.pidb
+*.svclog
+*.scc
+
+# ReSharper / Rider
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+.idea/
+
+# NuGet
+packages/
+*.nupkg
+*.snupkg
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Publish / Output
+publish/
+*.pubxml
+*.pubxml.user
+*.pubproj
+*.publishproj
+
+# Misc
+*.bak
+*.cache
+*.tmp
+
+# =========================
+# OS / Editor
+# =========================
+# Windows
+Thumbs.db
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+.fuse_hidden*
+
+# =========================
+# Project-specific
+# =========================
+# 本地构建日志（避免提交大文件）
+build.log
+*.log
+
+# 测试数据 / 临时输出
+*.tmp
+*.bak

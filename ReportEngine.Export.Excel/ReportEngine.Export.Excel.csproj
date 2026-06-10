@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net462;netstandard2.0;net8.0</TargetFrameworks>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <PackageId>ReportEngine.Export.Excel</PackageId>
+    <Version>0.3.0-alpha</Version>
+    <Description>基于 ClosedXML 的多目标 Excel 导出器（net462/netstandard2.0/net8）</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ReportEngine.Core\ReportEngine.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- ClosedXML 0.95.4：最后一个同时支持 net462 + netstandard2.0 的版本 -->
+    <PackageReference Include="ClosedXML" Version="0.95.4" />
+  </ItemGroup>
+
+</Project>

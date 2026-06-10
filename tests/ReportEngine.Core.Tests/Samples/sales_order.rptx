@@ -1,0 +1,157 @@
+{
+  "version": "1.0",
+  "page": {
+    "width": 210,
+    "height": 297,
+    "unit": "mm",
+    "orientation": "portrait",
+    "margin": { "top": 15, "bottom": 15, "left": 10, "right": 10 }
+  },
+  "dataSources": [
+    {
+      "name": "orders",
+      "type": "json",
+      "fields": [
+        { "name": "orderNo", "type": "string" },
+        { "name": "customer", "type": "string" },
+        { "name": "orderDate", "type": "date", "format": "date" },
+        { "name": "totalAmount", "type": "number" },
+        { "name": "status", "type": "string" }
+      ]
+    }
+  ],
+  "bands": [
+    {
+      "type": "reportHeader",
+      "height": 35,
+      "elements": [
+        {
+          "type": "text",
+          "id": "title",
+          "text": "销售订单报表",
+          "x": 10, "y": 5, "width": 190, "height": 12,
+          "font": { "family": "Microsoft YaHei", "size": 18, "bold": true, "color": "#1a1a2e" },
+          "alignment": "center"
+        },
+        {
+          "type": "text",
+          "id": "dateInfo",
+          "text": "报表日期: {{REPORT_DATE}}",
+          "x": 10, "y": 22, "width": 100, "height": 8,
+          "font": { "family": "SimSun", "size": 9, "color": "#666666" }
+        }
+      ]
+    },
+    {
+      "type": "header",
+      "height": 10,
+      "repeatOnNewPage": true,
+      "elements": [
+        {
+          "type": "text",
+          "text": "订单号", "x": 10, "y": 1, "width": 35, "height": 8,
+          "font": { "size": 9, "bold": true }, "backgroundColor": "#f0f0f0"
+        },
+        {
+          "type": "text",
+          "text": "客户名称", "x": 48, "y": 1, "width": 45, "height": 8,
+          "font": { "size": 9, "bold": true }, "backgroundColor": "#f0f0f0"
+        },
+        {
+          "type": "text",
+          "text": "下单日期", "x": 96, "y": 1, "width": 30, "height": 8,
+          "font": { "size": 9, "bold": true }, "backgroundColor": "#f0f0f0"
+        },
+        {
+          "type": "text",
+          "text": "金额", "x": 130, "y": 1, "width": 30, "height": 8,
+          "font": { "size": 9, "bold": true }, "alignment": "right", "backgroundColor": "#f0f0f0"
+        },
+        {
+          "type": "text",
+          "text": "状态", "x": 164, "y": 1, "width": 30, "height": 8,
+          "font": { "size": 9, "bold": true }, "alignment": "center", "backgroundColor": "#f0f0f0"
+        }
+      ]
+    },
+    {
+      "type": "detail",
+      "height": 10,
+      "dataSource": "orders",
+      "elements": [
+        {
+          "type": "text",
+          "text": "{{orders.orderNo}}", "x": 10, "y": 1, "width": 35, "height": 8,
+          "font": { "size": 9 }
+        },
+        {
+          "type": "text",
+          "text": "{{orders.customer}}", "x": 48, "y": 1, "width": 45, "height": 8,
+          "font": { "size": 9 }
+        },
+        {
+          "type": "text",
+          "text": "{{orders.orderDate}}", "x": 96, "y": 1, "width": 30, "height": 8,
+          "font": { "size": 9 }
+        },
+        {
+          "type": "text",
+          "text": "{{orders.totalAmount}}", "x": 130, "y": 1, "width": 30, "height": 8,
+          "font": { "size": 9 }, "alignment": "right", "format": "currency"
+        },
+        {
+          "type": "text",
+          "text": "{{orders.status}}", "x": 164, "y": 1, "width": 30, "height": 8,
+          "font": { "size": 9 }, "alignment": "center"
+        },
+        {
+          "type": "line",
+          "x": 0, "y": 10, "width": 190, "height": 0,
+          "direction": "horizontal", "lineWidth": 0.3, "lineColor": "#cccccc"
+        },
+        {
+          "type": "subreport",
+          "templateRef": "order_detail.rptx",
+          "dataBinding": {
+            "source": "orders",
+            "paramMap": { "orderId": "{{currentRow.orderNo}}" }
+          },
+          "x": 5, "y": 10, "width": 180,
+          "heightMode": "auto",
+          "repeatPerRow": true,
+          "height": 20
+        }
+      ]
+    },
+    {
+      "type": "footer",
+      "height": 20,
+      "repeatOnNewPage": true,
+      "elements": [
+        {
+          "type": "text",
+          "text": "订单总数: {{COUNT(orders.orderNo)}}",
+          "x": 10, "y": 2, "width": 60, "height": 8,
+          "font": { "size": 9, "bold": true }
+        },
+        {
+          "type": "text",
+          "text": "合计金额: {{SUM(orders.totalAmount)}}",
+          "x": 120, "y": 2, "width": 60, "height": 8,
+          "font": { "size": 9, "bold": true }, "format": "currency", "alignment": "right"
+        },
+        {
+          "type": "text",
+          "text": "第{{PAGE}}页 / 共{{TOTAL_PAGES}}页",
+          "x": 10, "y": 12, "width": 100, "height": 6,
+          "font": { "size": 8, "color": "#999999" }, "alignment": "left"
+        },
+        {
+          "type": "line",
+          "x": 0, "y": 0, "width": 190, "height": 0,
+          "direction": "horizontal", "lineWidth": 1, "lineColor": "#333333"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFrameworks>net462;net8.0-windows</TargetFrameworks>
+    <RootNamespace>ReportEngine.Designer.WinForms</RootNamespace>
+    <AssemblyName>ReportDesigner</AssemblyName>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <ApplicationIcon />
+    <UseWindowsForms Condition="'$(TargetFramework)' == 'net8.0-windows'">true</UseWindowsForms>
+    <ImportWindowsDesktopTargets Condition="'$(TargetFramework)' == 'net8.0-windows'">true</ImportWindowsDesktopTargets>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ReportEngine.Core\ReportEngine.Core.csproj" />
+  </ItemGroup>
+
+  <!-- net462 需要手动引用 WinForms 程序集 -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net462'">
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing.Design" />
+  </ItemGroup>
+
+</Project>

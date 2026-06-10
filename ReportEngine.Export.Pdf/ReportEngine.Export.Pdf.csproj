@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net462;netstandard2.0;net8.0</TargetFrameworks>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <PackageId>ReportEngine.Export.Pdf</PackageId>
+    <Version>0.3.0-alpha</Version>
+    <Description>基于 PDFsharp 的多目标 PDF 导出器（net462/netstandard2.0/net8）</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ReportEngine.Core\ReportEngine.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- PdfSharpCore 1.3.62：MIT、netstandard1.3单目标、内置 Windows/Linux 字体解析器，
+         可被 net462 / netstandard2.0 / net8.0 同时引用 -->
+    <PackageReference Include="PdfSharpCore" Version="1.3.62" />
+  </ItemGroup>
+
+</Project>
