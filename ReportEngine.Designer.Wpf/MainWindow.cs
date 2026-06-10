@@ -20,6 +20,7 @@ using ReportEngine.Export.Excel;
 using static ReportEngine.Designer.Wpf.UiFactory;
 using static ReportEngine.Designer.Wpf.ElementFactory;
 using static ReportEngine.Designer.Wpf.ElementIcons;
+using static ReportEngine.Designer.Wpf.BandStyle;
 
 namespace ReportEngine.Designer.Wpf
 {
@@ -50,6 +51,10 @@ namespace ReportEngine.Designer.Wpf
         private readonly ScrollViewer _previewScrollViewer;
         private readonly Canvas _previewCanvas;
         private readonly Canvas _vRuler;
+
+        // 渲染器（Step2.A 拆出）
+        private readonly CanvasRenderer _canvasRenderer;
+        private readonly PreviewRenderer _previewRenderer;
 
         private ReportElement? _selectedElement;
         private Band? _selectedBand;
@@ -147,6 +152,10 @@ namespace ReportEngine.Designer.Wpf
                 Visibility = Visibility.Collapsed,
             };
 
+            // 渲染器（Step2.A 拆出）：构造函数持 canvas/ruler/scroll 引用，渲染状态走 ctx 参数
+            _canvasRenderer = new CanvasRenderer(_canvas, _hRuler, _vRuler, _scrollViewer);
+            _previewRenderer = new PreviewRenderer(_previewCanvas);
+
             _bandTree = new TreeView { Background = Brushes.White, Foreground = Brushes.Black, BorderThickness = new Thickness(0) };
             _bandTree.SelectedItemChanged += OnBandTreeSelectionChanged;
 
@@ -162,7 +171,7 @@ namespace ReportEngine.Designer.Wpf
             _zoomLabel = new TextBlock { Text = "100%", Foreground = Brushes.White, VerticalAlignment = VerticalAlignment.Center, MinWidth = 40 };
             _posLabel = new TextBlock { Text = "", Foreground = Brushes.White, VerticalAlignment = VerticalAlignment.Center, MinWidth = 120 };
             _zoomSlider = new Slider { Minimum = 25, Maximum = 400, Value = 100, Width = 120, VerticalAlignment = VerticalAlignment.Center };
-            _zoomSlider.ValueChanged += (_, __) => { _zoom = _zoomSlider.Value / 100.0; _zoomLabel.Text = (int)_zoomSlider.Value + "%"; RenderCanvas(); DrawRulers(); };
+            _zoomSlider.ValueChanged += (_, __) => { _zoom = _zoomSlider.Value / 100.0; _zoomLabel.Text = (int)_zoomSlider.Value + "%"; _canvasRenderer.Render(BuildCanvasRenderContext(), _selectedElements, _selectedBand); _canvasRenderer.RenderRulers(_template!, _zoom); };
 
             BuildLayout();
             ApplyScrollBarStyle();
@@ -673,7 +682,7 @@ namespace ReportEngine.Designer.Wpf
             grid.Children.Add(_vRuler);
 
             Grid.SetRow(_scrollViewer, 1); Grid.SetColumn(_scrollViewer, 1);
-            _scrollViewer.ScrollChanged += (_, __) => DrawRulers();
+            _scrollViewer.ScrollChanged += (_, __) => _canvasRenderer.RenderRulers(_template!, _zoom);
             _scrollViewer.PreviewMouseWheel += OnCanvasWheel;
             grid.Children.Add(_scrollViewer);
 
@@ -838,12 +847,12 @@ namespace ReportEngine.Designer.Wpf
             view.Items.Add(MakeMenuItem("100%", null, () => { _zoomSlider.Value = 100; }));
             view.Items.Add(new Separator());
             var gridItem = new MenuItem { Header = "显示网格线(_G)", IsCheckable = true, IsChecked = _showGrid };
-            gridItem.Click += (_, __) => { _showGrid = gridItem.IsChecked; RenderCanvas(); };
+            gridItem.Click += (_, __) => { _showGrid = gridItem.IsChecked; _canvasRenderer.Render(BuildCanvasRenderContext(), _selectedElements, _selectedBand); };
             view.Items.Add(gridItem);
             view.Items.Add(MakeMenuItem("网格设置...", null, ShowGridSettingsDialog));
             view.Items.Add(new Separator());
             var miClearGuides = new MenuItem { Header = "清除所有参考线" };
-            miClearGuides.Click += (_, __) => { _hGuides.Clear(); _vGuides.Clear(); RenderCanvas(); _statusText.Text = "已清除所有参考线"; };
+            miClearGuides.Click += (_, __) => { _hGuides.Clear(); _vGuides.Clear(); _canvasRenderer.Render(BuildCanvasRenderContext(), _selectedElements, _selectedBand); _statusText.Text = "已清除所有参考线"; };
             view.Items.Add(miClearGuides);
             view.Items.Add(new Separator());
             var snapItem = new MenuItem { Header = "吸附对齐(_S)", IsCheckable = true, IsChecked = _snapEnabled };
@@ -956,204 +965,6 @@ namespace ReportEngine.Designer.Wpf
 
         // ============================== 画布渲染 ==============================
 
-        private void RenderCanvas()
-        {
-            _canvas.Children.Clear();
-            if (_template == null) return;
-
-            double z = _zoom;
-
-            // 计算设计区域尺寸
-            double designW, designH;
-            var muCfg = _template.Page.MultiUp;
-            bool isMultiUp = muCfg != null && muCfg.Count > 1;
-            if (isMultiUp)
-            {
-                // 多联模式：设计区域 = 纸张等分后的单联尺寸
-                int muRows = Math.Max(1, muCfg!.Rows);
-                int muCols = Math.Max(1, muCfg.Columns);
-                designW = (_template.Page.Width - muCfg.HSpacing * (muCols - 1)) / muCols;
-                designH = (_template.Page.Height - muCfg.VSpacing * (muRows - 1)) / muRows;
-                if (designW < 1) designW = 1;
-                if (designH < 1) designH = 1;
-            }
-            else
-            {
-                designW = _template.Page.Width;
-                designH = _template.Page.Height;
-            }
-
-            double pageW = designW * PixelsPerMm * z;
-            double pageH = designH * PixelsPerMm * z;
-            _canvas.Width = pageW + CanvasPadding * 2;
-            _canvas.Height = pageH + CanvasPadding * 2;
-
-            // 页面阴影
-            var shadow = new Rectangle
-            {
-                Width = pageW, Height = pageH,
-                Fill = new SolidColorBrush(Color.FromArgb(60, 0, 0, 0)),
-            };
-            Canvas.SetLeft(shadow, CanvasPadding + 4);
-            Canvas.SetTop(shadow, CanvasPadding + 4);
-            _canvas.Children.Add(shadow);
-
-            // 页面背景
-            Brush pageFill = !string.IsNullOrEmpty(_template.Page.BackgroundColor) ? ParseBrush(_template.Page.BackgroundColor, Brushes.White) : Brushes.White;
-            var pageBg = new Rectangle
-            {
-                Width = pageW, Height = pageH,
-                Fill = pageFill,
-                Stroke = Brushes.Gray,
-                StrokeThickness = 1,
-            };
-            Canvas.SetLeft(pageBg, CanvasPadding);
-            Canvas.SetTop(pageBg, CanvasPadding);
-            _canvas.Children.Add(pageBg);
-
-            // 网格线
-            if (_showGrid)
-            {
-                double gridStep = _gridSpacingMm * PixelsPerMm * z;
-                var gridPen = new SolidColorBrush(_gridColor);
-                for (double gx = gridStep; gx < pageW; gx += gridStep)
-                {
-                    var gl = new Line { X1 = CanvasPadding + gx, Y1 = CanvasPadding, X2 = CanvasPadding + gx, Y2 = CanvasPadding + pageH, Stroke = gridPen, StrokeThickness = 0.5 };
-                    _canvas.Children.Add(gl);
-                }
-                for (double gy = gridStep; gy < pageH; gy += gridStep)
-                {
-                    var gl = new Line { X1 = CanvasPadding, Y1 = CanvasPadding + gy, X2 = CanvasPadding + pageW, Y2 = CanvasPadding + gy, Stroke = gridPen, StrokeThickness = 0.5 };
-                    _canvas.Children.Add(gl);
-                }
-            }
-
-            // 绘制对齐参考线（拖动时显示）
-            if (_snapLinesX.Count > 0 || _snapLinesY.Count > 0)
-            {
-                var guidePen = new SolidColorBrush(Color.FromRgb(255, 0, 0));
-                foreach (var x in _snapLinesX)
-                {
-                    var line = new Line
-                    {
-                        X1 = CanvasPadding + x * PixelsPerMm * z,
-                        Y1 = CanvasPadding,
-                        X2 = CanvasPadding + x * PixelsPerMm * z,
-                        Y2 = CanvasPadding + pageH,
-                        Stroke = guidePen,
-                        StrokeThickness = 1,
-                    };
-                    _canvas.Children.Add(line);
-                }
-                foreach (var y in _snapLinesY)
-                {
-                    var line = new Line
-                    {
-                        X1 = CanvasPadding,
-                        Y1 = CanvasPadding + y * PixelsPerMm * z,
-                        X2 = CanvasPadding + pageW,
-                        Y2 = CanvasPadding + y * PixelsPerMm * z,
-                        Stroke = guidePen,
-                        StrokeThickness = 1,
-                    };
-                    _canvas.Children.Add(line);
-                }
-            }
-
-            // 参考线
-            var guideBrush = new SolidColorBrush(Color.FromArgb(180, 0, 180, 255));
-            foreach (var gx in _vGuides)
-            {
-                double px = CanvasPadding + gx * PixelsPerMm * z;
-                _canvas.Children.Add(new Line { X1 = px, Y1 = CanvasPadding, X2 = px, Y2 = CanvasPadding + pageH, Stroke = guideBrush, StrokeThickness = 1, StrokeDashArray = new DoubleCollection { 6, 3 } });
-            }
-            foreach (var gy in _hGuides)
-            {
-                double py = CanvasPadding + gy * PixelsPerMm * z;
-                _canvas.Children.Add(new Line { X1 = CanvasPadding, Y1 = py, X2 = CanvasPadding + pageW, Y2 = py, Stroke = guideBrush, StrokeThickness = 1, StrokeDashArray = new DoubleCollection { 6, 3 } });
-            }
-
-            // 吸附辅助线
-            var snapBrush = new SolidColorBrush(Color.FromArgb(180, 255, 50, 50));
-            foreach (var sx in _snapLinesX)
-            {
-                double px = CanvasPadding + sx * PixelsPerMm * z;
-                _canvas.Children.Add(new Line { X1 = px, Y1 = CanvasPadding, X2 = px, Y2 = CanvasPadding + pageH, Stroke = snapBrush, StrokeThickness = 0.7, StrokeDashArray = new DoubleCollection { 3, 2 } });
-            }
-            foreach (var sy in _snapLinesY)
-            {
-                double py = CanvasPadding + sy * PixelsPerMm * z;
-                _canvas.Children.Add(new Line { X1 = CanvasPadding, Y1 = py, X2 = CanvasPadding + pageW, Y2 = py, Stroke = snapBrush, StrokeThickness = 0.7, StrokeDashArray = new DoubleCollection { 3, 2 } });
-            }
-
-            // 页面水印
-            if (!string.IsNullOrEmpty(_template.Page.Watermark))
-            {
-                var wm = new TextBlock
-                {
-                    Text = _template.Page.Watermark,
-                    FontSize = 48 * z,
-                    Foreground = new SolidColorBrush(Color.FromArgb(30, 150, 150, 150)),
-                    FontWeight = FontWeights.Bold,
-                };
-                var transform = new System.Windows.Media.RotateTransform(-30, pageW / 2, pageH / 2);
-                wm.RenderTransform = transform;
-                Canvas.SetLeft(wm, CanvasPadding + pageW / 2 - 100 * z);
-                Canvas.SetTop(wm, CanvasPadding + pageH / 2 - 30 * z);
-                _canvas.Children.Add(wm);
-            }
-
-            // 多联时顶部提示
-            if (isMultiUp)
-            {
-                var muHint = new TextBlock
-                {
-                    Text = "多联打印: " + muCfg!.Rows + "×" + muCfg.Columns + "=" + muCfg.Count + "份/页  单联: " + Math.Round(designW, 1) + "×" + Math.Round(designH, 1) + "mm",
-                    FontSize = 10 * z,
-                    Foreground = Brushes.OrangeRed,
-                    FontWeight = FontWeights.Bold,
-                };
-                Canvas.SetLeft(muHint, CanvasPadding + 4);
-                Canvas.SetTop(muHint, CanvasPadding - 14 * z);
-                _canvas.Children.Add(muHint);
-            }
-            else
-            {
-                // 非多联：画边距线
-                var ml = _template.Page.Margin.Left * PixelsPerMm * z;
-                var mr = _template.Page.Margin.Right * PixelsPerMm * z;
-                var mt = _template.Page.Margin.Top * PixelsPerMm * z;
-                var mb = _template.Page.Margin.Bottom * PixelsPerMm * z;
-                DrawDashedLine(CanvasPadding + ml, CanvasPadding, CanvasPadding + ml, CanvasPadding + pageH, Colors.LightBlue);
-                DrawDashedLine(CanvasPadding + pageW - mr, CanvasPadding, CanvasPadding + pageW - mr, CanvasPadding + pageH, Colors.LightBlue);
-                DrawDashedLine(CanvasPadding, CanvasPadding + mt, CanvasPadding + pageW, CanvasPadding + mt, Colors.LightBlue);
-                DrawDashedLine(CanvasPadding, CanvasPadding + pageH - mb, CanvasPadding + pageW, CanvasPadding + pageH - mb, Colors.LightBlue);
-            }
-
-            // 渲染 Bands
-            double currentY = CanvasPadding;
-            foreach (var band in _template.Bands)
-            {
-                double bandH = band.Height * PixelsPerMm * z;
-                var bandRect = new Rect(CanvasPadding, currentY, pageW, bandH);
-                DrawBand(band, bandRect, z);
-
-                // Band 底部调整手柄
-                var handle = new Rectangle
-                {
-                    Width = pageW, Height = 5,
-                    Fill = Brushes.Transparent, Cursor = Cursors.SizeNS,
-                    Tag = band,
-                };
-                Canvas.SetLeft(handle, CanvasPadding);
-                Canvas.SetTop(handle, currentY + bandH - 2);
-                _canvas.Children.Add(handle);
-
-                currentY += bandH;
-            }
-
-            _canvas.Height = Math.Max(_canvas.Height, currentY + CanvasPadding);
-        }
 
         private void SwitchView(string mode, Border tabDesign, Border tabPreview)
         {
@@ -1166,7 +977,7 @@ namespace ReportEngine.Designer.Wpf
                 _previewScrollViewer.Visibility = Visibility.Visible;
                 tabDesign.Background = new SolidColorBrush(Color.FromRgb(220, 220, 220));
                 tabPreview.Background = Brushes.White;
-                RenderPreview();
+                _previewRenderer.Render(_template!, _zoom, _previewData);
             }
             else
             {
@@ -1179,473 +990,15 @@ namespace ReportEngine.Designer.Wpf
             }
         }
 
-        private void RenderPreview()
-        {
-            _previewCanvas.Children.Clear();
-            if (_template == null) return;
 
-            double z = _zoom;
-            double physW = _template.Page.Width;
-            double physH = _template.Page.Height;
-            double pageW = physW * PixelsPerMm * z;
-            double pageH = physH * PixelsPerMm * z;
-            double pad = 30;
 
-            _previewCanvas.Width = pageW + pad * 2;
-            _previewCanvas.Height = pageH + pad * 2;
 
-            // 页面阴影
-            var shadow = new Rectangle { Width = pageW, Height = pageH, Fill = new SolidColorBrush(Color.FromArgb(60, 0, 0, 0)) };
-            Canvas.SetLeft(shadow, pad + 4); Canvas.SetTop(shadow, pad + 4);
-            _previewCanvas.Children.Add(shadow);
 
-            // 页面白底
-            var pageBg = new Rectangle { Width = pageW, Height = pageH, Fill = Brushes.White, Stroke = Brushes.Gray, StrokeThickness = 1 };
-            Canvas.SetLeft(pageBg, pad); Canvas.SetTop(pageBg, pad);
-            _previewCanvas.Children.Add(pageBg);
 
-            var muCfg = _template.Page.MultiUp;
-            bool isMultiUp = muCfg != null && muCfg.Count > 1;
 
-            if (isMultiUp)
-            {
-                // 多联模式：平铺渲染
-                int rows = Math.Max(1, muCfg!.Rows);
-                int cols = Math.Max(1, muCfg.Columns);
-                double cellW = (physW - muCfg.HSpacing * (cols - 1)) / cols;
-                double cellH = (physH - muCfg.VSpacing * (rows - 1)) / rows;
-                if (cellW < 1) cellW = 1;
-                if (cellH < 1) cellH = 1;
-
-                bool horizontal = muCfg.Direction != "Vertical";
-                int idx = 0;
-                for (int r = 0; r < rows && idx < muCfg.Count; r++)
-                {
-                    for (int c = 0; c < cols && idx < muCfg.Count; c++, idx++)
-                    {
-                        int row = horizontal ? r : c;
-                        int col = horizontal ? c : r;
-                        double ox = pad + (cellW + muCfg.HSpacing) * col * PixelsPerMm * z;
-                        double oy = pad + (cellH + muCfg.VSpacing) * row * PixelsPerMm * z;
-
-                        // 单联边框
-                        var cellBorder = new Rectangle
-                        {
-                            Width = cellW * PixelsPerMm * z, Height = cellH * PixelsPerMm * z,
-                            Stroke = new SolidColorBrush(Color.FromArgb(80, 0, 120, 200)), StrokeThickness = 0.5,
-                            StrokeDashArray = new DoubleCollection(new[] { 3.0, 2.0 }),
-                            Fill = Brushes.Transparent,
-                        };
-                        Canvas.SetLeft(cellBorder, ox); Canvas.SetTop(cellBorder, oy);
-                        _previewCanvas.Children.Add(cellBorder);
-
-                        // 渲染每个单联内的Bands
-                        double bandY = oy;
-                        foreach (var band in _template.Bands)
-                        {
-                            double bh = band.Height * PixelsPerMm * z;
-                            var bandRect = new Rect(ox, bandY, cellW * PixelsPerMm * z, bh);
-                            DrawPreviewBand(band, bandRect, z);
-                            bandY += bh;
-                        }
-
-                        // 序号标记
-                        var numLabel = new TextBlock { Text = (idx + 1).ToString(), FontSize = 9 * z, Foreground = Brushes.Gray };
-                        Canvas.SetLeft(numLabel, ox + 2); Canvas.SetTop(numLabel, oy + 1);
-                        _previewCanvas.Children.Add(numLabel);
-                    }
-                }
-            }
-            else
-            {
-                // 单页模式
-                double bandY = pad;
-                foreach (var band in _template.Bands)
-                {
-                    double bh = band.Height * PixelsPerMm * z;
-                    var bandRect = new Rect(pad, bandY, pageW, bh);
-                    DrawPreviewBand(band, bandRect, z);
-                    bandY += bh;
-                }
-            }
-
-            // 页码
-            var pageNum = new TextBlock { Text = "页 1/1", FontSize = 10 * z, Foreground = Brushes.Gray };
-            Canvas.SetLeft(pageNum, pad + pageW / 2 - 15); Canvas.SetTop(pageNum, pad + pageH + 6);
-            _previewCanvas.Children.Add(pageNum);
-        }
-
-        private void DrawPreviewBand(Band band, Rect rect, double z)
-        {
-            foreach (var el in band.Elements)
-                DrawPreviewElement(el, rect, z);
-        }
-
-        private void DrawPreviewElement(ReportElement el, Rect bandRect, double z)
-        {
-            double px = bandRect.X + el.X * PixelsPerMm * z;
-            double py = bandRect.Y + el.Y * PixelsPerMm * z;
-            double pw = Math.Max(1, el.Width * PixelsPerMm * z);
-            double ph = Math.Max(1, el.Height * PixelsPerMm * z);
-
-            if (el is TextElement txt)
-            {
-                string prevText;
-                switch (txt.BoxType)
-                {
-                    case TextBoxType.Field: prevText = ResolvePreviewValue(txt.DataField); break;
-                    case TextBoxType.Summary:
-                        var sumVal = ResolvePreviewValue(txt.SummaryField);
-                        prevText = _previewData != null ? sumVal : "Σ" + (txt.SummaryFunction ?? "") + "(" + (txt.SummaryField ?? "") + ")";
-                        break;
-                    case TextBoxType.SysVar:
-                        prevText = txt.SystemVariable switch {
-                            "PageNumber" => "1",
-                            "TotalPages" => "1",
-                            "PrintDate" => DateTime.Now.ToString("yyyy-MM-dd"),
-                            "PrintTime" => DateTime.Now.ToString("HH:mm:ss"),
-                            "ReportTitle" => "报表",
-                            _ => "@" + (txt.SystemVariable ?? "")
-                        };
-                        break;
-                    default: prevText = txt.Text ?? ""; break;
-                }
-                var tb = new TextBlock
-                {
-                    Text = prevText,
-                    FontSize = Math.Max(6, (txt.Font?.Size ?? 9) * z),
-                    Foreground = ParseBrush(txt.Font?.Color, Brushes.Black),
-                    Width = pw, Height = ph,
-                    TextTrimming = TextTrimming.CharacterEllipsis,
-                };
-                if (el.BackgroundColor != null)
-                {
-                    var bg = new Border { Width = pw, Height = ph, Background = ParseBrush(el.BackgroundColor, Brushes.Transparent), Child = tb };
-                    Canvas.SetLeft(bg, px); Canvas.SetTop(bg, py);
-                    _previewCanvas.Children.Add(bg);
-                }
-                else
-                {
-                    Canvas.SetLeft(tb, px); Canvas.SetTop(tb, py);
-                    _previewCanvas.Children.Add(tb);
-                }
-            }
-            else if (el is LineElement line)
-            {
-                var l = new Line
-                {
-                    X1 = px, Y1 = py, X2 = px + pw, Y2 = py + ph,
-                    Stroke = ParseBrush(line.LineColor, Brushes.Black),
-                    StrokeThickness = Math.Max(0.5, line.LineWidth * z),
-                };
-                _previewCanvas.Children.Add(l);
-            }
-            else if (el is ShapeElement shape)
-            {
-                var rect2 = new Rectangle
-                {
-                    Width = pw, Height = ph,
-                    Fill = ParseBrush(shape.FillColor, Brushes.Transparent),
-                    Stroke = Brushes.Black, StrokeThickness = 0.5 * z,
-                    RadiusX = shape.BorderRadius * z, RadiusY = shape.BorderRadius * z,
-                };
-                Canvas.SetLeft(rect2, px); Canvas.SetTop(rect2, py);
-                _previewCanvas.Children.Add(rect2);
-            }
-            else if (el is ImageElement)
-            {
-                var placeholder = new Rectangle { Width = pw, Height = ph, Fill = new SolidColorBrush(Color.FromArgb(30, 100, 100, 100)), Stroke = Brushes.Gray, StrokeThickness = 0.5 };
-                Canvas.SetLeft(placeholder, px); Canvas.SetTop(placeholder, py);
-                _previewCanvas.Children.Add(placeholder);
-                var imgLabel = new TextBlock { Text = "🖼", FontSize = Math.Min(pw, ph) * 0.5, Foreground = Brushes.Gray, HorizontalAlignment = HorizontalAlignment.Center };
-                Canvas.SetLeft(imgLabel, px + pw / 2 - 6); Canvas.SetTop(imgLabel, py + ph / 2 - 8);
-                _previewCanvas.Children.Add(imgLabel);
-            }
-            else if (el is BarcodeElement)
-            {
-                var bcRect = new Rectangle { Width = pw, Height = ph, Fill = Brushes.White, Stroke = Brushes.Black, StrokeThickness = 0.5 };
-                Canvas.SetLeft(bcRect, px); Canvas.SetTop(bcRect, py);
-                _previewCanvas.Children.Add(bcRect);
-                // 简化条码表示
-                for (double bx = 2; bx < pw - 2; bx += 3)
-                {
-                    var bar = new Rectangle { Width = 1.5, Height = ph * 0.7, Fill = Brushes.Black };
-                    Canvas.SetLeft(bar, px + bx); Canvas.SetTop(bar, py + ph * 0.1);
-                    _previewCanvas.Children.Add(bar);
-                }
-            }
-            else
-            {
-                // 通用占位
-                var generic = new Rectangle { Width = pw, Height = ph, Fill = new SolidColorBrush(Color.FromArgb(20, 0, 0, 0)), Stroke = Brushes.Gray, StrokeThickness = 0.5 };
-                Canvas.SetLeft(generic, px); Canvas.SetTop(generic, py);
-                _previewCanvas.Children.Add(generic);
-            }
-        }
-
-        private void DrawDashedLine(double x1, double y1, double x2, double y2, Color color)
-        {
-            var line = new Line
-            {
-                X1 = x1, Y1 = y1, X2 = x2, Y2 = y2,
-                Stroke = new SolidColorBrush(color),
-                StrokeThickness = 0.5,
-                StrokeDashArray = new DoubleCollection(new[] { 4.0, 4.0 }),
-            };
-            _canvas.Children.Add(line);
-        }
-
-        private void DrawBand(Band band, Rect rect, double z)
-        {
-            bool selected = band == _selectedBand;
-            var bg = new Rectangle
-            {
-                Width = rect.Width, Height = rect.Height,
-                Fill = GetBandBrush(band.Type),
-                Stroke = selected ? Brushes.DodgerBlue : new SolidColorBrush(Color.FromRgb(200, 200, 200)),
-                StrokeThickness = selected ? 2 : 0.5,
-            };
-            Canvas.SetLeft(bg, rect.X);
-            Canvas.SetTop(bg, rect.Y);
-            _canvas.Children.Add(bg);
-
-            // Band 标签
-            var label = new TextBlock
-            {
-                Text = BandTypeName(band.Type) + " (" + band.Height + "mm)",
-                FontSize = 9 * z, Foreground = new SolidColorBrush(Color.FromRgb(120, 120, 120)),
-            };
-            Canvas.SetLeft(label, rect.X + 3);
-            Canvas.SetTop(label, rect.Y + 1);
-            _canvas.Children.Add(label);
-
-            // 元素
-            foreach (var el in band.Elements)
-                DrawElement(el, rect, z);
-        }
-
-        private void DrawElement(ReportElement el, Rect bandRect, double z)
-        {
-            double x = bandRect.X + el.X * PixelsPerMm * z;
-            double y = bandRect.Y + el.Y * PixelsPerMm * z;
-            double w = Math.Max(4, el.Width * PixelsPerMm * z);
-            double h = Math.Max(4, el.Height * PixelsPerMm * z);
-            bool selected = el == _selectedElement || _selectedElements.Contains(el);
-
-            FrameworkElement? visual = null;
-            switch (el)
-            {
-                case TextElement t:
-                    string displayText;
-                    Brush textFg = Brushes.Black;
-                    switch (t.BoxType)
-                    {
-                        case TextBoxType.Field:
-                            displayText = "{" + (t.DataField ?? "") + "}";
-                            textFg = Brushes.DarkBlue;
-                            break;
-                        case TextBoxType.Summary:
-                            displayText = "Σ" + (t.SummaryFunction ?? "") + "(" + (t.SummaryField ?? "") + ")";
-                            textFg = Brushes.DarkRed;
-                            break;
-                        case TextBoxType.SysVar:
-                            displayText = "@" + (t.SystemVariable ?? "");
-                            textFg = Brushes.DarkGreen;
-                            break;
-                        default:
-                            displayText = t.Text ?? "";
-                            break;
-                    }
-                    var tb = new TextBlock
-                    {
-                        Text = displayText, Width = w, Height = h,
-                        FontSize = Math.Max(6, t.Font.Size * z),
-                        FontWeight = t.Font.Bold ? FontWeights.Bold : FontWeights.Normal,
-                        FontStyle = t.Font.Italic ? FontStyles.Italic : FontStyles.Normal,
-                        TextTrimming = TextTrimming.CharacterEllipsis, Padding = new Thickness(1),
-                        Foreground = textFg,
-                    };
-                    if (t.BoxType == TextBoxType.Static && !string.IsNullOrEmpty(t.Font.Color))
-                        tb.Foreground = ParseBrush(t.Font.Color, Brushes.Black);
-                    visual = tb;
-                    break;
-                case LineElement l:
-                    var lineCanvas = new Canvas { Width = w, Height = h };
-                    var line = new Line { StrokeThickness = l.LineWidth * z, Stroke = ParseBrush(l.LineColor, Brushes.Black) };
-                    if (l.Direction == LineDirection.Vertical) { line.X1 = w / 2; line.Y1 = 0; line.X2 = w / 2; line.Y2 = h; }
-                    else if (l.Direction == LineDirection.Diagonal) { line.X1 = 0; line.Y1 = 0; line.X2 = w; line.Y2 = h; }
-                    else { line.X1 = 0; line.Y1 = h / 2; line.X2 = w; line.Y2 = h / 2; }
-                    lineCanvas.Children.Add(line);
-                    visual = lineCanvas;
-                    break;
-                case ShapeElement s:
-                    var shape = new Rectangle { Width = w, Height = h, Fill = ParseBrush(s.FillColor, Brushes.White), Stroke = Brushes.DimGray, StrokeThickness = 1 };
-                    if (s.Shape == ShapeType.Ellipse) { shape.RadiusX = w / 2; shape.RadiusY = h / 2; }
-                    else if (s.BorderRadius > 0) { shape.RadiusX = s.BorderRadius * z; shape.RadiusY = s.BorderRadius * z; }
-                    visual = shape;
-                    break;
-                case SubReportElement sr:
-                    visual = MakeElementBorder(w, h, Brushes.MediumPurple, Color.FromArgb(20, 147, 112, 219), "[SubReport] " + sr.TemplateRef, 9 * z);
-                    break;
-                case BarcodeElement bc:
-                    visual = MakeElementBorder(w, h, Brushes.DarkOrange, Color.FromRgb(255, 250, 240), "[" + bc.Format + "] " + bc.Value, 8 * z);
-                    break;
-                case TableElement tbl:
-                    var tblCanvas = new Canvas { Width = w, Height = h, Background = Brushes.White };
-                    double tcw = w / Math.Max(tbl.ColCount, 1), trh = h / Math.Max(tbl.RowCount, 1);
-                    for (int ci = 0; ci <= tbl.ColCount; ci++) tblCanvas.Children.Add(new Line { X1 = ci * tcw, Y1 = 0, X2 = ci * tcw, Y2 = h, Stroke = Brushes.LightGray, StrokeThickness = 0.5 });
-                    for (int ri = 0; ri <= tbl.RowCount; ri++) tblCanvas.Children.Add(new Line { X1 = 0, Y1 = ri * trh, X2 = w, Y2 = ri * trh, Stroke = Brushes.LightGray, StrokeThickness = 0.5 });
-                    var tl = new TextBlock { Text = "[Table " + tbl.RowCount + "x" + tbl.ColCount + "]", FontSize = 8 * z, Foreground = Brushes.DarkSlateGray };
-                    Canvas.SetLeft(tl, 2); Canvas.SetTop(tl, 2);
-                    tblCanvas.Children.Add(tl);
-                    visual = new Border { Width = w, Height = h, BorderBrush = Brushes.DarkSlateGray, BorderThickness = new Thickness(1), Child = tblCanvas };
-                    break;
-                case CrossTabElement ct:
-                    visual = MakeElementBorder(w, h, Brushes.DarkCyan, Color.FromRgb(240, 248, 255), "[CrossTab] " + ct.DataSource, 8 * z);
-                    break;
-                case ChartElement ch:
-                    visual = MakeElementBorder(w, h, Brushes.MediumVioletRed, Color.FromRgb(255, 245, 250), "[Chart] " + ch.Title + " (" + ChartTypeCN(ch.ChartType) + ")", 9 * z);
-                    break;
-                case ImageElement img:
-                    visual = MakeElementBorder(w, h, Brushes.SteelBlue, Color.FromArgb(0, 0, 0, 0), "[Image]", 8 * z);
-                    break;
-            }
-
-            if (visual == null) return;
-
-            // 应用透明度
-            if (el.Opacity < 1.0)
-            {
-                visual.Opacity = el.Opacity;
-            }
-
-            // 应用旋转
-            if (el.Rotation != 0)
-            {
-                var container = new Border { Width = w, Height = h, Child = visual };
-                var transform = new System.Windows.Media.RotateTransform(el.Rotation, w / 2, h / 2);
-                container.RenderTransform = transform;
-                visual = container;
-            }
-
-            // 绘制元素边框 (BorderDef)
-            if (el.Border != null && el.Border.Width > 0)
-            {
-                var borderBrush = ParseBrush(el.Border.Color, Brushes.Black);
-                double bw = el.Border.Width * z;
-                DoubleCollection? dash = el.Border.Style == BorderStyle.Dashed ? new DoubleCollection { 4, 2 }
-                    : el.Border.Style == BorderStyle.Dotted ? new DoubleCollection { 1, 2 } : null;
-                if (el.Border.Top) { var ln = new Line { X1 = x, Y1 = y, X2 = x + w, Y2 = y, Stroke = borderBrush, StrokeThickness = bw }; if (dash != null) ln.StrokeDashArray = dash; _canvas.Children.Add(ln); }
-                if (el.Border.Bottom) { var ln = new Line { X1 = x, Y1 = y + h, X2 = x + w, Y2 = y + h, Stroke = borderBrush, StrokeThickness = bw }; if (dash != null) ln.StrokeDashArray = dash; _canvas.Children.Add(ln); }
-                if (el.Border.Left) { var ln = new Line { X1 = x, Y1 = y, X2 = x, Y2 = y + h, Stroke = borderBrush, StrokeThickness = bw }; if (dash != null) ln.StrokeDashArray = dash; _canvas.Children.Add(ln); }
-                if (el.Border.Right) { var ln = new Line { X1 = x + w, Y1 = y, X2 = x + w, Y2 = y + h, Stroke = borderBrush, StrokeThickness = bw }; if (dash != null) ln.StrokeDashArray = dash; _canvas.Children.Add(ln); }
-            }
-
-            // 选中边框 + 8 向 resize 手柄
-            if (selected)
-            {
-                var selBorder = new Border { Width = w + 4, Height = h + 4, BorderBrush = el.Locked ? Brushes.Gray : Brushes.OrangeRed, BorderThickness = new Thickness(1.5), Child = visual };
-                Canvas.SetLeft(selBorder, x - 2);
-                Canvas.SetTop(selBorder, y - 2);
-                selBorder.Tag = el;
-                _canvas.Children.Add(selBorder);
-
-                if (el.Locked)
-                {
-                    // 锁定图标
-                    var lockLabel = new TextBlock { Text = "🔒", FontSize = 10 * z, Foreground = Brushes.DimGray };
-                    Canvas.SetLeft(lockLabel, x + w - 12 * z);
-                    Canvas.SetTop(lockLabel, y - 14 * z);
-                    _canvas.Children.Add(lockLabel);
-                }
-                else
-                {
-                    // 手柄
-                    double hs = 6;
-                    DrawHandle(x - hs / 2, y - hs / 2, hs, 0);
-                    DrawHandle(x + w / 2 - hs / 2, y - hs / 2, hs, 1);
-                    DrawHandle(x + w - hs / 2, y - hs / 2, hs, 2);
-                    DrawHandle(x + w - hs / 2, y + h / 2 - hs / 2, hs, 3);
-                    DrawHandle(x + w - hs / 2, y + h - hs / 2, hs, 4);
-                    DrawHandle(x + w / 2 - hs / 2, y + h - hs / 2, hs, 5);
-                    DrawHandle(x - hs / 2, y + h - hs / 2, hs, 6);
-                    DrawHandle(x - hs / 2, y + h / 2 - hs / 2, hs, 7);
-                }
-            }
-            else
-            {
-                var container = new Border { Width = w, Height = h, Child = visual };
-                Canvas.SetLeft(container, x);
-                Canvas.SetTop(container, y);
-                container.Tag = el;
-                _canvas.Children.Add(container);
-            }
-        }
-
-        private void DrawHandle(double x, double y, double size, int index)
-        {
-            var rect = new Rectangle
-            {
-                Width = size, Height = size,
-                Fill = Brushes.White, Stroke = Brushes.OrangeRed, StrokeThickness = 1,
-                Tag = "handle_" + index,
-                Cursor = index == 0 || index == 4 ? Cursors.SizeNWSE : index == 2 || index == 6 ? Cursors.SizeNESW : index == 1 || index == 5 ? Cursors.SizeNS : Cursors.SizeWE,
-            };
-            Canvas.SetLeft(rect, x);
-            Canvas.SetTop(rect, y);
-            _canvas.Children.Add(rect);
-        }
 
         // ============================== 标尺 ==============================
 
-        private void DrawRulers()
-        {
-            _hRuler.Children.Clear();
-            _vRuler.Children.Clear();
-            if (_template == null) return;
-
-            double z = _zoom;
-            double offsetX = -_scrollViewer.HorizontalOffset + CanvasPadding;
-            double offsetY = -_scrollViewer.VerticalOffset + CanvasPadding;
-            double mmPx = PixelsPerMm * z;
-            double pageW = _template.Page.Width;
-            double pageH = _template.Page.Height;
-
-            var fg = Brushes.DimGray;
-            var pen = new SolidColorBrush(Color.FromRgb(160, 160, 160));
-
-            // 水平标尺
-            for (int mm = 0; mm <= (int)pageW; mm += 5)
-            {
-                double px = offsetX + mm * mmPx;
-                if (px < 0 || px > _hRuler.ActualWidth) continue;
-                double tickH = mm % 10 == 0 ? RulerSize * 0.6 : RulerSize * 0.3;
-                _hRuler.Children.Add(new Line { X1 = px, Y1 = RulerSize, X2 = px, Y2 = RulerSize - tickH, Stroke = pen, StrokeThickness = 0.5 });
-                if (mm % 10 == 0)
-                {
-                    var txt = new TextBlock { Text = mm.ToString(), FontSize = 8, Foreground = fg };
-                    Canvas.SetLeft(txt, px + 2);
-                    Canvas.SetTop(txt, 1);
-                    _hRuler.Children.Add(txt);
-                }
-            }
-
-            // 垂直标尺
-            for (int mm = 0; mm <= (int)pageH; mm += 5)
-            {
-                double py = offsetY + mm * mmPx;
-                if (py < 0 || py > _vRuler.ActualHeight) continue;
-                double tickW = mm % 10 == 0 ? RulerSize * 0.6 : RulerSize * 0.3;
-                _vRuler.Children.Add(new Line { X1 = RulerSize, Y1 = py, X2 = RulerSize - tickW, Y2 = py, Stroke = pen, StrokeThickness = 0.5 });
-                if (mm % 10 == 0)
-                {
-                    var txt = new TextBlock { Text = mm.ToString(), FontSize = 8, Foreground = fg, RenderTransform = new RotateTransform(-90) };
-                    Canvas.SetLeft(txt, 1);
-                    Canvas.SetTop(txt, py + 12);
-                    _vRuler.Children.Add(txt);
-                }
-            }
-        }
 
         // ============================== 标尺参考线拖拽 ==============================
 
@@ -1665,8 +1018,19 @@ namespace ReportEngine.Designer.Wpf
             _hRuler.CaptureMouse();
             _hRuler.MouseMove += OnRulerGuideMouseMove;
             _hRuler.MouseLeftButtonUp += OnRulerGuideMouseUp;
-            RenderCanvas();
+            _canvasRenderer.Render(BuildCanvasRenderContext(), _selectedElements, _selectedBand);
             _statusText.Text = "垂直参考线: " + mm + "mm (拖出标尺外删除)";
+        }
+
+        private CanvasRenderContext BuildCanvasRenderContext()
+        {
+            if (_template == null)
+                return null!; // 调用方均已判 _template 非空，这里不抛
+            // ShowMargins 原 MainWindow 无 toggle，始终为 true（margin 永远绘制以保留行为）
+            return new CanvasRenderContext(
+                _template, _zoom, _gridSpacingMm, _showGrid,
+                showMargins: true, _gridColor,
+                _vGuides, _hGuides, _snapLinesX, _snapLinesY);
         }
 
         private void OnVRulerMouseDown(object sender, MouseButtonEventArgs e)
@@ -1685,7 +1049,7 @@ namespace ReportEngine.Designer.Wpf
             _vRuler.CaptureMouse();
             _vRuler.MouseMove += OnRulerGuideMouseMove;
             _vRuler.MouseLeftButtonUp += OnRulerGuideMouseUp;
-            RenderCanvas();
+            _canvasRenderer.Render(BuildCanvasRenderContext(), _selectedElements, _selectedBand);
             _statusText.Text = "水平参考线: " + mm + "mm (拖出标尺外删除)";
         }
 
@@ -1709,7 +1073,7 @@ namespace ReportEngine.Designer.Wpf
                 if (_draggingGuideIndex >= 0 && _draggingGuideIndex < _vGuides.Count)
                     _vGuides[_draggingGuideIndex] = mm;
             }
-            RenderCanvas();
+            _canvasRenderer.Render(BuildCanvasRenderContext(), _selectedElements, _selectedBand);
         }
 
         private void OnRulerGuideMouseUp(object sender, MouseButtonEventArgs e)
@@ -1734,7 +1098,7 @@ namespace ReportEngine.Designer.Wpf
             }
             _draggingGuide = false;
             _draggingGuideIndex = -1;
-            RenderCanvas();
+            _canvasRenderer.Render(BuildCanvasRenderContext(), _selectedElements, _selectedBand);
             _statusText.Text = "参考线: 水平" + _hGuides.Count + "条 垂直" + _vGuides.Count + "条";
         }
 
@@ -1897,7 +1261,7 @@ namespace ReportEngine.Designer.Wpf
                     _selectedElement.X = Math.Round(newX * 2) / 2;
                     _selectedElement.Y = Math.Round(newY * 2) / 2;
                 }
-                RenderCanvas();
+                _canvasRenderer.Render(BuildCanvasRenderContext(), _selectedElements, _selectedBand);
             }
             else if (_dragMode == DragMode.ResizeElement && _selectedElement != null)
             {
@@ -1919,13 +1283,13 @@ namespace ReportEngine.Designer.Wpf
                 _selectedElement.Y = Math.Max(0, Math.Round(newY * 2) / 2);
                 _selectedElement.Width = Math.Max(2, Math.Round(newW * 2) / 2);
                 _selectedElement.Height = Math.Max(2, Math.Round(newH * 2) / 2);
-                RenderCanvas();
+                _canvasRenderer.Render(BuildCanvasRenderContext(), _selectedElements, _selectedBand);
             }
             else if (_dragMode == DragMode.ResizeBandHeight && _selectedBand != null)
             {
                 double dy = (pos.Y - _dragStart.Y) / mmPx;
                 _selectedBand.Height = Math.Max(3, Math.Round((_dragStartH + dy) * 2) / 2);
-                RenderCanvas();
+                _canvasRenderer.Render(BuildCanvasRenderContext(), _selectedElements, _selectedBand);
             }
             else if (_dragMode == DragMode.MarqueeSelect)
             {
@@ -2254,7 +1618,7 @@ namespace ReportEngine.Designer.Wpf
                 // 临时渲染到100%缩放以保证清晰度
                 double oldZoom = _zoom;
                 _zoom = 1.0;
-                RenderCanvas();
+                _canvasRenderer.Render(BuildCanvasRenderContext(), _selectedElements, _selectedBand);
 
                 // 计算画布实际大小
                 double pageW = _template.Page.Width * PixelsPerMm;
@@ -2273,7 +1637,7 @@ namespace ReportEngine.Designer.Wpf
                     encoder.Save(stream);
 
                 _zoom = oldZoom;
-                RenderCanvas();
+                _canvasRenderer.Render(BuildCanvasRenderContext(), _selectedElements, _selectedBand);
                 _statusText.Text = "PNG已导出: " + System.IO.Path.GetFileName(dlg.FileName);
                 MessageBox.Show("PNG 导出完成！\n" + dlg.FileName, "导出成功", MessageBoxButton.OK, MessageBoxImage.Information);
             }
@@ -2730,8 +2094,8 @@ namespace ReportEngine.Designer.Wpf
 
         private void RefreshUI()
         {
-            RenderCanvas();
-            DrawRulers();
+            _canvasRenderer.Render(BuildCanvasRenderContext(), _selectedElements, _selectedBand);
+            _canvasRenderer.RenderRulers(_template!, _zoom);
             UpdateBandTree();
             UpdatePropertyList();
             UpdateTitle();
@@ -2765,7 +2129,7 @@ namespace ReportEngine.Designer.Wpf
         {
             if (_template == null) { _statusText.Text = "就绪"; return; }
             var parts = new List<string>();
-            if (_selectedBand != null) parts.Add(BandTypeName(_selectedBand.Type));
+            if (_selectedBand != null) parts.Add(Name(_selectedBand.Type));
             if (_selectedElements.Count > 1)
                 parts.Add("选中 " + _selectedElements.Count + " 个元素");
             else if (_selectedElement != null)
@@ -2781,7 +2145,7 @@ namespace ReportEngine.Designer.Wpf
             {
                 var node = new TreeViewItem
                 {
-                    Header = BandIcon(band.Type) + " " + BandTypeName(band.Type) + " (" + band.Height + "mm)",
+                    Header = BandIcon(band.Type) + " " + Name(band.Type) + " (" + band.Height + "mm)",
                     Tag = band,
                     Foreground = Brushes.Black,
                     IsExpanded = true,
@@ -2824,7 +2188,7 @@ namespace ReportEngine.Designer.Wpf
             miInsert.Items.Add(MakeMenuItem("图象框", null, () => { _selectedBand = band; InsertElement(NewImage()); }));
             menu.Items.Add(miInsert);
             menu.Items.Add(new Separator());
-            var miDel = new MenuItem { Header = "删除区域 [" + BandTypeName(band.Type) + "]" };
+            var miDel = new MenuItem { Header = "删除区域 [" + Name(band.Type) + "]" };
             miDel.Click += (_, __) => DeleteBand(band);
             menu.Items.Add(miDel);
             return menu;
@@ -2910,7 +2274,7 @@ namespace ReportEngine.Designer.Wpf
             if (_selectedElement != null)
                 _selectedObjLabel.Text = ElementTypeName(_selectedElement);
             else if (_selectedBand != null)
-                _selectedObjLabel.Text = BandTypeName(_selectedBand.Type);
+                _selectedObjLabel.Text = Name(_selectedBand.Type);
             else
                 _selectedObjLabel.Text = "页面";
 
@@ -3074,7 +2438,7 @@ namespace ReportEngine.Designer.Wpf
             {
                 var band = _selectedBand;
                 AddPropSection("设计");
-                AddPropLabel("类型", BandTypeName(band.Type));
+                AddPropLabel("类型", Name(band.Type));
                 AddPropLabel("标识", band.Type.ToString());
 
                 AddPropSection("外观");
@@ -3440,14 +2804,14 @@ namespace ReportEngine.Designer.Wpf
 
             // 颜色预览块 + 点击弹出选色器
             var colorPreview = new Border { Width = 16, Height = 16, CornerRadius = new CornerRadius(2), BorderBrush = Brushes.Gray, BorderThickness = new Thickness(1), Margin = new Thickness(2), Cursor = Cursors.Hand, VerticalAlignment = VerticalAlignment.Center };
-            colorPreview.Background = ParseBrush(value ?? "", Brushes.Transparent);
+            colorPreview.Background = BrushParser.Parse(value ?? "", Brushes.Transparent);
             colorPreview.MouseLeftButtonDown += (_, __) =>
             {
                 var picked = ShowColorPicker(value ?? "");
                 if (picked != null)
                 {
                     tb.Text = picked;
-                    colorPreview.Background = ParseBrush(picked, Brushes.Transparent);
+                    colorPreview.Background = BrushParser.Parse(picked, Brushes.Transparent);
                     onCommit(picked);
                 }
             };
@@ -3476,15 +2840,15 @@ namespace ReportEngine.Designer.Wpf
             var grid2 = new WrapPanel { Margin = new Thickness(0, 0, 0, 12) };
             string? result = null;
             var previewBorder = new Border { Width = 40, Height = 40, CornerRadius = new CornerRadius(4), BorderBrush = Brushes.Gray, BorderThickness = new Thickness(1), Margin = new Thickness(0, 8, 0, 8) };
-            previewBorder.Background = ParseBrush(currentColor, Brushes.White);
+            previewBorder.Background = BrushParser.Parse(currentColor, Brushes.White);
             var hexBox = new TextBox { Text = currentColor, FontSize = 12, Width = 120, Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
-            hexBox.TextChanged += (_, __) => { previewBorder.Background = ParseBrush(hexBox.Text, Brushes.White); };
+            hexBox.TextChanged += (_, __) => { previewBorder.Background = BrushParser.Parse(hexBox.Text, Brushes.White); };
 
             foreach (var c in presetColors)
             {
-                var swatch = new Border { Width = 28, Height = 28, Margin = new Thickness(2), CornerRadius = new CornerRadius(3), Background = ParseBrush(c, Brushes.White), BorderBrush = Brushes.LightGray, BorderThickness = new Thickness(1), Cursor = Cursors.Hand };
+                var swatch = new Border { Width = 28, Height = 28, Margin = new Thickness(2), CornerRadius = new CornerRadius(3), Background = BrushParser.Parse(c, Brushes.White), BorderBrush = Brushes.LightGray, BorderThickness = new Thickness(1), Cursor = Cursors.Hand };
                 var cc = c;
-                swatch.MouseLeftButtonDown += (_, __) => { hexBox.Text = cc; previewBorder.Background = ParseBrush(cc, Brushes.White); };
+                swatch.MouseLeftButtonDown += (_, __) => { hexBox.Text = cc; previewBorder.Background = BrushParser.Parse(cc, Brushes.White); };
                 grid2.Children.Add(swatch);
             }
             stack.Children.Add(new TextBlock { Text = "预设颜色", FontSize = 11, FontWeight = FontWeights.Bold });
@@ -3570,7 +2934,7 @@ namespace ReportEngine.Designer.Wpf
                     if (_template != null)
                         _selectedBand = _template.Bands.FirstOrDefault(b => b.Elements.Contains(el));
                 }
-                RenderCanvas();
+                _canvasRenderer.Render(BuildCanvasRenderContext(), _selectedElements, _selectedBand);
                 UpdatePropertyList();
             }
         }
@@ -3627,7 +2991,7 @@ namespace ReportEngine.Designer.Wpf
             // 删除当前区域
             if (_selectedBand != null)
             {
-                var miDelBand = new MenuItem { Header = "删除区域 [" + BandTypeName(_selectedBand.Type) + "]" };
+                var miDelBand = new MenuItem { Header = "删除区域 [" + Name(_selectedBand.Type) + "]" };
                 var delB = _selectedBand;
                 miDelBand.Click += (_, __) => DeleteBand(delB);
                 menu.Items.Add(miDelBand);
@@ -3661,39 +3025,9 @@ namespace ReportEngine.Designer.Wpf
             }
         }
 
-        private static Brush ParseBrush(string? color, Brush fallback)
-        {
-            if (string.IsNullOrEmpty(color)) return fallback;
-            try
-            {
-                if (color!.StartsWith("#") && color.Length == 7)
-                {
-                    byte r = Convert.ToByte(color.Substring(1, 2), 16);
-                    byte g = Convert.ToByte(color.Substring(3, 2), 16);
-                    byte b = Convert.ToByte(color.Substring(5, 2), 16);
-                    return new SolidColorBrush(Color.FromRgb(r, g, b));
-                }
-            }
-            catch { }
-            return fallback;
-        }
 
         // ============================== 中英文转换 ==============================
 
-        private static string BandTypeName(BandType t)
-        {
-            switch (t)
-            {
-                case BandType.Header: return "页眉";
-                case BandType.Footer: return "页脚";
-                case BandType.Detail: return "明细";
-                case BandType.ReportHeader: return "报表头";
-                case BandType.ReportFooter: return "报表尾";
-                case BandType.GroupHeader: return "分组头";
-                case BandType.GroupFooter: return "分组尾";
-                default: return t.ToString();
-            }
-        }
 
         private static string ElementTypeName(ReportElement el)
         {
@@ -4298,7 +3632,7 @@ namespace ReportEngine.Designer.Wpf
                     // 简单JSON解析: 支持 {"key":"value",...} 格式
                     _previewData = ParseSimpleJson(text);
                     _statusText.Text = "已加载预览数据: " + System.IO.Path.GetFileName(dlg.FileName) + " (" + (_previewData?.Count ?? 0) + " 个字段)";
-                    if (_viewMode == "preview") RenderPreview();
+                    if (_viewMode == "preview") _previewRenderer.Render(_template!, _zoom, _previewData);
                 }
                 catch (Exception ex)
                 {
@@ -4338,11 +3672,6 @@ namespace ReportEngine.Designer.Wpf
             return result;
         }
 
-        private string ResolvePreviewValue(string? fieldName)
-        {
-            if (_previewData == null || string.IsNullOrEmpty(fieldName)) return "[" + (fieldName ?? "") + "]";
-            return _previewData.TryGetValue(fieldName!, out var val) ? val?.ToString() ?? "" : "[" + fieldName + "]";
-        }
 
         /// <summary>快捷键一览对话框</summary>
         private void ShowShortcutsDialog()
@@ -4503,7 +3832,7 @@ namespace ReportEngine.Designer.Wpf
                 if (double.TryParse(tbSpacing.Text, out var d) && d > 0 && d <= 50)
                 {
                     _gridSpacingMm = d;
-                    RenderCanvas();
+                    _canvasRenderer.Render(BuildCanvasRenderContext(), _selectedElements, _selectedBand);
                 }
                 dlg.Close();
             };
