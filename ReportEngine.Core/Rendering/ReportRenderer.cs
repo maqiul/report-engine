@@ -229,9 +229,9 @@ public class ReportRenderer
                 continue;
 
             var dataSourceName = detailBand.DataSource;
-            context.DataSourceName = dataSourceName;
+            context.DataSourceName = dataSourceName!;
 
-            var rows = context.DataSources.TryGetValue(dataSourceName, out var r) ? r : new();
+            var rows = context.DataSources.TryGetValue(dataSourceName!, out var r) ? r : new();
 
             // 多栏打印路径
             if (detailBand.MultiColumn != null && detailBand.MultiColumn.ColumnCount > 1)
@@ -550,8 +550,8 @@ public class ReportRenderer
         {
             if (string.IsNullOrEmpty(detail.DataSource)) continue;
 
-            context.DataSourceName = detail.DataSource;
-            var rows = context.DataSources.TryGetValue(detail.DataSource, out var r) ? r : new();
+            context.DataSourceName = detail.DataSource!;
+            var rows = context.DataSources.TryGetValue(detail.DataSource!, out var r) ? r : new();
 
             for (int i = 0; i < rows.Count; i++)
             {
@@ -639,7 +639,7 @@ public class ReportRenderer
         // 检查可见性条件
         if (!string.IsNullOrEmpty(element.VisibleExpression))
         {
-            var isVisible = _expressionEngine.Evaluate(element.VisibleExpression, context);
+            var isVisible = _expressionEngine.Evaluate(element.VisibleExpression!, context);
             if (!Convert.ToBoolean(isVisible))
                 return null;
         }
