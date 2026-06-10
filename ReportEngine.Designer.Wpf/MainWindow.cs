@@ -21,6 +21,8 @@ using static ReportEngine.Designer.Wpf.UiFactory;
 using static ReportEngine.Designer.Wpf.ElementFactory;
 using static ReportEngine.Designer.Wpf.ElementIcons;
 using static ReportEngine.Designer.Wpf.BandStyle;
+using static ReportEngine.Designer.Wpf.PreviewJsonParser;
+using static ReportEngine.Designer.Wpf.ExportDataBuilder;
 
 namespace ReportEngine.Designer.Wpf
 {
@@ -1560,7 +1562,7 @@ namespace ReportEngine.Designer.Wpf
                 var resolver = new FileSystemTemplateResolver(System.IO.Path.GetDirectoryName(_currentFilePath) ?? ".");
                 var renderer = new ReportRenderer(resolver);
                 // 如果有预览数据，导出时带入
-                var data = BuildExportData();
+                var data = Build(_previewData);
                 var rendered = await renderer.RenderAsync(_template, data);
                 var exporter = new PdfSharpExporter();
                 exporter.ExportToFile(rendered, dlg.FileName);
@@ -1593,7 +1595,7 @@ namespace ReportEngine.Designer.Wpf
                 _statusText.Text = "正在导出Excel...";
                 var resolver = new FileSystemTemplateResolver(System.IO.Path.GetDirectoryName(_currentFilePath) ?? ".");
                 var renderer = new ReportRenderer(resolver);
-                var data = BuildExportData();
+                var data = Build(_previewData);
                 var rendered = await renderer.RenderAsync(_template, data);
                 var exporter = new ClosedXmlExporter();
                 exporter.ExportToFile(rendered, dlg.FileName);
@@ -1674,7 +1676,7 @@ namespace ReportEngine.Designer.Wpf
                 _statusText.Text = "正在批量导出...";
                 var resolver = new FileSystemTemplateResolver(System.IO.Path.GetDirectoryName(_currentFilePath) ?? ".");
                 var renderer = new ReportRenderer(resolver);
-                var data = BuildExportData();
+                var data = Build(_previewData);
                 var rendered = await renderer.RenderAsync(_template, data);
 
                 // 导出PDF
@@ -3630,7 +3632,7 @@ namespace ReportEngine.Designer.Wpf
                 {
                     var text = File.ReadAllText(dlg.FileName);
                     // 简单JSON解析: 支持 {"key":"value",...} 格式
-                    _previewData = ParseSimpleJson(text);
+                    _previewData = Parse(text);
                     _statusText.Text = "已加载预览数据: " + System.IO.Path.GetFileName(dlg.FileName) + " (" + (_previewData?.Count ?? 0) + " 个字段)";
                     if (_viewMode == "preview") _previewRenderer.Render(_template!, _zoom, _previewData);
                 }
@@ -3642,35 +3644,6 @@ namespace ReportEngine.Designer.Wpf
         }
 
         /// <summary>简单JSON解析 (浅层平铺 key-value), 兼容net462用Newtonsoft风格手动解析</summary>
-        private static Dictionary<string, object>? ParseSimpleJson(string json)
-        {
-            json = json.Trim();
-            // 如果是数组，取第一个对象
-            if (json.StartsWith("["))
-            {
-                int depth = 0;
-                int start = -1;
-                for (int i = 0; i < json.Length; i++)
-                {
-                    if (json[i] == '{') { if (depth == 0) start = i; depth++; }
-                    else if (json[i] == '}') { depth--; if (depth == 0 && start >= 0) { json = json.Substring(start, i - start + 1); break; } }
-                }
-            }
-            if (!json.StartsWith("{")) return null;
-            var result = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-            // 简单解析: 用TemplateParser的JSON库(Newtonsoft)
-            try
-            {
-                var parser = new TemplateParser();
-                // 借助 Newtonsoft.Json 解析
-                var dict = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, object>>(json);
-                if (dict != null)
-                    foreach (var kv in dict)
-                        result[kv.Key] = kv.Value ?? "";
-            }
-            catch { }
-            return result;
-        }
 
 
         /// <summary>快捷键一览对话框</summary>
@@ -3797,20 +3770,6 @@ namespace ReportEngine.Designer.Wpf
         }
 
         /// <summary>构建导出数据：如果有预览数据则使用，否则返回空</summary>
-        private Dictionary<string, List<Dictionary<string, object>>> BuildExportData()
-        {
-            var result = new Dictionary<string, List<Dictionary<string, object>>>();
-            if (_previewData != null && _previewData.Count > 0)
-            {
-                // 将预览数据转换为渲染器需要的格式
-                var row = new Dictionary<string, object>();
-                foreach (var kv in _previewData)
-                    row[kv.Key] = kv.Value;
-                // 默认数据源名为"Default"
-                result["Default"] = new List<Dictionary<string, object>> { row };
-            }
-            return result;
-        }
 
         private void ShowGridSettingsDialog()
         {
