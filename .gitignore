@@ -102,3 +102,17 @@ build.log
 # 测试数据 / 临时输出
 *.tmp
 *.bak
+
+# Python（scripts/ 下工具脚本的 __pycache__）
+__pycache__/
+*.pyc
+
+# 本地脚本输出（build_log.txt / test_log.txt / methods.json / slnx_build.txt 等）
+build_log.txt
+test_log.txt
+methods.json
+slnx_build.txt
+
+# 弃用脚本（被 analyze_methods.py / step2a_finish.py 替代，保留仅作教训）
+scripts/rewire_renderers.py
+scripts/strip_render_methods.py
