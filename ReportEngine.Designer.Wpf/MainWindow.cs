@@ -23,6 +23,7 @@ using static ReportEngine.Designer.Wpf.ElementIcons;
 using static ReportEngine.Designer.Wpf.BandStyle;
 using static ReportEngine.Designer.Wpf.PreviewJsonParser;
 using static ReportEngine.Designer.Wpf.ExportDataBuilder;
+using static ReportEngine.Designer.Wpf.EnumCnMap;
 
 namespace ReportEngine.Designer.Wpf
 {
@@ -967,7 +968,6 @@ namespace ReportEngine.Designer.Wpf
 
         // ============================== 画布渲染 ==============================
 
-
         private void SwitchView(string mode, Border tabDesign, Border tabPreview)
         {
             _viewMode = mode;
@@ -992,15 +992,7 @@ namespace ReportEngine.Designer.Wpf
             }
         }
 
-
-
-
-
-
-
-
         // ============================== 标尺 ==============================
-
 
         // ============================== 标尺参考线拖拽 ==============================
 
@@ -3012,72 +3004,7 @@ namespace ReportEngine.Designer.Wpf
             base.OnClosing(e);
         }
 
-        private static Brush GetBandBrush(BandType type)
-        {
-            switch (type)
-            {
-                case BandType.ReportHeader: return new SolidColorBrush(Color.FromArgb(40, 70, 130, 180));
-                case BandType.ReportFooter: return new SolidColorBrush(Color.FromArgb(40, 100, 149, 237));
-                case BandType.Header: return new SolidColorBrush(Color.FromArgb(40, 60, 179, 113));
-                case BandType.Footer: return new SolidColorBrush(Color.FromArgb(40, 144, 238, 144));
-                case BandType.Detail: return new SolidColorBrush(Color.FromArgb(20, 200, 200, 200));
-                case BandType.GroupHeader: return new SolidColorBrush(Color.FromArgb(40, 255, 165, 0));
-                case BandType.GroupFooter: return new SolidColorBrush(Color.FromArgb(40, 255, 215, 0));
-                default: return Brushes.Transparent;
-            }
-        }
-
-
         // ============================== 中英文转换 ==============================
-
-
-        private static string ElementTypeName(ReportElement el)
-        {
-            switch (el)
-            {
-                case TextElement _: return "文本";
-                case LineElement _: return "线条";
-                case ImageElement _: return "图像";
-                case ShapeElement _: return "形状";
-                case SubReportElement _: return "子报表";
-                case BarcodeElement _: return "条码/二维码";
-                case TableElement _: return "表格";
-                case CrossTabElement _: return "交叉表";
-                case ChartElement _: return "图表";
-                default: return el.GetType().Name;
-            }
-        }
-
-        private static string AlignToCN(string v) { switch (v) { case "Left": return "左对齐"; case "Center": return "居中"; case "Right": return "右对齐"; case "Justify": return "两端对齐"; default: return v; } }
-        private static ReportEngine.Core.TextAlignment CNToAlign(string v) { switch (v) { case "居中": return ReportEngine.Core.TextAlignment.Center; case "右对齐": return ReportEngine.Core.TextAlignment.Right; case "两端对齐": return ReportEngine.Core.TextAlignment.Justify; default: return ReportEngine.Core.TextAlignment.Left; } }
-
-        private static string DirToCN(string v) { switch (v) { case "Horizontal": return "水平"; case "Vertical": return "垂直"; case "Diagonal": return "对角线"; default: return v; } }
-        private static LineDirection CNToDir(string v) { switch (v) { case "垂直": return LineDirection.Vertical; case "对角线": return LineDirection.Diagonal; default: return LineDirection.Horizontal; } }
-
-        private static string ShapeToCN(string v) { switch (v) { case "Rectangle": return "矩形"; case "Ellipse": return "椭圆"; case "RoundedRect": return "圆角矩形"; case "Triangle": return "三角形"; default: return v; } }
-        private static ShapeType CNToShape(string v) { switch (v) { case "椭圆": return ShapeType.Ellipse; case "圆角矩形": return ShapeType.RoundedRect; case "三角形": return ShapeType.Triangle; default: return ShapeType.Rectangle; } }
-
-        private static string SizingToCN(string v) { switch (v) { case "Stretch": return "拉伸"; case "FitProportional": return "等比缩放"; case "Clip": return "裁剪"; case "ActualSize": return "原始尺寸"; default: return v; } }
-        private static ImageSizing CNToSizing(string v) { switch (v) { case "拉伸": return ImageSizing.Stretch; case "裁剪": return ImageSizing.Clip; case "原始尺寸": return ImageSizing.ActualSize; default: return ImageSizing.FitProportional; } }
-
-        private static string BoxTypeToCN(TextBoxType t) { switch (t) { case TextBoxType.Field: return "字段框"; case TextBoxType.Summary: return "统计框"; case TextBoxType.SysVar: return "系统变量框"; default: return "静态框"; } }
-
-        private static string GetTextElLabel(TextElement t)
-        {
-            switch (t.BoxType)
-            {
-                case TextBoxType.Field: return t.DataField ?? "";
-                case TextBoxType.Summary: return t.SummaryFunction + "(" + (t.SummaryField ?? "") + ")";
-                case TextBoxType.SysVar: return t.SystemVariable ?? "";
-                default: var s = t.Text ?? ""; return s.Length > 12 ? s.Substring(0, 12) + "…" : s;
-            }
-        }
-
-        private static string BcFmtToCN(string v) { return v == "QRCode" ? "二维码(QR)" : v; }
-        private static BarcodeFormat CNToBcFmt(string v) { switch (v) { case "二维码(QR)": return BarcodeFormat.QRCode; default: if (Enum.TryParse<BarcodeFormat>(v, out var f)) return f; return BarcodeFormat.QRCode; } }
-
-        private static string ChartTypeCN(ChartType t) { switch (t) { case ChartType.Bar: return "柱状图"; case ChartType.Line: return "折线图"; case ChartType.Pie: return "饼图"; case ChartType.Area: return "面积图"; case ChartType.Scatter: return "散点图"; default: return t.ToString(); } }
-        private static ChartType CNToChartType(string v) { switch (v) { case "折线图": return ChartType.Line; case "饼图": return ChartType.Pie; case "面积图": return ChartType.Area; case "散点图": return ChartType.Scatter; default: return ChartType.Bar; } }
 
         // ============================== 页面设置弹窗 ==============================
 
@@ -3644,7 +3571,6 @@ namespace ReportEngine.Designer.Wpf
         }
 
         /// <summary>简单JSON解析 (浅层平铺 key-value), 兼容net462用Newtonsoft风格手动解析</summary>
-
 
         /// <summary>快捷键一览对话框</summary>
         private void ShowShortcutsDialog()
