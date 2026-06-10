@@ -17,6 +17,9 @@ using ReportEngine.Core.Rendering;
 using ReportEngine.Core.SubReports;
 using ReportEngine.Export.Pdf;
 using ReportEngine.Export.Excel;
+using static ReportEngine.Designer.Wpf.UiFactory;
+using static ReportEngine.Designer.Wpf.ElementFactory;
+using static ReportEngine.Designer.Wpf.ElementIcons;
 
 namespace ReportEngine.Designer.Wpf
 {
@@ -298,41 +301,6 @@ namespace ReportEngine.Designer.Wpf
             return tb;
         }
 
-        private static Button MakeToolBtn(string text, Action onClick)
-        {
-            var btn = new Button
-            {
-                Content = text,
-                Padding = new Thickness(6, 3, 6, 3),
-                Background = Brushes.Transparent,
-                Foreground = Brushes.Black,
-                BorderThickness = new Thickness(0),
-                Cursor = Cursors.Hand,
-                FontSize = 12,
-            };
-            btn.Click += (_, __) => onClick();
-            
-            // 添加禁用状态样式：置灰
-            btn.IsEnabledChanged += (s, e) =>
-            {
-                var b = (Button)s;
-                if (!b.IsEnabled)
-                {
-                    b.Foreground = Brushes.Gray;
-                    b.Opacity = 0.5;
-                    b.Cursor = Cursors.Arrow;
-                }
-                else
-                {
-                    b.Foreground = Brushes.Black;
-                    b.Opacity = 1.0;
-                    b.Cursor = Cursors.Hand;
-                }
-            };
-            
-            return btn;
-        }
-
         private Border BuildStatusBar()
         {
             var outer = new DockPanel { Height = 26 };
@@ -375,22 +343,6 @@ namespace ReportEngine.Designer.Wpf
             return new Border { Child = outer };
         }
 
-        private static Border MakeStatusTab(string text, bool active, Action? onClick = null)
-        {
-            var border = new Border
-            {
-                Padding = new Thickness(10, 3, 10, 3),
-                Margin = new Thickness(0, 0, 1, 0),
-                Background = active ? Brushes.White : new SolidColorBrush(Color.FromRgb(220, 220, 220)),
-                BorderBrush = new SolidColorBrush(Color.FromRgb(190, 190, 190)),
-                BorderThickness = new Thickness(1, 1, 1, 0),
-                Cursor = Cursors.Hand,
-                Child = new TextBlock { Text = text, FontSize = 11, Foreground = Brushes.Black },
-            };
-            if (onClick != null) border.MouseLeftButtonDown += (_, __) => onClick();
-            return border;
-        }
-
         private ToolBarTray BuildFontToolBar()
         {
             var tray = new ToolBarTray { Background = new SolidColorBrush(Color.FromRgb(245, 245, 245)) };
@@ -423,16 +375,6 @@ namespace ReportEngine.Designer.Wpf
 
             tray.ToolBars.Add(tb);
             return tray;
-        }
-
-        private static Button MakeFmtBtn(string text, FontWeight weight, Action onClick, bool italic = false, bool underline = false)
-        {
-            var tb = new TextBlock { Text = text, FontWeight = weight, FontSize = 13 };
-            if (italic) tb.FontStyle = FontStyles.Italic;
-            if (underline) tb.TextDecorations = TextDecorations.Underline;
-            var btn = new Button { Content = tb, Padding = new Thickness(6, 2, 6, 2), Background = Brushes.Transparent, BorderThickness = new Thickness(0), Cursor = Cursors.Hand, MinWidth = 28 };
-            btn.Click += (_, __) => onClick();
-            return btn;
         }
 
         private void ApplyFontFamily()
@@ -711,33 +653,6 @@ namespace ReportEngine.Designer.Wpf
             return panel;
         }
 
-        private static void AddToolboxBtn(StackPanel sp, string text, Action onClick, string? dragType = null)
-        {
-            var btn = new Button
-            {
-                Content = text,
-                HorizontalContentAlignment = HorizontalAlignment.Left,
-                Padding = new Thickness(8, 4, 8, 4),
-                Margin = new Thickness(0, 1, 0, 1),
-                Background = new SolidColorBrush(Color.FromRgb(225, 225, 225)),
-                Foreground = Brushes.Black,
-                BorderThickness = new Thickness(1),
-                BorderBrush = new SolidColorBrush(Color.FromRgb(200, 200, 200)),
-                Cursor = Cursors.Hand,
-            };
-            btn.Click += (_, __) => onClick();
-            if (dragType != null)
-            {
-                btn.PreviewMouseLeftButtonDown += (s, e) =>
-                {
-                    var data = new DataObject();
-                    data.SetData("ElementType", dragType);
-                    DragDrop.DoDragDrop(btn, data, DragDropEffects.Copy);
-                };
-            }
-            sp.Children.Add(btn);
-        }
-
         private Grid BuildCenterPanel()
         {
             var grid = new Grid();
@@ -843,22 +758,6 @@ namespace ReportEngine.Designer.Wpf
             grid.Children.Add(propPanel);
 
             return grid;
-        }
-
-        private static Button MakeSmallIconBtn(string icon, string tooltip)
-        {
-            return new Button
-            {
-                Content = new TextBlock { Text = icon, FontSize = 12 },
-                Width = 22, Height = 20,
-                Padding = new Thickness(0),
-                Background = Brushes.Transparent,
-                BorderThickness = new Thickness(1),
-                BorderBrush = new SolidColorBrush(Color.FromRgb(200, 200, 200)),
-                Margin = new Thickness(1, 0, 1, 0),
-                Cursor = Cursors.Hand,
-                ToolTip = tooltip,
-            };
         }
 
         private TextBlock _selectedObjLabel = null!;
@@ -976,14 +875,6 @@ namespace ReportEngine.Designer.Wpf
             menu.Items.Add(help);
 
             return menu;
-        }
-
-        private static MenuItem MakeMenuItem(string header, string? gesture, Action onClick)
-        {
-            var mi = new MenuItem { Header = header };
-            if (gesture != null) mi.InputGestureText = gesture;
-            mi.Click += (_, __) => onClick();
-            return mi;
         }
 
         private void SetupKeyBindings()
@@ -1703,17 +1594,6 @@ namespace ReportEngine.Designer.Wpf
             Canvas.SetLeft(rect, x);
             Canvas.SetTop(rect, y);
             _canvas.Children.Add(rect);
-        }
-
-        private static Border MakeElementBorder(double w, double h, Brush borderBrush, Color bgColor, string text, double fontSize)
-        {
-            return new Border
-            {
-                Width = w, Height = h,
-                BorderBrush = borderBrush, BorderThickness = new Thickness(1),
-                Background = new SolidColorBrush(bgColor),
-                Child = new TextBlock { Text = text, FontSize = Math.Max(6, fontSize), Foreground = borderBrush, Margin = new Thickness(2), TextTrimming = TextTrimming.CharacterEllipsis },
-            };
         }
 
         // ============================== 标尺 ==============================
@@ -2846,25 +2726,6 @@ namespace ReportEngine.Designer.Wpf
 
         // ============================== 元素工厂 ==============================
 
-        private static BorderDef EnsureBorder(ReportElement el)
-        {
-            if (el.Border == null) el.Border = new BorderDef();
-            return el.Border;
-        }
-
-        private static TextElement NewText() => new TextElement { X = 5, Y = 2, Width = 40, Height = 6, Text = "文本" };
-        private static TextElement NewFieldBox() => new TextElement { X = 5, Y = 2, Width = 40, Height = 6, DataField = "FieldName" };
-        private static TextElement NewSummaryBox() => new TextElement { X = 5, Y = 2, Width = 40, Height = 6, SummaryFunction = "Sum", SummaryField = "Amount" };
-        private static TextElement NewSysVarBox() => new TextElement { X = 5, Y = 2, Width = 40, Height = 6, SystemVariable = "PageNumber" };
-        private static LineElement NewLine() => new LineElement { X = 5, Y = 2, Width = 50, Height = 1 };
-        private static ImageElement NewImage() => new ImageElement { X = 5, Y = 2, Width = 30, Height = 20 };
-        private static ShapeElement NewShape() => new ShapeElement { X = 5, Y = 2, Width = 30, Height = 15 };
-        private static SubReportElement NewSubReport() => new SubReportElement { X = 5, Y = 2, Width = 60, Height = 30 };
-        private static BarcodeElement NewBarcode() => new BarcodeElement { X = 5, Y = 2, Width = 25, Height = 25 };
-        private static TableElement NewTable() => new TableElement { X = 5, Y = 2, Width = 80, Height = 30 };
-        private static CrossTabElement NewCrossTab() => new CrossTabElement { X = 5, Y = 2, Width = 80, Height = 40 };
-        private static ChartElement NewChart() => new ChartElement { X = 5, Y = 2, Width = 60, Height = 40, Title = "图表", ChartType = ChartType.Bar, CategoryField = "Category", Series = { new ChartSeries { Name = "系列1", ValueField = "Value" } } };
-
         // ============================== 刷新 ==============================
 
         private void RefreshUI()
@@ -3021,37 +2882,6 @@ namespace ReportEngine.Designer.Wpf
             sp.Children.Add(btnOk);
             dlg.Content = sp;
             dlg.ShowDialog();
-        }
-
-        private static string BandIcon(BandType t)
-        {
-            switch (t)
-            {
-                case BandType.Header: return "📃";
-                case BandType.Footer: return "📃";
-                case BandType.Detail: return "📊";
-                case BandType.ReportHeader: return "📘";
-                case BandType.ReportFooter: return "📘";
-                case BandType.GroupHeader: return "📁";
-                case BandType.GroupFooter: return "📁";
-                default: return "□";
-            }
-        }
-
-        private static string ElementIcon(ReportElement el)
-        {
-            switch (el)
-            {
-                case TextElement _: return "🅰";
-                case LineElement _: return "—";
-                case ImageElement _: return "🖼";
-                case ShapeElement _: return "□";
-                case SubReportElement _: return "📎";
-                case BarcodeElement _: return "▓";
-                case TableElement _: return "≡";
-                case CrossTabElement _: return "⊞";
-                default: return "●";
-            }
         }
 
         private int _propRowIndex;
