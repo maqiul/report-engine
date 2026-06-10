@@ -4,7 +4,7 @@
 
 ![status](https://img.shields.io/badge/status-alpha-orange)
 ![.net](https://img.shields.io/badge/.NET-net462%20%7C%20netstandard2.0%20%7C%20net8.0-blue)
-![license](https://img.shields.io/badge/license-TBD-lightgrey)
+![license](https://img.shields.io/badge/license-MIT-blue)
 
 ---
 
@@ -19,6 +19,12 @@
   - Excel —— 基于 [ClosedXML](https://github.com/ClosedXML/ClosedXML)
   - PDF —— 基于 [PdfSharpCore](https://github.com/ststeiger/PdfSharpCore)
 - **条码/二维码** —— 基于 [ZXing.Net](https://github.com/micjahn/ZXing.Net)
+
+---
+
+## 📄 许可证
+
+本项目基于 [MIT License](./LICENSE) 开源。
 
 ---
 
@@ -161,12 +167,6 @@ exporter.Export(template, orders, "output.xlsx");
 2. WPF 设计器的属性面板与拖拽画布
 3. 文档：模板字段参考、API 参考、最佳实践
 4. 多语言资源与 .editorconfig（统一 UTF-8）
-
----
-
-## 📄 许可证
-
-待定（建议 MIT 或 Apache-2.0）。
 
 ---
 

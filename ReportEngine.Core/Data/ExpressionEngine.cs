@@ -202,8 +202,9 @@ public class ExpressionEngine
         };
     }
 
-    private static decimal ConvertToDecimal(object value) => value switch
+    private static decimal ConvertToDecimal(object? value) => value switch
     {
+        null => 0m,
         decimal d => d,
         double db => (decimal)db,
         int i => i,
@@ -212,8 +213,9 @@ public class ExpressionEngine
         _ => decimal.TryParse(value.ToString(), out var r) ? r : 0m
     };
 
-    private static double ConvertToDouble(object value) => value switch
+    private static double ConvertToDouble(object? value) => value switch
     {
+        null => 0,
         double d => d,
         decimal dc => (double)dc,
         int i => i,
