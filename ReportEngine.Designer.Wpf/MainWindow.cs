@@ -1831,44 +1831,12 @@ namespace ReportEngine.Designer.Wpf
         private void AlignElements(string mode)
         {
             var targets = _selectedElements.Count > 1 ? _selectedElements : new List<ReportElement>();
-            if (targets.Count < 2) { _statusText.Text = "请选中多个元素后再对齐"; return; }
-            PushUndo();
-            var first = targets[0];
-            switch (mode)
+            if (!ElementAligner.Align(targets, mode))
             {
-                case "left":
-                    double minX = targets.Min(e => e.X);
-                    foreach (var el in targets) el.X = minX;
-                    break;
-                case "right":
-                    double maxR = targets.Max(e => e.X + e.Width);
-                    foreach (var el in targets) el.X = maxR - el.Width;
-                    break;
-                case "top":
-                    double minY = targets.Min(e => e.Y);
-                    foreach (var el in targets) el.Y = minY;
-                    break;
-                case "bottom":
-                    double maxB = targets.Max(e => e.Y + e.Height);
-                    foreach (var el in targets) el.Y = maxB - el.Height;
-                    break;
-                case "hcenter":
-                    double avgCX = targets.Average(e => e.X + e.Width / 2);
-                    foreach (var el in targets) el.X = avgCX - el.Width / 2;
-                    break;
-                case "vcenter":
-                    double avgCY = targets.Average(e => e.Y + e.Height / 2);
-                    foreach (var el in targets) el.Y = avgCY - el.Height / 2;
-                    break;
-                case "samewidth":
-                    double w = first.Width;
-                    foreach (var el in targets) el.Width = w;
-                    break;
-                case "sameheight":
-                    double h = first.Height;
-                    foreach (var el in targets) el.Height = h;
-                    break;
+                _statusText.Text = "请选中多个元素后再对齐";
+                return;
             }
+            PushUndo();
             MarkDirty();
             RefreshUI();
         }
