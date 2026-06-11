@@ -1250,7 +1250,10 @@ namespace ReportEngine.Designer.Wpf
                     double newY = Math.Max(0, _dragStartY + dy);
                     if (_snapEnabled && _selectedBand != null)
                     {
-                        SnapPosition(ref newX, ref newY, _selectedElement.Width, _selectedElement.Height, _selectedBand);
+                        SnapHelper.Snap(ref newX, ref newY, _selectedElement.Width, _selectedElement.Height, _selectedBand,
+                            excludedElements: new[] { _selectedElement }.Concat(_selectedElements).Distinct(),
+                            vGuides: _vGuides, hGuides: _hGuides, snapThresholdMm: SnapThresholdMm,
+                            snapLinesX: _snapLinesX, snapLinesY: _snapLinesY);
                     }
                     _selectedElement.X = Math.Round(newX * 2) / 2;
                     _selectedElement.Y = Math.Round(newY * 2) / 2;
@@ -1347,74 +1350,6 @@ namespace ReportEngine.Designer.Wpf
                 _dragMode = DragMode.None;
                 MarkDirty();
                 RefreshUI();
-            }
-        }
-
-        /// <summary>吸附对齐：检查当前元素边缘/中线是否接近其他元素边缘/中线或参考线</summary>
-        private void SnapPosition(ref double x, ref double y, double w, double h, Band band)
-        {
-            // 收集吸附线: 其他元素的边缘和中线
-            var xSnaps = new List<double>();
-            var ySnaps = new List<double>();
-
-            foreach (var other in band.Elements)
-            {
-                if (other == _selectedElement) continue;
-                if (_selectedElements.Contains(other)) continue;
-                xSnaps.Add(other.X);                    // 左边
-                xSnaps.Add(other.X + other.Width / 2);  // 中线
-                xSnaps.Add(other.X + other.Width);      // 右边
-                ySnaps.Add(other.Y);
-                ySnaps.Add(other.Y + other.Height / 2);
-                ySnaps.Add(other.Y + other.Height);
-            }
-
-            // 加入参考线
-            foreach (var g in _vGuides) xSnaps.Add(g);
-            foreach (var g in _hGuides) ySnaps.Add(g);
-
-            // 当前元素的3个吸附点
-            double[] myXs = { x, x + w / 2, x + w };
-            double[] myYs = { y, y + h / 2, y + h };
-
-            double bestDx = double.MaxValue;
-            double snapX = x;
-            foreach (var sx in xSnaps)
-            {
-                foreach (var mx in myXs)
-                {
-                    double d = Math.Abs(mx - sx);
-                    if (d < SnapThresholdMm && d < Math.Abs(bestDx))
-                    {
-                        bestDx = mx - sx;
-                        snapX = sx;
-                    }
-                }
-            }
-            if (bestDx != double.MaxValue)
-            {
-                x -= bestDx;
-                _snapLinesX.Add(snapX);
-            }
-
-            double bestDy = double.MaxValue;
-            double snapY = y;
-            foreach (var sy in ySnaps)
-            {
-                foreach (var my in myYs)
-                {
-                    double d = Math.Abs(my - sy);
-                    if (d < SnapThresholdMm && d < Math.Abs(bestDy))
-                    {
-                        bestDy = my - sy;
-                        snapY = sy;
-                    }
-                }
-            }
-            if (bestDy != double.MaxValue)
-            {
-                y -= bestDy;
-                _snapLinesY.Add(snapY);
             }
         }
 
