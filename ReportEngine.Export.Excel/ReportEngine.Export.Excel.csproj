@@ -6,11 +6,22 @@
     <LangVersion>latest</LangVersion>
     <PackageId>ReportEngine.Export.Excel</PackageId>
     <Version>0.3.0-alpha</Version>
+    <Authors>maqiul</Authors>
     <Description>基于 ClosedXML 的多目标 Excel 导出器（net462/netstandard2.0/net8）</Description>
+    <PackageTags>report-engine;excel;export</PackageTags>
+    <PackageProjectUrl>https://github.com/maqiul/report-engine</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/maqiul/report-engine</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\ReportEngine.Core\ReportEngine.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\README.md" Pack="true" PackagePath="" />
   </ItemGroup>
 
   <ItemGroup>
