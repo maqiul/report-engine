@@ -1132,7 +1132,7 @@ namespace ReportEngine.Designer.Wpf
                 return;
             }
 
-            HitTest(pos, out var band, out var element);
+            var (band, element) = HitTester.Hit(pos, _template, _zoom, CanvasPadding, PixelsPerMm);
 
             // 格式刷模式：点击元素应用格式
             if (element != null && _formatPainterActive)
@@ -1195,7 +1195,7 @@ namespace ReportEngine.Designer.Wpf
         {
             if (_template == null) return;
             var pos = e.GetPosition(_canvas);
-            HitTest(pos, out _, out var element);
+            var (_, element) = HitTester.Hit(pos, _template, _zoom, CanvasPadding, PixelsPerMm);
             if (element is TextElement txt)
             {
                 // 双击文本元素：弹出编辑框
@@ -1362,41 +1362,6 @@ namespace ReportEngine.Designer.Wpf
             }
         }
 
-        private void HitTest(Point pos, out Band? hitBand, out ReportElement? hitElement)
-        {
-            hitBand = null;
-            hitElement = null;
-            if (_template == null) return;
-            double z = _zoom;
-            double mmPx = PixelsPerMm * z;
-            double currentY = CanvasPadding;
-            foreach (var band in _template.Bands)
-            {
-                double bandH = band.Height * mmPx;
-                double bandTop = currentY;
-                double bandBot = currentY + bandH;
-                if (pos.Y >= bandTop && pos.Y <= bandBot)
-                {
-                    hitBand = band;
-                    // 反序遍历，上层元素优先
-                    for (int i = band.Elements.Count - 1; i >= 0; i--)
-                    {
-                        var el = band.Elements[i];
-                        double ex = CanvasPadding + el.X * mmPx;
-                        double ey = bandTop + el.Y * mmPx;
-                        double ew = el.Width * mmPx;
-                        double eh = el.Height * mmPx;
-                        if (pos.X >= ex && pos.X <= ex + ew && pos.Y >= ey && pos.Y <= ey + eh)
-                        {
-                            hitElement = el;
-                            return;
-                        }
-                    }
-                    return;
-                }
-                currentY += bandH;
-            }
-        }
 
         // ============================== 文件操作 ==============================
 
@@ -2642,7 +2607,7 @@ namespace ReportEngine.Designer.Wpf
         {
             if (_template == null) return;
             var pos = e.GetPosition(_canvas);
-            HitTest(pos, out var band, out var element);
+            var (band, element) = HitTester.Hit(pos, _template, _zoom, CanvasPadding, PixelsPerMm);
 
             if (element != null) { _selectedElement = element; _selectedBand = band; RefreshUI(); }
             else if (band != null) { _selectedElement = null; _selectedBand = band; RefreshUI(); }
