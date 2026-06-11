@@ -174,7 +174,7 @@ namespace ReportEngine.Designer.Wpf
             _zoomLabel = new TextBlock { Text = "100%", Foreground = Brushes.White, VerticalAlignment = VerticalAlignment.Center, MinWidth = 40 };
             _posLabel = new TextBlock { Text = "", Foreground = Brushes.White, VerticalAlignment = VerticalAlignment.Center, MinWidth = 120 };
             _zoomSlider = new Slider { Minimum = 25, Maximum = 400, Value = 100, Width = 120, VerticalAlignment = VerticalAlignment.Center };
-            _zoomSlider.ValueChanged += (_, __) => { _zoom = _zoomSlider.Value / 100.0; _zoomLabel.Text = (int)_zoomSlider.Value + "%"; _canvasRenderer.Render(BuildCanvasRenderContext(), _selectedElements, _selectedBand); _canvasRenderer.RenderRulers(_template!, _zoom); };
+            _zoomSlider.ValueChanged += (_, __) => { _zoom = _zoomSlider.Value / 100.0; _zoomLabel.Text = (int)_zoomSlider.Value + "%"; _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand); _canvasRenderer.RenderRulers(_template!, _zoom); };
 
             BuildLayout();
             ApplyScrollBarStyle();
@@ -850,12 +850,12 @@ namespace ReportEngine.Designer.Wpf
             view.Items.Add(MakeMenuItem("100%", null, () => { _zoomSlider.Value = 100; }));
             view.Items.Add(new Separator());
             var gridItem = new MenuItem { Header = "显示网格线(_G)", IsCheckable = true, IsChecked = _showGrid };
-            gridItem.Click += (_, __) => { _showGrid = gridItem.IsChecked; _canvasRenderer.Render(BuildCanvasRenderContext(), _selectedElements, _selectedBand); };
+            gridItem.Click += (_, __) => { _showGrid = gridItem.IsChecked; _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand); };
             view.Items.Add(gridItem);
             view.Items.Add(MakeMenuItem("网格设置...", null, ShowGridSettingsDialog));
             view.Items.Add(new Separator());
             var miClearGuides = new MenuItem { Header = "清除所有参考线" };
-            miClearGuides.Click += (_, __) => { _hGuides.Clear(); _vGuides.Clear(); _canvasRenderer.Render(BuildCanvasRenderContext(), _selectedElements, _selectedBand); _statusText.Text = "已清除所有参考线"; };
+            miClearGuides.Click += (_, __) => { _hGuides.Clear(); _vGuides.Clear(); _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand); _statusText.Text = "已清除所有参考线"; };
             view.Items.Add(miClearGuides);
             view.Items.Add(new Separator());
             var snapItem = new MenuItem { Header = "吸附对齐(_S)", IsCheckable = true, IsChecked = _snapEnabled };
@@ -1012,19 +1012,8 @@ namespace ReportEngine.Designer.Wpf
             _hRuler.CaptureMouse();
             _hRuler.MouseMove += OnRulerGuideMouseMove;
             _hRuler.MouseLeftButtonUp += OnRulerGuideMouseUp;
-            _canvasRenderer.Render(BuildCanvasRenderContext(), _selectedElements, _selectedBand);
+            _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand);
             _statusText.Text = "垂直参考线: " + mm + "mm (拖出标尺外删除)";
-        }
-
-        private CanvasRenderContext BuildCanvasRenderContext()
-        {
-            if (_template == null)
-                return null!; // 调用方均已判 _template 非空，这里不抛
-            // ShowMargins 原 MainWindow 无 toggle，始终为 true（margin 永远绘制以保留行为）
-            return new CanvasRenderContext(
-                _template, _zoom, _gridSpacingMm, _showGrid,
-                showMargins: true, _gridColor,
-                _vGuides, _hGuides, _snapLinesX, _snapLinesY);
         }
 
         private void OnVRulerMouseDown(object sender, MouseButtonEventArgs e)
@@ -1043,7 +1032,7 @@ namespace ReportEngine.Designer.Wpf
             _vRuler.CaptureMouse();
             _vRuler.MouseMove += OnRulerGuideMouseMove;
             _vRuler.MouseLeftButtonUp += OnRulerGuideMouseUp;
-            _canvasRenderer.Render(BuildCanvasRenderContext(), _selectedElements, _selectedBand);
+            _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand);
             _statusText.Text = "水平参考线: " + mm + "mm (拖出标尺外删除)";
         }
 
@@ -1067,7 +1056,7 @@ namespace ReportEngine.Designer.Wpf
                 if (_draggingGuideIndex >= 0 && _draggingGuideIndex < _vGuides.Count)
                     _vGuides[_draggingGuideIndex] = mm;
             }
-            _canvasRenderer.Render(BuildCanvasRenderContext(), _selectedElements, _selectedBand);
+            _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand);
         }
 
         private void OnRulerGuideMouseUp(object sender, MouseButtonEventArgs e)
@@ -1092,7 +1081,7 @@ namespace ReportEngine.Designer.Wpf
             }
             _draggingGuide = false;
             _draggingGuideIndex = -1;
-            _canvasRenderer.Render(BuildCanvasRenderContext(), _selectedElements, _selectedBand);
+            _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand);
             _statusText.Text = "参考线: 水平" + _hGuides.Count + "条 垂直" + _vGuides.Count + "条";
         }
 
@@ -1258,7 +1247,7 @@ namespace ReportEngine.Designer.Wpf
                     _selectedElement.X = Math.Round(newX * 2) / 2;
                     _selectedElement.Y = Math.Round(newY * 2) / 2;
                 }
-                _canvasRenderer.Render(BuildCanvasRenderContext(), _selectedElements, _selectedBand);
+                _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand);
             }
             else if (_dragMode == DragMode.ResizeElement && _selectedElement != null)
             {
@@ -1280,13 +1269,13 @@ namespace ReportEngine.Designer.Wpf
                 _selectedElement.Y = Math.Max(0, Math.Round(newY * 2) / 2);
                 _selectedElement.Width = Math.Max(2, Math.Round(newW * 2) / 2);
                 _selectedElement.Height = Math.Max(2, Math.Round(newH * 2) / 2);
-                _canvasRenderer.Render(BuildCanvasRenderContext(), _selectedElements, _selectedBand);
+                _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand);
             }
             else if (_dragMode == DragMode.ResizeBandHeight && _selectedBand != null)
             {
                 double dy = (pos.Y - _dragStart.Y) / mmPx;
                 _selectedBand.Height = Math.Max(3, Math.Round((_dragStartH + dy) * 2) / 2);
-                _canvasRenderer.Render(BuildCanvasRenderContext(), _selectedElements, _selectedBand);
+                _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand);
             }
             else if (_dragMode == DragMode.MarqueeSelect)
             {
@@ -1512,7 +1501,7 @@ namespace ReportEngine.Designer.Wpf
                 // 临时渲染到100%缩放以保证清晰度
                 double oldZoom = _zoom;
                 _zoom = 1.0;
-                _canvasRenderer.Render(BuildCanvasRenderContext(), _selectedElements, _selectedBand);
+                _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand);
 
                 // 计算画布实际大小
                 double pageW = _template.Page.Width * PixelsPerMm;
@@ -1531,7 +1520,7 @@ namespace ReportEngine.Designer.Wpf
                     encoder.Save(stream);
 
                 _zoom = oldZoom;
-                _canvasRenderer.Render(BuildCanvasRenderContext(), _selectedElements, _selectedBand);
+                _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand);
                 _statusText.Text = "PNG已导出: " + System.IO.Path.GetFileName(dlg.FileName);
                 MessageBox.Show("PNG 导出完成！\n" + dlg.FileName, "导出成功", MessageBoxButton.OK, MessageBoxImage.Information);
             }
@@ -1988,7 +1977,7 @@ namespace ReportEngine.Designer.Wpf
 
         private void RefreshUI()
         {
-            _canvasRenderer.Render(BuildCanvasRenderContext(), _selectedElements, _selectedBand);
+            _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand);
             _canvasRenderer.RenderRulers(_template!, _zoom);
             UpdateBandTree();
             UpdatePropertyList();
@@ -2598,7 +2587,7 @@ namespace ReportEngine.Designer.Wpf
                     if (_template != null)
                         _selectedBand = _template.Bands.FirstOrDefault(b => b.Elements.Contains(el));
                 }
-                _canvasRenderer.Render(BuildCanvasRenderContext(), _selectedElements, _selectedBand);
+                _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand);
                 UpdatePropertyList();
             }
         }
@@ -2724,7 +2713,7 @@ namespace ReportEngine.Designer.Wpf
                 newSpacing =>
                 {
                     _gridSpacingMm = newSpacing;
-                    _canvasRenderer.Render(BuildCanvasRenderContext(), _selectedElements, _selectedBand);
+                    _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand);
                 });
         }
 
