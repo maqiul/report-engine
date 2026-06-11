@@ -1935,12 +1935,7 @@ namespace ReportEngine.Designer.Wpf
                 foreach (var el in band.Elements)
                 {
                     string icon = ElementIcon(el);
-                    string elLabel;
-                    // 优先显示自定义名称
-                    if (!string.IsNullOrEmpty(el.Name))
-                        elLabel = el.Name!;
-                    else
-                        switch (el) { case TextElement te: elLabel = BoxTypeToCN(te.BoxType) + ": " + GetTextElLabel(te); break; case LineElement _: elLabel = "线段"; break; case ImageElement _: elLabel = "图象框"; break; case ShapeElement _: elLabel = "图形框"; break; case SubReportElement _: elLabel = "子报表"; break; case BarcodeElement _: elLabel = "条码"; break; case TableElement _: elLabel = "表格"; break; case CrossTabElement _: elLabel = "交叉表"; break; default: elLabel = el.GetType().Name; break; }
+                    string elLabel = ElementTreeLabelBuilder.BuildLabel(el);
                     string lockIcon = el.Locked ? " 🔒" : "";
                     var child = new TreeViewItem { Header = icon + " " + elLabel + lockIcon, Tag = el, Foreground = el.Locked ? Brushes.Gray : Brushes.DimGray, HorizontalContentAlignment = HorizontalAlignment.Left, VerticalContentAlignment = VerticalAlignment.Center };
                     // 元素右键菜单
