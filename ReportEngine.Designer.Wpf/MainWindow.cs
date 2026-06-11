@@ -1899,7 +1899,7 @@ namespace ReportEngine.Designer.Wpf
             RefreshUI();
         }
 
-        private void PushUndo()
+        internal void PushUndo()
         {
             if (_template == null) return;
             try
@@ -1952,7 +1952,7 @@ namespace ReportEngine.Designer.Wpf
 
         // ============================== 刷新 ==============================
 
-        private void RefreshUI()
+        internal void RefreshUI()
         {
             _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand);
             _canvasRenderer.RenderRulers(_template!, _zoom);
@@ -2211,165 +2211,7 @@ namespace ReportEngine.Designer.Wpf
                     return;
                 }
 
-                var el = _selectedElement;
-
-                // === 设计 ===
-                ctx.AddSection("设计");
-                ctx.AddLabel("类型", ElementTypeName(el));
-                ctx.AddLabel("标识", el.Id ?? "");
-                ctx.AddEditor(this, "名称", el.Name ?? "", v => { PushUndo(); el.Name = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); RefreshUI(); });
-                ctx.AddBool("可见", el.Visible, v => { PushUndo(); el.Visible = v; MarkDirty(); });
-                ctx.AddBool("锁定", el.Locked, v => { PushUndo(); el.Locked = v; MarkDirty(); RefreshUI(); });
-                ctx.AddEditor(this, "旋转(°)", el.Rotation.ToString(), v => { if (double.TryParse(v, out var d)) { PushUndo(); el.Rotation = d % 360; MarkDirty(); RefreshUI(); } });
-                ctx.AddEditor(this, "透明度", el.Opacity.ToString("F2"), v => { if (double.TryParse(v, out var d)) { PushUndo(); el.Opacity = Math.Max(0, Math.Min(1, d)); MarkDirty(); RefreshUI(); } });
-
-                // === 外观 ===
-                ctx.AddSection("外观");
-                ctx.AddColor(this, "背景色", el.BackgroundColor ?? "", v => { PushUndo(); el.BackgroundColor = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); RefreshUI(); });
-
-                // 边框属性
-                ctx.AddSection("边框");
-                var border = el.Border ?? new BorderDef();
-                ctx.AddEditor(this, "边框宽", border.Width.ToString(), v =>
-                {
-                    if (double.TryParse(v, out var d) && d >= 0) { PushUndo(); EnsureBorder(el).Width = d; MarkDirty(); RefreshUI(); }
-                });
-                ctx.AddColor(this, "边框色", border.Color ?? "#000000", v =>
-                {
-                    PushUndo(); EnsureBorder(el).Color = string.IsNullOrEmpty(v) ? "#000000" : v; MarkDirty(); RefreshUI();
-                });
-                ctx.AddCombo("边框样式", new[] { "Solid", "Dashed", "Dotted", "None" }, border.Style.ToString(), v =>
-                {
-                    PushUndo();
-                    if (Enum.TryParse<BorderStyle>(v, out var bs)) EnsureBorder(el).Style = bs;
-                    MarkDirty(); RefreshUI();
-                });
-                ctx.AddBool("上边框", border.Top, v => { PushUndo(); EnsureBorder(el).Top = v; MarkDirty(); RefreshUI(); });
-                ctx.AddBool("下边框", border.Bottom, v => { PushUndo(); EnsureBorder(el).Bottom = v; MarkDirty(); RefreshUI(); });
-                ctx.AddBool("左边框", border.Left, v => { PushUndo(); EnsureBorder(el).Left = v; MarkDirty(); RefreshUI(); });
-                ctx.AddBool("右边框", border.Right, v => { PushUndo(); EnsureBorder(el).Right = v; MarkDirty(); RefreshUI(); });
-
-                switch (el)
-                {
-                    case TextElement t:
-                        ctx.AddFontRow(this, t);
-                        ctx.AddColor(this, "字体色", t.Font.Color ?? "", v => { PushUndo(); t.Font.Color = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); RefreshUI(); });
-                        ctx.AddCombo("对齐", new[] { "左对齐", "居中", "右对齐", "两端对齐" }, AlignToCN(t.Alignment.ToString()), v => { var a = CNToAlign(v); PushUndo(); t.Alignment = a; MarkDirty(); RefreshUI(); });
-                        break;
-                    case LineElement l:
-                        ctx.AddEditor(this, "线宽", l.LineWidth.ToString(), v => { if (double.TryParse(v, out var d)) { PushUndo(); l.LineWidth = d; MarkDirty(); RefreshUI(); } });
-                        ctx.AddColor(this, "线色", l.LineColor, v => { PushUndo(); l.LineColor = v; MarkDirty(); RefreshUI(); });
-                        break;
-                    case ShapeElement s:
-                        ctx.AddColor(this, "填充色", s.FillColor, v => { PushUndo(); s.FillColor = v; MarkDirty(); RefreshUI(); });
-                        ctx.AddEditor(this, "圆角", s.BorderRadius.ToString(), v => { if (double.TryParse(v, out var d)) { PushUndo(); s.BorderRadius = d; MarkDirty(); RefreshUI(); } });
-                        break;
-                    case BarcodeElement bc:
-                        ctx.AddColor(this, "前景色", bc.ForeColor, v => { PushUndo(); bc.ForeColor = v; MarkDirty(); });
-                        break;
-                    case TableElement tbl:
-                        ctx.AddEditor(this, "边框宽", tbl.BorderWidth.ToString(), v => { if (double.TryParse(v, out var d)) { PushUndo(); tbl.BorderWidth = d; MarkDirty(); } });
-                        ctx.AddColor(this, "边框色", tbl.BorderColor, v => { PushUndo(); tbl.BorderColor = v; MarkDirty(); });
-                        break;
-                }
-
-                // === 位置尺寸 ===
-                ctx.AddEditor(this, "X(mm)", el.X.ToString(), v => { if (double.TryParse(v, out var d)) { PushUndo(); el.X = d; MarkDirty(); RefreshUI(); } });
-                ctx.AddEditor(this, "Y(mm)", el.Y.ToString(), v => { if (double.TryParse(v, out var d)) { PushUndo(); el.Y = d; MarkDirty(); RefreshUI(); } });
-                ctx.AddEditor(this, "宽(mm)", el.Width.ToString(), v => { if (double.TryParse(v, out var d) && d > 0) { PushUndo(); el.Width = d; MarkDirty(); RefreshUI(); } });
-                ctx.AddEditor(this, "高(mm)", el.Height.ToString(), v => { if (double.TryParse(v, out var d) && d > 0) { PushUndo(); el.Height = d; MarkDirty(); RefreshUI(); } });
-
-                // === 行为 ===
-                ctx.AddSection("行为");
-                switch (el)
-                {
-                    case TextElement t:
-                        ctx.AddBool("自动增高", t.CanGrow, v => { PushUndo(); t.CanGrow = v; MarkDirty(); });
-                        break;
-                    case LineElement l:
-                        ctx.AddCombo("方向", new[] { "水平", "垂直", "对角线" }, DirToCN(l.Direction.ToString()), v => { PushUndo(); l.Direction = CNToDir(v); MarkDirty(); RefreshUI(); });
-                        break;
-                    case ShapeElement s:
-                        ctx.AddCombo("形状", new[] { "矩形", "椭圆", "圆角矩形", "三角形" }, ShapeToCN(s.Shape.ToString()), v => { PushUndo(); s.Shape = CNToShape(v); MarkDirty(); RefreshUI(); });
-                        break;
-                    case ImageElement img:
-                        ctx.AddCombo("缩放", new[] { "拉伸", "等比缩放", "裁剪", "原始尺寸" }, SizingToCN(img.Sizing.ToString()), v => { PushUndo(); img.Sizing = CNToSizing(v); MarkDirty(); });
-                        break;
-                    case SubReportElement sr:
-                        ctx.AddBool("每行重复", sr.RepeatPerRow, v => { PushUndo(); sr.RepeatPerRow = v; MarkDirty(); });
-                        break;
-                    case BarcodeElement bc:
-                        ctx.AddCombo("格式", new[] { "Code128", "Code39", "EAN13", "EAN8", "UPC_A", "二维码(QR)", "DataMatrix", "PDF417" }, BcFmtToCN(bc.Format.ToString()), v => { PushUndo(); bc.Format = CNToBcFmt(v); MarkDirty(); RefreshUI(); });
-                        ctx.AddBool("显示文字", bc.ShowText, v => { PushUndo(); bc.ShowText = v; MarkDirty(); });
-                        break;
-                    case TableElement tbl:
-                        ctx.AddEditor(this, "行数", tbl.RowCount.ToString(), v => { if (int.TryParse(v, out var i) && i > 0) { PushUndo(); tbl.RowCount = i; MarkDirty(); RefreshUI(); } });
-                        ctx.AddEditor(this, "列数", tbl.ColCount.ToString(), v => { if (int.TryParse(v, out var i) && i > 0) { PushUndo(); tbl.ColCount = i; MarkDirty(); RefreshUI(); } });
-                        break;
-                    case CrossTabElement ct:
-                        ctx.AddBool("行合计", ct.ShowRowTotal, v => { PushUndo(); ct.ShowRowTotal = v; MarkDirty(); });
-                        ctx.AddBool("列合计", ct.ShowColumnTotal, v => { PushUndo(); ct.ShowColumnTotal = v; MarkDirty(); });
-                        break;
-                    case ChartElement ch:
-                        ctx.AddCombo("图表类型", new[] { "柱状图", "折线图", "饼图", "面积图", "散点图" },
-                            ChartTypeCN(ch.ChartType), v => { PushUndo(); ch.ChartType = CNToChartType(v); MarkDirty(); RefreshUI(); });
-                        break;
-                }
-
-                // === 其它 ===
-                ctx.AddSection("其它");
-                switch (el)
-                {
-                    case TextElement t:
-                        ctx.AddCombo("框类型", new[] { "静态框", "字段框", "统计框", "系统变量框" },
-                            BoxTypeToCN(t.BoxType), v => {
-                                PushUndo();
-                                switch (v) {
-                                    case "字段框": t.DataField = t.DataField ?? "FieldName"; t.SummaryFunction = null; t.SystemVariable = null; break;
-                                    case "统计框": t.SummaryFunction = t.SummaryFunction ?? "Sum"; t.SummaryField = t.SummaryField ?? "Amount"; t.DataField = null; t.SystemVariable = null; break;
-                                    case "系统变量框": t.SystemVariable = t.SystemVariable ?? "PageNumber"; t.DataField = null; t.SummaryFunction = null; break;
-                                    default: t.DataField = null; t.SummaryFunction = null; t.SystemVariable = null; break;
-                                }
-                                MarkDirty(); RefreshUI();
-                            });
-                        if (t.BoxType == TextBoxType.Static)
-                            ctx.AddEditor(this, "文本", t.Text, v => { PushUndo(); t.Text = v; MarkDirty(); RefreshUI(); });
-                        if (t.BoxType == TextBoxType.Field)
-                            ctx.AddExpr(this, "绑定字段", t.DataField ?? "", v => { PushUndo(); t.DataField = v; MarkDirty(); RefreshUI(); });
-                        if (t.BoxType == TextBoxType.Summary)
-                        {
-                            ctx.AddCombo("统计函数", new[] { "Sum", "Count", "Avg", "Max", "Min" },
-                                t.SummaryFunction ?? "Sum", v => { PushUndo(); t.SummaryFunction = v; MarkDirty(); RefreshUI(); });
-                            ctx.AddEditor(this, "统计字段", t.SummaryField ?? "", v => { PushUndo(); t.SummaryField = v; MarkDirty(); RefreshUI(); });
-                        }
-                        if (t.BoxType == TextBoxType.SysVar)
-                            ctx.AddCombo("系统变量", new[] { "PageNumber", "TotalPages", "PrintDate", "PrintTime", "ReportTitle" },
-                                t.SystemVariable ?? "PageNumber", v => { PushUndo(); t.SystemVariable = v; MarkDirty(); RefreshUI(); });
-                        ctx.AddExpr(this, "格式", t.Format ?? "", v => { PushUndo(); t.Format = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); });
-                        ctx.AddExpr(this, "超链接", t.Hyperlink ?? "", v => { PushUndo(); t.Hyperlink = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); });
-                        break;
-                    case ImageElement img:
-                        ctx.AddEditor(this, "图像源", img.Source, v => { PushUndo(); img.Source = v; MarkDirty(); });
-                        break;
-                    case SubReportElement sr:
-                        ctx.AddExpr(this, "模板引用", sr.TemplateRef, v => { PushUndo(); sr.TemplateRef = v; MarkDirty(); RefreshUI(); });
-                        ctx.AddExpr(this, "数据源", sr.DataBinding.Source, v => { PushUndo(); sr.DataBinding.Source = v; MarkDirty(); });
-                        break;
-                    case BarcodeElement bc:
-                        ctx.AddExpr(this, "内容", bc.Value, v => { PushUndo(); bc.Value = v; MarkDirty(); RefreshUI(); });
-                        break;
-                    case CrossTabElement ct:
-                        ctx.AddExpr(this, "数据源", ct.DataSource, v => { PushUndo(); ct.DataSource = v; MarkDirty(); RefreshUI(); });
-                        ctx.AddExpr(this, "行字段", string.Join(",", ct.RowFields), v => { PushUndo(); ct.RowFields = v.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList(); MarkDirty(); });
-                        ctx.AddExpr(this, "列字段", string.Join(",", ct.ColumnFields), v => { PushUndo(); ct.ColumnFields = v.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList(); MarkDirty(); });
-                        ctx.AddEditor(this, "边框宽", ct.BorderWidth.ToString(), v => { if (double.TryParse(v, out var d)) { PushUndo(); ct.BorderWidth = d; MarkDirty(); } });
-                        break;
-                    case ChartElement ch:
-                        ctx.AddExpr(this, "标题", ch.Title ?? "", v => { PushUndo(); ch.Title = v; MarkDirty(); });
-                        ctx.AddExpr(this, "数据源", ch.DataSource, v => { PushUndo(); ch.DataSource = v; MarkDirty(); });
-                        ctx.AddExpr(this, "分类字段", ch.CategoryField, v => { PushUndo(); ch.CategoryField = v; MarkDirty(); });
-                        break;
-                }
+                PropertySectionBuilder.BuildElementProperties(ctx, _selectedElement, this);
             }
         }
 
@@ -2435,7 +2277,7 @@ namespace ReportEngine.Designer.Wpf
             Title = (_dirty ? "* " : "") + name + " - 报表设计器";
         }
 
-        private void MarkDirty()
+        internal void MarkDirty()
         {
             _dirty = true;
             UpdateTitle();
