@@ -2803,40 +2803,8 @@ namespace ReportEngine.Designer.Wpf
         /// <summary>搜索元素对话框</summary>
         private void SearchElement()
         {
-            if (_template == null) return;
-            var dlg = new Window
-            {
-                Title = "搜索元素",
-                Width = 320, Height = 120,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                Owner = this, ResizeMode = ResizeMode.NoResize,
-            };
-            var sp = new StackPanel { Margin = new Thickness(12) };
-            sp.Children.Add(new TextBlock { Text = "搜索名称或ID:", Margin = new Thickness(0, 0, 0, 4), Foreground = Brushes.Black });
-            var tb = new TextBox { Text = "", Margin = new Thickness(0, 0, 0, 8), Foreground = Brushes.Black };
-            sp.Children.Add(tb);
-            var btnOk = new Button { Content = "搜索", Width = 70, Height = 26, HorizontalAlignment = HorizontalAlignment.Right, IsDefault = true };
-            btnOk.Click += (_, __) =>
-            {
-                var keyword = tb.Text.Trim();
-                if (string.IsNullOrEmpty(keyword)) { dlg.Close(); return; }
-                ReportElement? found = null;
-                Band? foundBand = null;
-                foreach (var band in _template.Bands)
-                {
-                    foreach (var el in band.Elements)
-                    {
-                        if ((!string.IsNullOrEmpty(el.Name) && el.Name.Contains(keyword, StringComparison.OrdinalIgnoreCase)) ||
-                            el.Id.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0)
-                        {
-                            found = el;
-                            foundBand = band;
-                            break;
-                        }
-                    }
-                    if (found != null) break;
-                }
-                if (found != null)
+            SearchElementDialog.Show(this, _template,
+                onFound: (found, foundBand) =>
                 {
                     _selectedElement = found;
                     _selectedBand = foundBand;
@@ -2844,16 +2812,8 @@ namespace ReportEngine.Designer.Wpf
                     _selectedElements.Add(found);
                     RefreshUI();
                     _statusText.Text = "已找到: " + (found.Name ?? found.GetType().Name);
-                }
-                else
-                {
-                    _statusText.Text = "未找到匹配的元素";
-                }
-                dlg.Close();
-            };
-            sp.Children.Add(btnOk);
-            dlg.Content = sp;
-            dlg.ShowDialog();
+                },
+                onNotFound: () => _statusText.Text = "未找到匹配的元素");
         }
 
         /// <summary>构建导出数据：如果有预览数据则使用，否则返回空</summary>
