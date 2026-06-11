@@ -1674,21 +1674,7 @@ namespace ReportEngine.Designer.Wpf
             double mmPx = PixelsPerMm * z;
 
             // 确定drop位置对应的Band
-            double bandY = CanvasPadding;
-            Band? targetBand = null;
-            double relY = 0;
-            foreach (var band in _template.Bands)
-            {
-                double bh = band.Height * mmPx;
-                if (pos.Y >= bandY && pos.Y < bandY + bh)
-                {
-                    targetBand = band;
-                    relY = (pos.Y - bandY) / mmPx;
-                    break;
-                }
-                bandY += bh;
-            }
-            if (targetBand == null) targetBand = _template.Bands.LastOrDefault();
+            var (targetBand, relY) = BandHitTester.FindBandAtY(_template, pos.X, pos.Y, _zoom, CanvasPadding, PixelsPerMm);
             if (targetBand == null) return;
 
             double relX = (pos.X - CanvasPadding) / mmPx;
