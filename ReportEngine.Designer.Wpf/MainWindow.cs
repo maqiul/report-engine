@@ -1934,22 +1934,16 @@ namespace ReportEngine.Designer.Wpf
 
         private ContextMenu BuildBandTreeContextMenu(Band band)
         {
-            var menu = new ContextMenu();
-            var miInsert = new MenuItem { Header = "插入元素" };
-            miInsert.Items.Add(MakeMenuItem("静态框", null, () => { _selectedBand = band; InsertElement(NewText()); }));
-            miInsert.Items.Add(MakeMenuItem("字段框", null, () => { _selectedBand = band; InsertElement(NewFieldBox()); }));
-            miInsert.Items.Add(MakeMenuItem("统计框", null, () => { _selectedBand = band; InsertElement(NewSummaryBox()); }));
-            miInsert.Items.Add(MakeMenuItem("系统变量框", null, () => { _selectedBand = band; InsertElement(NewSysVarBox()); }));
-            miInsert.Items.Add(new Separator());
-            miInsert.Items.Add(MakeMenuItem("线段", null, () => { _selectedBand = band; InsertElement(NewLine()); }));
-            miInsert.Items.Add(MakeMenuItem("图形框", null, () => { _selectedBand = band; InsertElement(NewShape()); }));
-            miInsert.Items.Add(MakeMenuItem("图象框", null, () => { _selectedBand = band; InsertElement(NewImage()); }));
-            menu.Items.Add(miInsert);
-            menu.Items.Add(new Separator());
-            var miDel = new MenuItem { Header = "删除区域 [" + Name(band.Type) + "]" };
-            miDel.Click += (_, __) => DeleteBand(band);
-            menu.Items.Add(miDel);
-            return menu;
+            return BandTreeContextMenuBuilder.Build(
+                band,
+                onInsertText: () => { _selectedBand = band; InsertElement(NewText()); },
+                onInsertFieldBox: () => { _selectedBand = band; InsertElement(NewFieldBox()); },
+                onInsertSummaryBox: () => { _selectedBand = band; InsertElement(NewSummaryBox()); },
+                onInsertSysVarBox: () => { _selectedBand = band; InsertElement(NewSysVarBox()); },
+                onInsertLine: () => { _selectedBand = band; InsertElement(NewLine()); },
+                onInsertShape: () => { _selectedBand = band; InsertElement(NewShape()); },
+                onInsertImage: () => { _selectedBand = band; InsertElement(NewImage()); },
+                onDelete: () => DeleteBand(band));
         }
 
         private ContextMenu BuildElementTreeContextMenu(ReportElement el, Band band)
