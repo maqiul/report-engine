@@ -46,6 +46,7 @@ namespace ReportEngine.Designer.Wpf
         private readonly TreeView _bandTree;
         private readonly ScrollViewer _propertyPanel;
         private readonly StackPanel _propertyStack;
+        internal StackPanel PropertyStack => _propertyStack;
         private readonly TextBlock _statusText;
         private readonly TextBlock _zoomLabel;
         private readonly Slider _zoomSlider;
@@ -2146,41 +2147,7 @@ namespace ReportEngine.Designer.Wpf
             // 未选中任何 Band / 元素时显示页面级属性
             if (_selectedBand == null && _selectedElement == null)
             {
-                ctx.AddSection("页面");
-                ctx.AddLabel("纸张", _template.Page.Width + " × " + _template.Page.Height + " mm");
-                ctx.AddLabel("方向", _template.Page.Orientation == "landscape" ? "横向" : "纵向");
-                ctx.AddLabel("边距", "上" + _template.Page.Margin.Top + " 下" + _template.Page.Margin.Bottom + " 左" + _template.Page.Margin.Left + " 右" + _template.Page.Margin.Right);
-                ctx.AddColor(this, "背景色", _template.Page.BackgroundColor ?? "", v => { PushUndo(); _template.Page.BackgroundColor = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); RefreshUI(); });
-                ctx.AddEditor(this, "背景图片", _template.Page.BackgroundImage ?? "", v => { PushUndo(); _template.Page.BackgroundImage = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); RefreshUI(); });
-                ctx.AddEditor(this, "水印文字", _template.Page.Watermark ?? "", v => { PushUndo(); _template.Page.Watermark = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); RefreshUI(); });
-                
-                // 多联打印 - 分组卡片式
-                ctx.AddSection("多联打印");
-                var muInfo = _template.Page.MultiUp;
-                if (muInfo != null)
-                {
-                    _propertyStack.Children.Add(PropertyCardFactory.CreateMultiUpEnabledCard(
-                        muInfo, _template,
-                        onEdit: ShowPageSetupDialog,
-                        onDirectionToggled: newDir =>
-                        {
-                            PushUndo();
-                            muInfo.Direction = newDir;
-                            MarkDirty();
-                            RefreshUI();
-                        }));
-                }
-                else
-                {
-                    _propertyStack.Children.Add(PropertyCardFactory.CreateMultiUpDisabledCard(
-                        onEnable: ShowPageSetupDialog));
-                }
-
-                ctx.AddSection("元数据");
-                ctx.AddEditor(this, "作者", _template.Author ?? "", v => { PushUndo(); _template.Author = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); });
-                ctx.AddEditor(this, "描述", _template.Description ?? "", v => { PushUndo(); _template.Description = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); });
-                ctx.AddLabel("创建时间", _template.CreatedAt.ToString("yyyy-MM-dd HH:mm"));
-                ctx.AddLabel("修改时间", _template.ModifiedAt.ToString("yyyy-MM-dd HH:mm"));
+                PagePropertySectionBuilder.Build(ctx, _template, this);
                 return;
             }
 
@@ -2335,7 +2302,7 @@ namespace ReportEngine.Designer.Wpf
 
         // ============================== 页面设置弹窗 ==============================
 
-        private void ShowPageSetupDialog()
+        internal void ShowPageSetupDialog()
         {
             if (_template == null) return;
             PageSetupDialog.Show(this, _template, () => {
