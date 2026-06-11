@@ -62,4 +62,43 @@ public class BarcodeGeneratorTests
 
         act.Should().NotThrow();
     }
+
+    // ============ A1 集成 / 边界 (v0.1.11) ============
+
+    [Fact]
+    public void Generate_QRCode_Long_URL_Does_Not_Throw()
+    {
+        // 长 URL 应该自动用更高 version 编码
+        var longUrl = "https://example.com/very/long/path?param1=value1&param2=value2&param3=value3&param4=value4&param5=value5&param6=value6&param7=value7";
+
+        var act = () => BarcodeGenerator.Generate(longUrl, BarcodeFormat.QRCode, 300, 300);
+
+        act.Should().NotThrow();
+        var matrix = act();
+        matrix.Cast<bool>().Should().Contain(true);
+    }
+
+    [Fact]
+    public void Generate_Code128_Chinese_Characters_Throws_ArgumentException()
+    {
+        // ZXing Code128 不支持非 ASCII 字符; 当前实现直接抛出 (非静默吞掉)
+        // 这是 ZXing 库的契约 - 我们测试的是"边界行为可见", 不是"自动 fallback"
+        var act = () => BarcodeGenerator.Generate("你好世界", BarcodeFormat.Code128, 200, 80);
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void Generate_Two_Calls_With_Same_Input_Produce_Equivalent_Matrix()
+    {
+        // 同样的输入 -> 同样的输出 (确定性)
+        var m1 = BarcodeGenerator.Generate("test-content-123", BarcodeFormat.QRCode, 100, 100);
+        var m2 = BarcodeGenerator.Generate("test-content-123", BarcodeFormat.QRCode, 100, 100);
+
+        m1.GetLength(0).Should().Be(m2.GetLength(0));
+        m1.GetLength(1).Should().Be(m2.GetLength(1));
+        for (int y = 0; y < m1.GetLength(0); y++)
+            for (int x = 0; x < m1.GetLength(1); x++)
+                m1[y, x].Should().Be(m2[y, x]);
+    }
 }
