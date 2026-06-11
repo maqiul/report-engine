@@ -62,6 +62,7 @@ namespace ReportEngine.Designer.Wpf
         private ReportElement? _selectedElement;
         private Band? _selectedBand;
         private readonly List<ReportElement> _selectedElements = new List<ReportElement>();
+        internal IReadOnlyList<ReportElement> SelectedElements => _selectedElements;
 
         // 拖动
         private enum DragMode { None, MoveElement, ResizeBandHeight, ResizeElement, MarqueeSelect }
@@ -2221,52 +2222,7 @@ namespace ReportEngine.Designer.Wpf
         private void UpdateMultiSelectProperties()
         {
             using var ctx = new PropertyRowContext(_propertyStack);
-            var targets = _selectedElements;
-            ctx.AddSection("批量编辑 (" + targets.Count + " 个元素)");
-            ctx.AddLabel("数量", targets.Count.ToString());
-
-            // 通用属性
-            ctx.AddSection("位置尺寸");
-            ctx.AddEditor(this, "宽(mm)", "", v => { if (double.TryParse(v, out var d) && d > 0) { PushUndo(); foreach (var el in targets) el.Width = d; MarkDirty(); RefreshUI(); } });
-            ctx.AddEditor(this, "高(mm)", "", v => { if (double.TryParse(v, out var d) && d > 0) { PushUndo(); foreach (var el in targets) el.Height = d; MarkDirty(); RefreshUI(); } });
-            ctx.AddEditor(this, "X(mm)", "", v => { if (double.TryParse(v, out var d)) { PushUndo(); foreach (var el in targets) el.X = d; MarkDirty(); RefreshUI(); } });
-            ctx.AddEditor(this, "Y(mm)", "", v => { if (double.TryParse(v, out var d)) { PushUndo(); foreach (var el in targets) el.Y = d; MarkDirty(); RefreshUI(); } });
-
-            ctx.AddSection("设计");
-            bool allVisible = targets.All(e => e.Visible);
-            ctx.AddBool("可见", allVisible, v => { PushUndo(); foreach (var el in targets) el.Visible = v; MarkDirty(); });
-            bool allLocked = targets.All(e => e.Locked);
-            ctx.AddBool("锁定", allLocked, v => { PushUndo(); foreach (var el in targets) el.Locked = v; MarkDirty(); RefreshUI(); });
-
-            ctx.AddSection("外观");
-            ctx.AddColor(this, "背景色", "", v => { PushUndo(); foreach (var el in targets) el.BackgroundColor = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); RefreshUI(); });
-
-            // 批量边框编辑
-            ctx.AddSection("边框");
-            ctx.AddEditor(this, "边框宽", "", v => { if (double.TryParse(v, out var d) && d >= 0) { PushUndo(); foreach (var el in targets) EnsureBorder(el).Width = d; MarkDirty(); RefreshUI(); } });
-            ctx.AddColor(this, "边框色", "", v => { PushUndo(); foreach (var el in targets) EnsureBorder(el).Color = string.IsNullOrEmpty(v) ? "#000000" : v; MarkDirty(); RefreshUI(); });
-            ctx.AddBool("上边框", true, v => { PushUndo(); foreach (var el in targets) EnsureBorder(el).Top = v; MarkDirty(); RefreshUI(); });
-            ctx.AddBool("下边框", true, v => { PushUndo(); foreach (var el in targets) EnsureBorder(el).Bottom = v; MarkDirty(); RefreshUI(); });
-            ctx.AddBool("左边框", true, v => { PushUndo(); foreach (var el in targets) EnsureBorder(el).Left = v; MarkDirty(); RefreshUI(); });
-            ctx.AddBool("右边框", true, v => { PushUndo(); foreach (var el in targets) EnsureBorder(el).Right = v; MarkDirty(); RefreshUI(); });
-
-            // 如果所有选中元素都是 TextElement，显示文本共有属性
-            if (targets.All(e => e is TextElement))
-            {
-                var texts = targets.Cast<TextElement>().ToList();
-                ctx.AddSection("字体");
-                string commonFamily = texts.Select(t => t.Font.Family).Distinct().Count() == 1 ? texts[0].Font.Family : "";
-                ctx.AddEditor(this, "字体", commonFamily, v => { if (!string.IsNullOrEmpty(v)) { PushUndo(); foreach (var t in texts) t.Font.Family = v; MarkDirty(); RefreshUI(); } });
-                string commonSize = texts.Select(t => t.Font.Size).Distinct().Count() == 1 ? texts[0].Font.Size.ToString() : "";
-                ctx.AddEditor(this, "字号", commonSize, v => { if (double.TryParse(v, out var sz) && sz > 0) { PushUndo(); foreach (var t in texts) t.Font.Size = sz; MarkDirty(); RefreshUI(); } });
-                bool allBold = texts.All(t => t.Font.Bold);
-                ctx.AddBool("加粗", allBold, v => { PushUndo(); foreach (var t in texts) t.Font.Bold = v; MarkDirty(); RefreshUI(); });
-                bool allItalic = texts.All(t => t.Font.Italic);
-                ctx.AddBool("斜体", allItalic, v => { PushUndo(); foreach (var t in texts) t.Font.Italic = v; MarkDirty(); RefreshUI(); });
-                ctx.AddColor(this, "字体色", "", v => { PushUndo(); foreach (var t in texts) t.Font.Color = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); RefreshUI(); });
-                ctx.AddCombo("对齐", new[] { "左对齐", "居中", "右对齐", "两端对齐" }, "",
-                    v => { var a = CNToAlign(v); PushUndo(); foreach (var t in texts) t.Alignment = a; MarkDirty(); RefreshUI(); });
-            }
+            MultiSelectPropertySectionBuilder.Build(ctx, this);
         }
 
         // ============================== 其他 ==============================
