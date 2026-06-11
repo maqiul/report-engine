@@ -425,31 +425,21 @@ namespace ReportEngine.Designer.Wpf
 
         private ToolBarTray BuildAlignToolBar()
         {
-            var tray = new ToolBarTray { Background = new SolidColorBrush(Color.FromRgb(245, 245, 245)) };
-            var tb = new ToolBar { Background = new SolidColorBrush(Color.FromRgb(245, 245, 245)), Band = 0 };
-
-            tb.Items.Add(MakeToolBtn("▐▌ 左对齐", () => AlignElements("left")));
-            tb.Items.Add(MakeToolBtn("▐▌ 右对齐", () => AlignElements("right")));
-            tb.Items.Add(MakeToolBtn("▔ 顶端对齐", () => AlignElements("top")));
-            tb.Items.Add(MakeToolBtn("▁ 底端对齐", () => AlignElements("bottom")));
-            tb.Items.Add(new Separator());
-            tb.Items.Add(MakeToolBtn("┃ 水平居中", () => AlignElements("hcenter")));
-            tb.Items.Add(MakeToolBtn("━ 垂直居中", () => AlignElements("vcenter")));
-            tb.Items.Add(new Separator());
-            tb.Items.Add(MakeToolBtn("↔ 等宽", () => AlignElements("samewidth")));
-            tb.Items.Add(MakeToolBtn("↕ 等高", () => AlignElements("sameheight")));
-            tb.Items.Add(new Separator());
-            tb.Items.Add(MakeToolBtn("▢↑ 置顶", () => MoveElementOrder("front")));
-            tb.Items.Add(MakeToolBtn("▢↓ 置底", () => MoveElementOrder("back")));
-            tb.Items.Add(new Separator());
-            tb.Items.Add(MakeToolBtn("🖌 格式刷", StartFormatPainter));
-            tb.Items.Add(MakeToolBtn("🔒 锁定", ToggleLockSelected));
-            tb.Items.Add(new Separator());
-            tb.Items.Add(MakeToolBtn("🔗 组合", GroupSelected));
-            tb.Items.Add(MakeToolBtn("✂ 取消组合", UngroupSelected));
-
-            tray.ToolBars.Add(tb);
-            return tray;
+            return AlignToolBarBuilder.Build(
+                onAlignLeft: () => AlignElements("left"),
+                onAlignRight: () => AlignElements("right"),
+                onAlignTop: () => AlignElements("top"),
+                onAlignBottom: () => AlignElements("bottom"),
+                onAlignHCenter: () => AlignElements("hcenter"),
+                onAlignVCenter: () => AlignElements("vcenter"),
+                onSameWidth: () => AlignElements("samewidth"),
+                onSameHeight: () => AlignElements("sameheight"),
+                onBringToFront: () => MoveElementOrder("front"),
+                onSendToBack: () => MoveElementOrder("back"),
+                onFormatPainter: StartFormatPainter,
+                onToggleLock: ToggleLockSelected,
+                onGroup: GroupSelected,
+                onUngroup: UngroupSelected);
         }
 
         private void ToggleLockSelected()
