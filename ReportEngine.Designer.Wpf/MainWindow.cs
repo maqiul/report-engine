@@ -920,16 +920,15 @@ namespace ReportEngine.Designer.Wpf
                 if (band != null && band.Elements.Count > 0)
                 {
                     bool reverse = Keyboard.Modifiers == ModifierKeys.Shift;
-                    int idx = _selectedElement != null ? band.Elements.IndexOf(_selectedElement) : -1;
-                    if (reverse)
-                        idx = idx <= 0 ? band.Elements.Count - 1 : idx - 1;
-                    else
-                        idx = idx < 0 || idx >= band.Elements.Count - 1 ? 0 : idx + 1;
-                    _selectedElement = band.Elements[idx];
-                    _selectedElements.Clear();
-                    _selectedElements.Add(_selectedElement);
-                    _selectedBand = band;
-                    RefreshUI();
+                    var next = TabCycleSelector.SelectNext(band.Elements, _selectedElement, reverse);
+                    if (next != null)
+                    {
+                        _selectedElement = next;
+                        _selectedElements.Clear();
+                        _selectedElements.Add(_selectedElement);
+                        _selectedBand = band;
+                        RefreshUI();
+                    }
                 }
                 e.Handled = true;
                 return;
