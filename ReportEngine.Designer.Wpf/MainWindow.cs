@@ -2820,31 +2820,12 @@ namespace ReportEngine.Designer.Wpf
 
         private void ShowGridSettingsDialog()
         {
-            var dlg = new Window
-            {
-                Title = "网格设置",
-                Width = 280, Height = 180,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                Owner = this, ResizeMode = ResizeMode.NoResize,
-            };
-            var sp = new StackPanel { Margin = new Thickness(12) };
-            sp.Children.Add(new TextBlock { Text = "网格间距(mm):", Margin = new Thickness(0, 0, 0, 4), Foreground = Brushes.Black });
-            var tbSpacing = new TextBox { Text = _gridSpacingMm.ToString(), Margin = new Thickness(0, 0, 0, 8), Foreground = Brushes.Black };
-            sp.Children.Add(tbSpacing);
-            sp.Children.Add(new TextBlock { Text = "吸附距离阈值(mm): 1.5", Margin = new Thickness(0, 0, 0, 12), Foreground = Brushes.Gray, FontSize = 10 });
-            var btnOk = new Button { Content = "确定", Width = 70, Height = 26, HorizontalAlignment = HorizontalAlignment.Right, IsDefault = true };
-            btnOk.Click += (_, __) =>
-            {
-                if (double.TryParse(tbSpacing.Text, out var d) && d > 0 && d <= 50)
+            GridSettingsDialog.Show(this, _gridSpacingMm,
+                newSpacing =>
                 {
-                    _gridSpacingMm = d;
+                    _gridSpacingMm = newSpacing;
                     _canvasRenderer.Render(BuildCanvasRenderContext(), _selectedElements, _selectedBand);
-                }
-                dlg.Close();
-            };
-            sp.Children.Add(btnOk);
-            dlg.Content = sp;
-            dlg.ShowDialog();
+                });
         }
 
         private void ShowDataSourceDialog()
