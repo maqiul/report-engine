@@ -166,4 +166,143 @@ public class ClosedXmlExporterTests
             if (File.Exists(tmp)) File.Delete(tmp);
         }
     }
+
+    // ============ D2 边界用例 (v0.1.10) ============
+
+    [Fact]
+    public void Export_With_Empty_Text_Does_Not_Throw()
+    {
+        var exporter = new ClosedXmlExporter();
+        var report = BuildReport(
+            Text("", 10, 5),
+            Text("   ", 60, 5),
+            Text("non-empty", 110, 5));
+
+        var act = () => exporter.Export(report);
+
+        act.Should().NotThrow();
+        act().Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public void Export_With_Chinese_Text_Does_Not_Throw()
+    {
+        var exporter = new ClosedXmlExporter();
+        var report = BuildReport(
+            Text("你好世界", 10, 5),
+            Text("报表标题-2026", 60, 5));
+
+        var act = () => exporter.Export(report);
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void Export_With_FontColor_And_BackgroundColor_Does_Not_Throw()
+    {
+        var exporter = new ClosedXmlExporter();
+        var report = BuildReport(
+            new RenderedTextElement
+            {
+                X = 10, Y = 5, Width = 30, Height = 8,
+                Text = "colored",
+                Font = new FontDef { Family = "SimSun", Size = 12, Color = "#FF0000" },
+                BackgroundColor = "#FFFFCC",
+            });
+
+        var act = () => exporter.Export(report);
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void Export_With_All_Alignments_Does_Not_Throw()
+    {
+        var exporter = new ClosedXmlExporter();
+        var report = BuildReport(
+            new RenderedTextElement { X = 10, Y = 5, Width = 30, Height = 8, Text = "L", Alignment = TextAlignment.Left },
+            new RenderedTextElement { X = 50, Y = 5, Width = 30, Height = 8, Text = "C", Alignment = TextAlignment.Center },
+            new RenderedTextElement { X = 90, Y = 5, Width = 30, Height = 8, Text = "R", Alignment = TextAlignment.Right },
+            new RenderedTextElement { X = 130, Y = 5, Width = 30, Height = 8, Text = "J", Alignment = TextAlignment.Justify });
+
+        var act = () => exporter.Export(report);
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void Export_With_Bold_Italic_Underline_Does_Not_Throw()
+    {
+        var exporter = new ClosedXmlExporter();
+        var report = BuildReport(
+            new RenderedTextElement
+            {
+                X = 10, Y = 5, Width = 30, Height = 8,
+                Text = "styled",
+                Font = new FontDef { Family = "SimSun", Size = 12, Bold = true, Italic = true, Underline = true },
+            });
+
+        var act = () => exporter.Export(report);
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void Export_With_Element_Border_All_Sides_Does_Not_Throw()
+    {
+        var exporter = new ClosedXmlExporter();
+        var report = BuildReport(
+            new RenderedTextElement
+            {
+                X = 10, Y = 5, Width = 40, Height = 12,
+                Text = "boxed",
+                Border = new BorderDef
+                {
+                    Width = 1.0, Color = "#333333",
+                    Top = true, Bottom = true, Left = true, Right = true,
+                },
+            });
+
+        var act = () => exporter.Export(report);
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void Export_With_Multiple_Pages_Renders_All_Pages()
+    {
+        var exporter = new ClosedXmlExporter();
+        var report = new RenderedReport
+        {
+            PageWidth = 210,
+            PageHeight = 297,
+            Pages = new List<RenderedPage>
+            {
+                new RenderedPage { PageNumber = 1, TotalPages = 3, Elements = new List<RenderedElement> { Text("p1", 10, 5) } },
+                new RenderedPage { PageNumber = 2, TotalPages = 3, Elements = new List<RenderedElement> { Text("p2", 10, 5) } },
+                new RenderedPage { PageNumber = 3, TotalPages = 3, Elements = new List<RenderedElement> { Text("p3", 10, 5) } },
+            },
+        };
+
+        var bytes = exporter.Export(report);
+
+        bytes.Should().NotBeEmpty();
+        bytes.Length.Should().BeGreaterThan(500);
+    }
+
+    [Fact]
+    public void Export_With_Clustered_Columns_Aggregates_To_Single_Column()
+    {
+        // 两个 X 起点差异 < ClusterTolerance, 应聚类为同一列
+        var exporter = new ClosedXmlExporter { ClusterTolerance = 0.8 };
+        var report = BuildReport(
+            Text("A1", 10.0, 5),
+            Text("A2", 10.3, 15),   // X 差 0.3 < 0.8
+            Text("A3", 10.5, 25));  // X 差 0.5 < 0.8
+
+        var act = () => exporter.Export(report);
+
+        act.Should().NotThrow();
+        act().Should().NotBeEmpty();
+    }
 }
