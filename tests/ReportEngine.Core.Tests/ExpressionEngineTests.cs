@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using FluentAssertions;
 using ReportEngine.Core.Data;
 using Xunit;
@@ -152,5 +153,128 @@ public class ExpressionEngineTests
         var result = engine.Evaluate("{{totally.unknown.token}}", ctx);
 
         result.Should().Be("{{totally.unknown.token}}");
+    }
+
+    // ============ D4 边界用例 (v0.1.13) ============
+
+    [Fact]
+    public void Evaluate_CurrentRow_DotPath_Resolves_To_Value()
+    {
+        // {{currentRow.amount}} 显式 currentRow 前缀
+        var engine = NewEngine();
+        var ctx = NewContext(currentRow: new Dictionary<string, object> { ["amount"] = 99.5m });
+
+        var result = engine.Evaluate("{{currentRow.amount}}", ctx);
+
+        result.Should().Be("99.5");
+    }
+
+    [Fact]
+    public void Evaluate_Avg_Returns_Mean_Across_All_Rows()
+    {
+        // AVG 聚合: (100 + 200 + 300) / 3 = 200
+        var engine = NewEngine();
+        var ctx = NewContext(
+            rows: new List<Dictionary<string, object>>
+            {
+                new() { ["amount"] = 100m },
+                new() { ["amount"] = 200m },
+                new() { ["amount"] = 300m },
+            });
+
+        var result = engine.Evaluate("{{AVG(amount)}}", ctx);
+
+        result.Should().Be("200");
+    }
+
+    [Fact]
+    public void Evaluate_Min_Returns_Smallest_Value()
+    {
+        // MIN 聚合: min(100, 200, 300) = 100
+        var engine = NewEngine();
+        var ctx = NewContext(
+            rows: new List<Dictionary<string, object>>
+            {
+                new() { ["amount"] = 100m },
+                new() { ["amount"] = 200m },
+                new() { ["amount"] = 300m },
+            });
+
+        var result = engine.Evaluate("{{MIN(amount)}}", ctx);
+
+        result.Should().Be("100");
+    }
+
+    [Fact]
+    public void Evaluate_Max_Returns_Largest_Value()
+    {
+        // MAX 聚合: max(100, 200, 300) = 300
+        var engine = NewEngine();
+        var ctx = NewContext(
+            rows: new List<Dictionary<string, object>>
+            {
+                new() { ["amount"] = 100m },
+                new() { ["amount"] = 200m },
+                new() { ["amount"] = 300m },
+            });
+
+        var result = engine.Evaluate("{{MAX(amount)}}", ctx);
+
+        result.Should().Be("300");
+    }
+
+    [Fact]
+    public void Evaluate_FieldFormat_Currency_Formats_Decimal()
+    {
+        // FieldFormat = "currency" => C2 格式 (zh-CN: ¥1,234.50)
+        var engine = NewEngine();
+        var ctx = NewContext(currentRow: new Dictionary<string, object> { ["price"] = 1234.5m });
+        ctx.FieldFormat = "currency";
+
+        var result = engine.Evaluate("{{price}}", ctx);
+
+        // 验证金额格式: 以 ¥ 开头, 含千分位, 含 2 位小数
+        result.Should().StartWith("¥");
+        result.Should().Contain("1,234.50");
+    }
+
+    [Fact]
+    public void Evaluate_FieldFormat_Date_Formats_DateTime()
+    {
+        // FieldFormat = "date" => yyyy-MM-dd
+        var engine = NewEngine();
+        var ctx = NewContext(currentRow: new Dictionary<string, object>
+        {
+            ["created"] = new DateTime(2026, 6, 11, 14, 30, 0),
+        });
+        ctx.FieldFormat = "date";
+
+        var result = engine.Evaluate("{{created}}", ctx);
+
+        result.Should().Be("2026-06-11");
+    }
+
+    [Fact]
+    public void Evaluate_EmptyString_Returns_EmptyString()
+    {
+        // 空模板: 不崩, 返回 ""
+        var engine = NewEngine();
+        var ctx = NewContext();
+
+        var result = engine.Evaluate("", ctx);
+
+        result.Should().Be("");
+    }
+
+    [Fact]
+    public void Evaluate_NoPlaceholder_Returns_Input_Unchanged()
+    {
+        // 无 {{...}} 占位符: 原文返回
+        var engine = NewEngine();
+        var ctx = NewContext();
+
+        var result = engine.Evaluate("普通文本 - 没有占位符", ctx);
+
+        result.Should().Be("普通文本 - 没有占位符");
     }
 }
