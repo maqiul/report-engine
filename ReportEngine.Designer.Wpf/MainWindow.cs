@@ -2963,7 +2963,6 @@ namespace ReportEngine.Designer.Wpf
             });
         }
 
-
         // ============================== 字体选择弹窗 ==============================
 
         private void AddPropFontRow(TextElement t)
@@ -2979,167 +2978,11 @@ namespace ReportEngine.Designer.Wpf
             var lb = new TextBlock { Text = "字体", Foreground = Brushes.DimGray, FontSize = 11, FontWeight = FontWeights.Normal, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 0, 0) };
             var vb = new TextBlock { Text = fontDesc, Foreground = Brushes.Black, FontSize = 11, FontWeight = FontWeights.Normal, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0, 0, 0), TextTrimming = TextTrimming.CharacterEllipsis };
             var btn = new Button { Content = "...", Width = 22, Height = 18, FontSize = 10, Padding = new Thickness(0), Background = Brushes.Transparent, BorderThickness = new Thickness(1), BorderBrush = new SolidColorBrush(Color.FromRgb(180, 180, 180)), Cursor = Cursors.Hand, VerticalAlignment = VerticalAlignment.Center };
-            btn.Click += (_, __) => ShowFontDialog(t);
+            btn.Click += (_, __) => FontDialog.Show(this, t);
             var sep = new Border { Width = 1, Background = new SolidColorBrush(Color.FromRgb(220, 220, 220)), HorizontalAlignment = HorizontalAlignment.Right };
             Grid.SetColumn(lb, 0); Grid.SetColumn(sep, 0); Grid.SetColumn(vb, 1); Grid.SetColumn(btn, 2);
             grid.Children.Add(lb); grid.Children.Add(sep); grid.Children.Add(vb); grid.Children.Add(btn);
             AddPropToCurrentSection(grid);
-        }
-
-        private void ShowFontDialog(TextElement t)
-        {
-            var dlg = new Window
-            {
-                Title = "字体",
-                Width = 560,
-                Height = 460,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                Owner = this,
-                ResizeMode = ResizeMode.NoResize,
-                Background = new SolidColorBrush(Color.FromRgb(240, 240, 240)),
-            };
-
-            var mainGrid = new Grid { Margin = new Thickness(12) };
-            mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-            mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(8) });
-            mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(80) });
-            mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(8) });
-            mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(100) });
-            mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(10) });
-            mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(32) });
-
-            // 上部三栏: 字体 | 字形 | 大小
-            var topGrid = new Grid();
-            topGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(2, GridUnitType.Star) });
-            topGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(8) });
-            topGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.2, GridUnitType.Star) });
-            topGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(8) });
-            topGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.8, GridUnitType.Star) });
-
-            // 字体列
-            var fontPanel = new DockPanel();
-            fontPanel.Children.Add(new TextBlock { Text = "字体(F):", FontSize = 11, Margin = new Thickness(0, 0, 0, 2) });
-            DockPanel.SetDock(fontPanel.Children[0], Dock.Top);
-            var fontInput = new TextBox { Text = t.Font.Family, FontSize = 12, Padding = new Thickness(4, 2, 4, 2), Margin = new Thickness(0, 0, 0, 2) };
-            DockPanel.SetDock(fontInput, Dock.Top);
-            fontPanel.Children.Add(fontInput);
-            var fontList = new ListBox { FontSize = 12 };
-            foreach (var f in new[] { "宋体", "黑体", "楷体", "仿宋", "微软雅黑", "华文中宋", "新宋体", "幼圆", "Arial", "Times New Roman", "Courier New", "Verdana", "Tahoma", "Segoe UI", "Consolas" })
-                fontList.Items.Add(new ListBoxItem { Content = f, FontFamily = new FontFamily(f) });
-            // 选中当前字体
-            foreach (ListBoxItem item in fontList.Items)
-                if ((string)item.Content == t.Font.Family) { item.IsSelected = true; fontList.ScrollIntoView(item); break; }
-            fontList.SelectionChanged += (_, __) => { if (fontList.SelectedItem is ListBoxItem si) fontInput.Text = (string)si.Content; };
-            fontPanel.Children.Add(fontList);
-            Grid.SetColumn(fontPanel, 0);
-            topGrid.Children.Add(fontPanel);
-
-            // 字形列
-            var stylePanel = new DockPanel();
-            stylePanel.Children.Add(new TextBlock { Text = "字形(Y):", FontSize = 11, Margin = new Thickness(0, 0, 0, 2) });
-            DockPanel.SetDock(stylePanel.Children[0], Dock.Top);
-            var styleInput = new TextBox { FontSize = 12, Padding = new Thickness(4, 2, 4, 2), Margin = new Thickness(0, 0, 0, 2), IsReadOnly = true };
-            // 确定当前字形
-            string curStyle = "常规";
-            if (t.Font.Bold && t.Font.Italic) curStyle = "粗斜体";
-            else if (t.Font.Bold) curStyle = "粗体";
-            else if (t.Font.Italic) curStyle = "斜体";
-            styleInput.Text = curStyle;
-            DockPanel.SetDock(styleInput, Dock.Top);
-            stylePanel.Children.Add(styleInput);
-            var styleList = new ListBox { FontSize = 12 };
-            styleList.Items.Add(new ListBoxItem { Content = "常规" });
-            styleList.Items.Add(new ListBoxItem { Content = "斜体", FontStyle = FontStyles.Italic });
-            styleList.Items.Add(new ListBoxItem { Content = "粗体", FontWeight = FontWeights.Bold });
-            styleList.Items.Add(new ListBoxItem { Content = "粗斜体", FontWeight = FontWeights.Bold, FontStyle = FontStyles.Italic });
-            foreach (ListBoxItem item in styleList.Items)
-                if ((string)item.Content == curStyle) { item.IsSelected = true; break; }
-            styleList.SelectionChanged += (_, __) => { if (styleList.SelectedItem is ListBoxItem si) styleInput.Text = (string)si.Content; };
-            stylePanel.Children.Add(styleList);
-            Grid.SetColumn(stylePanel, 2);
-            topGrid.Children.Add(stylePanel);
-
-            // 大小列
-            var sizePanel = new DockPanel();
-            sizePanel.Children.Add(new TextBlock { Text = "大小(S):", FontSize = 11, Margin = new Thickness(0, 0, 0, 2) });
-            DockPanel.SetDock(sizePanel.Children[0], Dock.Top);
-            var sizeInput = new TextBox { Text = t.Font.Size.ToString(), FontSize = 12, Padding = new Thickness(4, 2, 4, 2), Margin = new Thickness(0, 0, 0, 2) };
-            DockPanel.SetDock(sizeInput, Dock.Top);
-            sizePanel.Children.Add(sizeInput);
-            var sizeList = new ListBox { FontSize = 12 };
-            foreach (var sz in new[] { "8", "9", "10", "10.5", "11", "12", "13", "14", "16", "18", "20", "22", "24", "26", "28", "36", "48", "72" })
-                sizeList.Items.Add(sz);
-            sizeList.SelectedItem = t.Font.Size.ToString();
-            sizeList.SelectionChanged += (_, __) => { if (sizeList.SelectedItem is string s) sizeInput.Text = s; };
-            sizePanel.Children.Add(sizeList);
-            Grid.SetColumn(sizePanel, 4);
-            topGrid.Children.Add(sizePanel);
-
-            Grid.SetRow(topGrid, 0);
-            mainGrid.Children.Add(topGrid);
-
-            // 效果区
-            var effectGroup = new GroupBox { Header = "效果", FontSize = 11, Padding = new Thickness(8, 4, 8, 4) };
-            var effectStack = new StackPanel();
-            var chkStrike = new CheckBox { Content = "删除线(K)", FontSize = 11, Margin = new Thickness(0, 2, 0, 2) };
-            var chkUnderline = new CheckBox { Content = "下划线(U)", FontSize = 11, IsChecked = t.Font.Underline, Margin = new Thickness(0, 2, 0, 2) };
-            effectStack.Children.Add(chkStrike);
-            effectStack.Children.Add(chkUnderline);
-            effectGroup.Content = effectStack;
-            Grid.SetRow(effectGroup, 2);
-            mainGrid.Children.Add(effectGroup);
-
-            // 预览区
-            var previewGroup = new GroupBox { Header = "预览", FontSize = 11, Padding = new Thickness(8) };
-            var previewText = new TextBlock { Text = "微软中文软件", FontSize = 16, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-            previewGroup.Content = previewText;
-            Grid.SetRow(previewGroup, 4);
-            mainGrid.Children.Add(previewGroup);
-
-            // 实时预览更新
-            Action updatePreview = () =>
-            {
-                previewText.FontFamily = new FontFamily(fontInput.Text);
-                if (double.TryParse(sizeInput.Text, out var psz) && psz > 0 && psz <= 100)
-                    previewText.FontSize = psz;
-                var st = styleInput.Text;
-                previewText.FontWeight = (st == "粗体" || st == "粗斜体") ? FontWeights.Bold : FontWeights.Normal;
-                previewText.FontStyle = (st == "斜体" || st == "粗斜体") ? FontStyles.Italic : FontStyles.Normal;
-                previewText.TextDecorations = chkUnderline.IsChecked == true ? TextDecorations.Underline : null;
-            };
-            fontInput.TextChanged += (_, __) => updatePreview();
-            sizeInput.TextChanged += (_, __) => updatePreview();
-            styleInput.TextChanged += (_, __) => updatePreview();
-            chkUnderline.Checked += (_, __) => updatePreview();
-            chkUnderline.Unchecked += (_, __) => updatePreview();
-            updatePreview();
-
-            // 按钮
-            var btnPanel = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
-            var btnOk = new Button { Content = "确定", Width = 75, Height = 26, Margin = new Thickness(0, 0, 8, 0), IsDefault = true };
-            var btnCancel = new Button { Content = "取消", Width = 75, Height = 26, IsCancel = true };
-            btnPanel.Children.Add(btnOk);
-            btnPanel.Children.Add(btnCancel);
-            Grid.SetRow(btnPanel, 6);
-            mainGrid.Children.Add(btnPanel);
-
-            btnOk.Click += (_, __) =>
-            {
-                PushUndo();
-                t.Font.Family = fontInput.Text;
-                if (double.TryParse(sizeInput.Text, out var fsz) && fsz > 0)
-                    t.Font.Size = fsz;
-                var style = styleInput.Text;
-                t.Font.Bold = (style == "粗体" || style == "粗斜体");
-                t.Font.Italic = (style == "斜体" || style == "粗斜体");
-                t.Font.Underline = chkUnderline.IsChecked == true;
-                MarkDirty();
-                RefreshUI();
-                dlg.DialogResult = true;
-            };
-
-            dlg.Content = mainGrid;
-            dlg.ShowDialog();
         }
 
         // ============================== 表达式编辑器 ==============================
