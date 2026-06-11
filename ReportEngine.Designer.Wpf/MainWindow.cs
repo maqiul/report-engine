@@ -1187,22 +1187,13 @@ namespace ReportEngine.Designer.Wpf
             var (_, element) = HitTester.Hit(pos, _template, _zoom, CanvasPadding, PixelsPerMm);
             if (element is TextElement txt)
             {
-                // 双击文本元素：弹出编辑框
-                var input = new Window
+                TextEditDialog.Show(this, txt, newText =>
                 {
-                    Title = "编辑文本",
-                    Width = 320, Height = 150,
-                    WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                    Owner = this, ResizeMode = ResizeMode.NoResize,
-                };
-                var tb = new TextBox { Text = txt.Text ?? "", FontSize = 13, Margin = new Thickness(12), AcceptsReturn = true, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
-                var btnOk = new Button { Content = "确定", Width = 60, Height = 26, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 0, 12, 8), IsDefault = true };
-                btnOk.Click += (_, __) => { PushUndo(); txt.Text = tb.Text; MarkDirty(); RefreshUI(); input.DialogResult = true; };
-                var sp = new StackPanel();
-                sp.Children.Add(tb);
-                sp.Children.Add(btnOk);
-                input.Content = sp;
-                input.ShowDialog();
+                    PushUndo();
+                    txt.Text = newText;
+                    MarkDirty();
+                    RefreshUI();
+                });
             }
         }
 
