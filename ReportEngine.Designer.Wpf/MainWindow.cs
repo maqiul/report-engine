@@ -1667,39 +1667,11 @@ namespace ReportEngine.Designer.Wpf
 
         private void OnCanvasDrop(object sender, DragEventArgs e)
         {
-            if (_template == null || !e.Data.GetDataPresent("ElementType")) return;
-            var typeName = e.Data.GetData("ElementType") as string;
-            if (typeName == null) return;
-
-            var pos = e.GetPosition(_canvas);
-            double z = _zoom;
-            double mmPx = PixelsPerMm * z;
-
-            // 确定drop位置对应的Band
-            var (targetBand, relY) = BandHitTester.FindBandAtY(_template, pos.X, pos.Y, _zoom, CanvasPadding, PixelsPerMm);
-            if (targetBand == null) return;
-
-            double relX = (pos.X - CanvasPadding) / mmPx;
-
-            ReportElement? newEl = typeName switch
-            {
-                "Text" => NewText(),
-                "Field" => NewFieldBox(),
-                "Summary" => NewSummaryBox(),
-                "SysVar" => NewSysVarBox(),
-                "Line" => NewLine(),
-                "Shape" => NewShape(),
-                "Image" => NewImage(),
-                "Barcode" => NewBarcode(),
-                "Table" => NewTable(),
-                "CrossTab" => NewCrossTab(),
-                "Chart" => NewChart(),
-                "SubReport" => NewSubReport(),
-                _ => null
-            };
-            if (newEl == null) return;
-            InsertElementAt(newEl, targetBand, relX, relY);
-            _statusText.Text = "已拖入元素: " + typeName;
+            var insertedType = CanvasDropProcessor.Process(
+                e, _template, _canvas, _zoom, CanvasPadding, PixelsPerMm,
+                (el, band, x, y) => InsertElementAt(el, band, x, y));
+            if (insertedType != null)
+                _statusText.Text = "已拖入元素: " + insertedType;
         }
 
         private void DeleteSelected()
