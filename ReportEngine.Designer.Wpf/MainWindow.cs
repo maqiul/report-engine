@@ -957,12 +957,7 @@ namespace ReportEngine.Designer.Wpf
         {
             PushUndo();
             var targets = _selectedElements.Count > 0 ? _selectedElements : (_selectedElement != null ? new List<ReportElement> { _selectedElement } : new List<ReportElement>());
-            foreach (var el in targets)
-            {
-                if (el.Locked) continue;
-                el.X = Math.Max(0, el.X + dx);
-                el.Y = Math.Max(0, el.Y + dy);
-            }
+            ElementNudger.Nudge(targets, dx, dy);
             MarkDirty();
             RefreshUI();
         }
