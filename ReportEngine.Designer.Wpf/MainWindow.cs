@@ -792,8 +792,8 @@ namespace ReportEngine.Designer.Wpf
             file.Items.Add(MakeMenuItem("批量导出PDF+Excel(_B)...", null, ExportBatch));
             file.Items.Add(new Separator());
             file.Items.Add(MakeMenuItem("数据源(_S)...", null, OnShowDataSourceClicked));
-            file.Items.Add(MakeMenuItem("数据绑定向导(_B)...", null, ShowDataBindingWizard));
-            file.Items.Add(MakeMenuItem("模板参数(_P)...", null, ShowTemplateParamsDialog));
+            file.Items.Add(MakeMenuItem("数据绑定向导(_B)...", null, OnShowDataBindingWizardClicked));
+            file.Items.Add(MakeMenuItem("模板参数(_P)...", null, OnShowTemplateParamsClicked));
             file.Items.Add(MakeMenuItem("加载预览数据(_L)...", null, OnLoadPreviewDataClicked));
             file.Items.Add(new Separator());
             BuildRecentFilesMenu(file);
@@ -2834,9 +2834,9 @@ namespace ReportEngine.Designer.Wpf
         }
 
         /// <summary>数据绑定向导 — 引导用户选择数据源并绑定字段到元素</summary>
-        private void ShowDataBindingWizard()
+        private void OnShowDataBindingWizardClicked()
         {
-            if (_template == null || _selectedElement == null) 
+            if (_template == null || _selectedElement == null)
             {
                 _statusText.Text = "请先选中一个元素再打开数据绑定向导";
                 return;
@@ -2846,200 +2846,29 @@ namespace ReportEngine.Designer.Wpf
                 _statusText.Text = "请先添加数据源（文件→数据源）";
                 return;
             }
-
-            var dlg = new Window
-            {
-                Title = "数据绑定向导",
-                Width = 420, Height = 380,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                Owner = this, ResizeMode = ResizeMode.NoResize,
-            };
-            var sp = new StackPanel { Margin = new Thickness(12) };
-
-            // 步骤1：选择数据源
-            sp.Children.Add(new TextBlock { Text = "步骤1: 选择数据源", FontSize = 13, FontWeight = FontWeights.Bold, Foreground = Brushes.DarkBlue, Margin = new Thickness(0, 0, 0, 6) });
-            var dsCombo = new ComboBox { Margin = new Thickness(0, 0, 0, 12) };
-            foreach (var ds in _template.DataSources)
-                dsCombo.Items.Add(ds.Name);
-            dsCombo.SelectedIndex = 0;
-            sp.Children.Add(dsCombo);
-
-            // 步骤2：选择字段
-            sp.Children.Add(new TextBlock { Text = "步骤2: 选择要绑定的字段", FontSize = 13, FontWeight = FontWeights.Bold, Foreground = Brushes.DarkBlue, Margin = new Thickness(0, 8, 0, 6) });
-            var fieldList = new ListBox { Height = 150, Margin = new Thickness(0, 0, 0, 12) };
-            void RefreshFields()
-            {
-                fieldList.Items.Clear();
-                var ds = _template.DataSources.FirstOrDefault(d => d.Name == dsCombo.SelectedItem?.ToString());
-                if (ds != null)
-                    foreach (var f in ds.Fields)
-                        fieldList.Items.Add(f.Name);
-            }
-            dsCombo.SelectionChanged += (_, __) => RefreshFields();
-            RefreshFields();
-            sp.Children.Add(fieldList);
-
-            // 步骤3：绑定到元素的哪个属性
-            sp.Children.Add(new TextBlock { Text = "步骤3: 绑定到元素的属性", FontSize = 13, FontWeight = FontWeights.Bold, Foreground = Brushes.DarkBlue, Margin = new Thickness(0, 8, 0, 6) });
-            var propCombo = new ComboBox { Margin = new Thickness(0, 0, 0, 16) };
-            propCombo.Items.Add("文本内容 (Text)");
-            propCombo.Items.Add("可见性表达式 (VisibleExpression)");
-            propCombo.SelectedIndex = 0;
-            sp.Children.Add(propCombo);
-
-            // 按钮
-            var btnPanel = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
-            var btnCancel = new Button { Content = "取消", Width = 70, Height = 26, Margin = new Thickness(0, 0, 8, 0), IsCancel = true };
-            btnCancel.Click += (_, __) => dlg.Close();
-            btnPanel.Children.Add(btnCancel);
-            var btnBind = new Button { Content = "绑定", Width = 70, Height = 26, IsDefault = true };
-            btnBind.Click += (_, __) =>
-            {
-                var dsName = dsCombo.SelectedItem?.ToString();
-                var fieldName = fieldList.SelectedItem?.ToString();
-                var propChoice = propCombo.SelectedItem?.ToString();
-                if (string.IsNullOrEmpty(dsName) || string.IsNullOrEmpty(fieldName))
-                {
-                    MessageBox.Show("请选择数据源和字段", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
-                PushUndo();
-                var expression = $"[{dsName}.{fieldName}]";
-                if (propChoice == "文本内容 (Text)" && _selectedElement is TextElement txt)
-                {
-                    txt.Text = expression;
-                }
-                else if (propChoice == "可见性表达式 (VisibleExpression)")
-                {
-                    _selectedElement.VisibleExpression = expression;
-                }
-                MarkDirty();
-                RefreshUI();
-                _statusText.Text = $"已绑定: {expression}";
-                dlg.Close();
-            };
-            btnPanel.Children.Add(btnBind);
-            sp.Children.Add(btnPanel);
-
-            dlg.Content = sp;
-            dlg.ShowDialog();
-        }
-
-        /// <summary>模板参数管理对话框</summary>
-        private void ShowTemplateParamsDialog()
-        {
-            if (_template == null) return;
-
-            var dlg = new Window
-            {
-                Title = "模板参数管理",
-                Width = 450, Height = 350,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                Owner = this, ResizeMode = ResizeMode.NoResize,
-            };
-            var sp = new StackPanel { Margin = new Thickness(12) };
-
-            // 参数列表
-            sp.Children.Add(new TextBlock { Text = "模板参数列表（用于导出时变量替换）", FontSize = 12, FontWeight = FontWeights.Bold, Foreground = Brushes.DarkBlue, Margin = new Thickness(0, 0, 0, 6) });
-            var paramList = new ListBox { Height = 180, Margin = new Thickness(0, 0, 0, 8) };
-            void RefreshList()
-            {
-                paramList.Items.Clear();
-                foreach (var p in _template.Parameters)
-                    paramList.Items.Add($"{p.Label ?? p.Name} ({p.Name}) = {p.DefaultValue}");
-            }
-            RefreshList();
-            sp.Children.Add(paramList);
-
-            // 添加/删除按钮
-            var btnPanel = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 8) };
-            var btnAdd = new Button { Content = "+ 添加", Width = 70, Height = 26, Margin = new Thickness(0, 0, 4, 0) };
-            var btnDel = new Button { Content = "- 删除", Width = 70, Height = 26 };
-            btnPanel.Children.Add(btnAdd);
-            btnPanel.Children.Add(btnDel);
-            sp.Children.Add(btnPanel);
-
-            // 添加参数
-            btnAdd.Click += (_, __) =>
-            {
-                var inputDlg = new Window
-                {
-                    Title = "添加参数",
-                    Width = 300, Height = 220,
-                    WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                    Owner = dlg, ResizeMode = ResizeMode.NoResize,
-                };
-                var inputSp = new StackPanel { Margin = new Thickness(12) };
-                inputSp.Children.Add(new TextBlock { Text = "参数名称:", Margin = new Thickness(0, 0, 0, 4) });
-                var tbName = new TextBox { Margin = new Thickness(0, 0, 0, 8) };
-                inputSp.Children.Add(tbName);
-                inputSp.Children.Add(new TextBlock { Text = "显示名称:", Margin = new Thickness(0, 0, 0, 4) });
-                var tbLabel = new TextBox { Margin = new Thickness(0, 0, 0, 8) };
-                inputSp.Children.Add(tbLabel);
-                inputSp.Children.Add(new TextBlock { Text = "默认值:", Margin = new Thickness(0, 0, 0, 4) });
-                var tbDefault = new TextBox { Margin = new Thickness(0, 0, 0, 12) };
-                inputSp.Children.Add(tbDefault);
-                var btnOk = new Button { Content = "确定", Width = 70, Height = 26, HorizontalAlignment = HorizontalAlignment.Right, IsDefault = true };
-                btnOk.Click += (_, ___) =>
-                {
-                    if (!string.IsNullOrWhiteSpace(tbName.Text))
-                    {
-                        PushUndo();
-                        _template.Parameters.Add(new ReportEngine.Core.TemplateParam
-                        {
-                            Name = tbName.Text.Trim(),
-                            Label = string.IsNullOrWhiteSpace(tbLabel.Text) ? null : tbLabel.Text.Trim(),
-                            DefaultValue = tbDefault.Text,
-                            Type = "string"
-                        });
-                        MarkDirty();
-                        RefreshList();
-                        inputDlg.Close();
-                    }
-                };
-                inputSp.Children.Add(btnOk);
-                inputDlg.Content = inputSp;
-                inputDlg.ShowDialog();
-            };
-
-            // 删除参数
-            btnDel.Click += (_, __) =>
-            {
-                if (paramList.SelectedIndex >= 0 && paramList.SelectedIndex < _template.Parameters.Count)
+            DataBindingWizardDialog.Show(this, _template, _selectedElement,
+                (dsName, fieldName, propChoice, expression) =>
                 {
                     PushUndo();
-                    _template.Parameters.RemoveAt(paramList.SelectedIndex);
+                    if (propChoice == "文本内容 (Text)" && _selectedElement is TextElement txt)
+                    {
+                        txt.Text = expression;
+                    }
+                    else if (propChoice == "可见性表达式 (VisibleExpression)")
+                    {
+                        _selectedElement.VisibleExpression = expression;
+                    }
                     MarkDirty();
-                    RefreshList();
-                }
-            };
-
-            // 关闭按钮
-            var btnClose = new Button { Content = "关闭", Width = 70, Height = 26, HorizontalAlignment = HorizontalAlignment.Right, IsCancel = true };
-            btnClose.Click += (_, __) => dlg.Close();
-            sp.Children.Add(btnClose);
-
-            dlg.Content = sp;
-            dlg.ShowDialog();
+                    RefreshUI();
+                    _statusText.Text = "已绑定: " + expression;
+                });
         }
 
-        private void RefreshDsList(ListBox list, DataSourceDef? selectAfter)
+        private void OnShowTemplateParamsClicked()
         {
-            list.Items.Clear();
             if (_template == null) return;
-            foreach (var ds in _template.DataSources)
-                list.Items.Add(ds);
-            if (selectAfter != null)
-                for (int i = 0; i < list.Items.Count; i++)
-                    if (list.Items[i] == selectAfter) { list.SelectedIndex = i; return; }
-            if (list.Items.Count > 0) list.SelectedIndex = 0;
-        }
-
-        private static void RefreshFieldList(ListBox list, DataSourceDef ds)
-        {
-            list.Items.Clear();
-            foreach (var f in ds.Fields)
-                list.Items.Add(f);
+            TemplateParamsDialog.Show(this, _template,
+                () => { PushUndo(); MarkDirty(); });
         }
 
         // ============================== RelayCmd ==============================
