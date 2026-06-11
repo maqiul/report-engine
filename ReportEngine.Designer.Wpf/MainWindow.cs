@@ -2154,19 +2154,7 @@ namespace ReportEngine.Designer.Wpf
             // Band 属性（仅当没有选中元素时才显示）
             if (_selectedBand != null && _selectedElement == null)
             {
-                var band = _selectedBand;
-                ctx.AddSection("设计");
-                ctx.AddLabel("类型", Name(band.Type));
-                ctx.AddLabel("标识", band.Type.ToString());
-
-                ctx.AddSection("外观");
-                ctx.AddEditor(this, "高度(mm)", band.Height.ToString(), v => { if (double.TryParse(v, out var d) && d > 0) { PushUndo(); band.Height = d; MarkDirty(); RefreshUI(); } });
-
-                ctx.AddSection("行为");
-                ctx.AddBool("重复每页", band.RepeatOnNewPage, v => { PushUndo(); band.RepeatOnNewPage = v; MarkDirty(); });
-
-                ctx.AddSection("其它");
-                ctx.AddEditor(this, "数据源", band.DataSource ?? "", v => { PushUndo(); band.DataSource = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); });
+                BandPropertySectionBuilder.Build(ctx, _selectedBand, this);
             }
 
             // 元素属性
