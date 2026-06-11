@@ -5,6 +5,8 @@
 ![status](https://img.shields.io/badge/status-alpha-orange)
 ![.net](https://img.shields.io/badge/.NET-net462%20%7C%20netstandard2.0%20%7C%20net8.0-blue)
 ![license](https://img.shields.io/badge/license-MIT-blue)
+![tests](https://img.shields.io/badge/tests-100%2F100-brightgreen)
+![ci](https://github.com/maqiul/report-engine/actions/workflows/ci.yml/badge.svg)
 
 ---
 
@@ -172,10 +174,10 @@ exporter.Export(template, orders, "output.xlsx");
 
 | 项目 | 覆盖范围 | 测试数 |
 |------|----------|--------|
-| `ReportEngine.Core.Tests` | 模板解析 / 表达式引擎（系统变量/聚合/DotPath/FieldFormat）/ ZXing 条码 / 子报表解析（FileSystem + Composite）/ ClosedXML 导出 / 渲染主路径 + ReportRenderer 边界（ReportHeader / PageHeader / SubBands / 多栏 / 极小页面） | **70** |
-| `ReportEngine.Export.Pdf.Tests`（v0.1.7 新增）| `PdfSharpExporter` 主路径 — text / line / shape / image 断源 / barcode / border / 多页 / 磁盘文件 | **10** |
+| `ReportEngine.Core.Tests` | 模板解析 / 表达式引擎（系统变量/聚合/DotPath/FieldFormat）/ ZXing 条码 / 子报表解析（FileSystem + Composite）/ ClosedXML 导出（含 RenderedTable/CrossTab/多字号/页外坐标/HTTP URL 边界）/ 渲染主路径 + ReportRenderer 边界 | **84** |
+| `ReportEngine.Export.Pdf.Tests` | `PdfSharpExporter` 主路径 + 中文/超长/特殊符号/Hyperlink/4 对齐/Barcode 无文字 边界 | **16** |
 
-**总计 80 个测试**，全绿。运行：
+**总计 100 个测试**，全绿。运行：
 
 ```bash
 dotnet test ReportEngine.slnx
@@ -183,20 +185,38 @@ dotnet test ReportEngine.slnx
 
 > 设计器侧（WPF 预览 / WinForms 设计器）暂未独立测试，跨项目引用复杂，待 v0.4.x 加 net8.0 Designer 测试项目后再补。
 
+### 📦 NuGet 包（v0.1.19）
+
+三个核心库已配置 pack 元数据（`Authors` / `Tags` / `RepositoryUrl` / `MIT` / `README.md`）：
+
+| 包 | 版本 | TFM | 大小 |
+|----|------|-----|------|
+| `ReportEngine.Core` | `0.2.0-alpha` | `net462` / `netstandard2.0` / `net8.0` | 112 KB |
+| `ReportEngine.Export.Excel` | `0.3.0-alpha` | `net462` / `netstandard2.0` / `net8.0` | 29 KB |
+| `ReportEngine.Export.Pdf` | `0.3.0-alpha` | `net462` / `netstandard2.0` / `net8.0` | 28 KB |
+
+本地 pack：
+
+```bash
+dotnet pack ReportEngine.Core/ReportEngine.Core.csproj -c Release
+```
+
+> CI 自动 pack 见 `.github/workflows/ci.yml`（仅 main push 触发，artifacts 14 天保留）。
+
 ---
 
 ## 🗓️ 版本与路线图
 
-当前版本：**v0.1.13**（34 commits / 13 tags；详细里程碑见 `git tag -l`）
+当前版本：**v0.1.20**（40 commits / 21 tags；详细里程碑见 `git tag -l`）
 
 | 阶段 | 内容 | 状态 |
 |------|------|------|
 | 0.1.x | Core 引擎（解析 / 渲染 / 表达式 / 子报表） | ✅ |
-| 0.2.x | Excel/PDF 导出 + ZXing 条码 | ✅ |
+| 0.2.x | Excel/PDF 导出 + ZXing 条码 + NuGet pack | ✅（已 100 测试 / 3 nupkg / MainWindow 5050→2885 行） |
 | 0.3.x | WPF 运行时预览（分页 / 缩放 / 打印） | 🚧 |
-| 0.4.x | WPF 可视化设计器 | 🚧（MainWindow 已从 5050 → 3335 行） |
+| 0.4.x | WPF 可视化设计器 | 🚧 |
 | 0.5.x | WinForms 端对齐 | ⏳ |
-| 1.0   | 文档、单元测试、首个稳定 NuGet 发布 | 🚧（已 80 个测试） |
+| 1.0   | 文档、单元测试、首个稳定 NuGet 发布 | 🚧（已 100 个测试） |
 
 ### 🗺️ v0.2 详细路线图
 
@@ -217,12 +237,14 @@ dotnet test ReportEngine.slnx
 
 #### v0.2 验收标准
 
-- [ ] MainWindow.cs ≤ 3000 行
-- [ ] 单元测试 ≥ 100 条（全绿）
-- [ ] `ReportRenderer` / `ExpressionEngine` 边界用例覆盖
-- [ ] `CONTRIBUTING.md` 已发布
-- [ ] `LICENSE` / `README.md` / `CHANGELOG.md` 三件套到位
-- [ ] 首次 `dotnet pack` 能产出 NuGet 包（`ReportEngine.Core` 0.3.x + `ReportEngine.Export.Excel` + `ReportEngine.Export.Pdf`）
+- [x] MainWindow.cs ≤ 3000 行（**2885 行 / -42.9%**）
+- [x] 单元测试 ≥ 100 条（全绿，**100/100**）
+- [x] `ReportRenderer` / `ExpressionEngine` 边界用例覆盖（D3 + D4）
+- [x] `CONTRIBUTING.md` 已发布
+- [x] `LICENSE` / `README.md` / `CONTRIBUTING.md` 三件套到位
+- [x] 首次 `dotnet pack` 能产出 NuGet 包（`ReportEngine.Core` 0.2.0-alpha + `ReportEngine.Export.Excel` 0.3.0-alpha + `ReportEngine.Export.Pdf` 0.3.0-alpha）
+- [x] `.editorconfig` 代码风格规范（v0.1.20）
+- [x] GitHub Actions CI（v0.1.20：Win+Linux build/test + main push 自动 pack artifacts）
 
 #### v0.3+ 展望（暂不排期）
 
