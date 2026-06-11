@@ -305,4 +305,107 @@ public class ClosedXmlExporterTests
         act.Should().NotThrow();
         act().Should().NotBeEmpty();
     }
+
+    // ===== D7: 边界用例 =====
+
+    [Fact]
+    public void Export_With_RenderedTableElement_Does_Not_Throw()
+    {
+        var exporter = new ClosedXmlExporter();
+        var element = new RenderedTableElement
+        {
+            X = 10, Y = 5, Width = 80, Height = 40,
+            RowCount = 2, ColCount = 2,
+            Cells = new List<RenderedTableCell>
+            {
+                new RenderedTableCell { Row = 0, Col = 0, Text = "A" },
+                new RenderedTableCell { Row = 0, Col = 1, Text = "B" },
+                new RenderedTableCell { Row = 1, Col = 0, Text = "C" },
+                new RenderedTableCell { Row = 1, Col = 1, Text = "D" },
+            },
+        };
+
+        var act = () => exporter.Export(BuildReport(element));
+
+        act.Should().NotThrow();
+        act().Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public void Export_With_RenderedCrossTabElement_Does_Not_Throw()
+    {
+        var exporter = new ClosedXmlExporter();
+        var element = new RenderedCrossTabElement
+        {
+            X = 10, Y = 5, Width = 80, Height = 40,
+            RowCount = 3, ColCount = 3,
+            Cells = new List<RenderedTableCell>
+            {
+                new RenderedTableCell { Row = 0, Col = 0, Text = "X" },
+            },
+        };
+
+        var act = () => exporter.Export(BuildReport(element));
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void Export_With_Multiple_FontSizes_Does_Not_Throw()
+    {
+        var exporter = new ClosedXmlExporter();
+        var elements = new[]
+        {
+            new RenderedTextElement { Text = "6pt",  X = 10, Y = 5,  Width = 40, Height = 4,
+                Font = new FontDef { Size = 6 } },
+            new RenderedTextElement { Text = "16pt", X = 10, Y = 15, Width = 40, Height = 12,
+                Font = new FontDef { Size = 16 } },
+            new RenderedTextElement { Text = "36pt", X = 10, Y = 30, Width = 40, Height = 24,
+                Font = new FontDef { Size = 36 } },
+        };
+
+        var act = () => exporter.Export(BuildReport(elements));
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void Export_With_OutOfBounds_Text_Y_Does_Not_Throw()
+    {
+        // 元素 Y 在页外 (Y > PageHeight). 锁定: 不抛 + 字节仍非空
+        var exporter = new ClosedXmlExporter();
+        var report = BuildReport(Text("OffPage", 10, 500, h: 8));
+
+        var act = () => exporter.Export(report);
+
+        act.Should().NotThrow();
+        var bytes = exporter.Export(report);
+        bytes.Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public void Export_With_Image_Http_Url_Does_Not_Throw()
+    {
+        var exporter = new ClosedXmlExporter();
+        var img = new RenderedImageElement
+        {
+            X = 10, Y = 5, Width = 30, Height = 20,
+            Source = "https://example.com/does-not-exist.png",
+        };
+
+        var act = () => exporter.Export(BuildReport(img));
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void Export_With_Negative_Coordinates_Does_Not_Throw()
+    {
+        var exporter = new ClosedXmlExporter();
+        var report = BuildReport(Text("Negative", -5, -3));
+
+        var act = () => exporter.Export(report);
+
+        act.Should().NotThrow();
+    }
 }

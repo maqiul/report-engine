@@ -260,4 +260,92 @@ public class PdfSharpExporterTests
         bytes.Should().NotBeEmpty();
         bytes.Length.Should().BeGreaterThan(200);
     }
+
+    // ===== D5: 边界用例 =====
+
+    [Fact]
+    public void Export_With_Chinese_Unicode_Text_Does_Not_Throw()
+    {
+        var exporter = new PdfSharpExporter();
+        var report = BuildReport(Text("你好世界 — 中文报表", 10, 5));
+
+        var bytes = exporter.Export(report);
+
+        bytes.Should().NotBeEmpty();
+        bytes.Length.Should().BeGreaterThan(100);
+    }
+
+    [Fact]
+    public void Export_With_Very_Long_Text_Line_Does_Not_Throw()
+    {
+        var exporter = new PdfSharpExporter();
+        var longText = new string('A', 5000);
+        var report = BuildReport(Text(longText, 10, 5));
+
+        var bytes = exporter.Export(report);
+
+        bytes.Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public void Export_With_Special_Characters_Does_Not_Throw()
+    {
+        var exporter = new PdfSharpExporter();
+        var report = BuildReport(Text("特殊符号: & < > \" ' % # @ $ ! * + - / \\", 10, 5));
+
+        var bytes = exporter.Export(report);
+
+        bytes.Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public void Export_With_Hyperlink_Text_Does_Not_Throw()
+    {
+        var exporter = new PdfSharpExporter();
+        var element = Text("点击访问", 10, 5);
+        element.Hyperlink = "https://example.com/foo?bar=baz&q=1";
+        var report = BuildReport(element);
+
+        var bytes = exporter.Export(report);
+
+        bytes.Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public void Export_With_All_Alignment_Modes_Does_Not_Throw()
+    {
+        var exporter = new PdfSharpExporter();
+        var elements = new[]
+        {
+            new RenderedTextElement { Text = "Left",   X = 10, Y = 5,  Width = 50, Height = 8, Alignment = TextAlignment.Left },
+            new RenderedTextElement { Text = "Center", X = 10, Y = 15, Width = 50, Height = 8, Alignment = TextAlignment.Center },
+            new RenderedTextElement { Text = "Right",  X = 10, Y = 25, Width = 50, Height = 8, Alignment = TextAlignment.Right },
+            new RenderedTextElement { Text = "Justify", X = 10, Y = 35, Width = 50, Height = 8, Alignment = TextAlignment.Justify },
+        };
+
+        var report = BuildReport(elements);
+
+        var bytes = exporter.Export(report);
+
+        bytes.Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public void Export_Barcode_With_ShowText_False_Does_Not_Throw()
+    {
+        var exporter = new PdfSharpExporter();
+        var element = new RenderedBarcodeElement
+        {
+            X = 10, Y = 5, Width = 30, Height = 12,
+            Value = "ABC123",
+            Format = BarcodeFormat.Code128,
+            ShowText = false,
+        };
+
+        var report = BuildReport(element);
+
+        var bytes = exporter.Export(report);
+
+        bytes.Should().NotBeEmpty();
+    }
 }

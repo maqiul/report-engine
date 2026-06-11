@@ -101,4 +101,29 @@ public class BarcodeGeneratorTests
             for (int x = 0; x < m1.GetLength(1); x++)
                 m1[y, x].Should().Be(m2[y, x]);
     }
+
+    // ===== D8: 边界用例 (v0.1.18) =====
+
+    [Fact]
+    public void Generate_QRCode_All_Numeric_Content_Does_Not_Throw()
+    {
+        // QR Code 数字模式: 高密度编码
+        var act = () => BarcodeGenerator.Generate("123456789012345678901234567890", BarcodeFormat.QRCode, 150, 150);
+
+        act.Should().NotThrow();
+        var matrix = act();
+        matrix.Cast<bool>().Should().Contain(true);
+    }
+
+    [Fact]
+    public void Generate_Various_Dimensions_For_QRCode_Do_Not_Throw()
+    {
+        // 不同画布尺寸都应能容纳 QR 编码 (实际尺寸由编码决定, 画布被裁剪/居中)
+        var sizes = new[] { (50, 50), (100, 100), (300, 300), (500, 500) };
+        foreach (var (w, h) in sizes)
+        {
+            var act = () => BarcodeGenerator.Generate("Hello", BarcodeFormat.QRCode, w, h);
+            act.Should().NotThrow();
+        }
+    }
 }
