@@ -1477,11 +1477,9 @@ namespace ReportEngine.Designer.Wpf
                 _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand);
 
                 // 计算画布实际大小
-                double pageW = _template.Page.Width * PixelsPerMm;
-                double pageH = _template.Page.Height * PixelsPerMm;
+                var (bmpW, bmpH) = CanvasSizeCalculator.ComputePixelSize(_template, PixelsPerMm, CanvasPadding);
                 var bmp = new System.Windows.Media.Imaging.RenderTargetBitmap(
-                    (int)(pageW + CanvasPadding * 2),
-                    (int)(pageH + CanvasPadding * 2),
+                    bmpW, bmpH,
                     96, 96,
                     System.Windows.Media.PixelFormats.Pbgra32);
                 bmp.Render(_canvas);
