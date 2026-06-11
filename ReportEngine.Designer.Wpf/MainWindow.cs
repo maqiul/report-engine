@@ -504,21 +504,7 @@ namespace ReportEngine.Designer.Wpf
         {
             if (_formatPainterSource == null || !_formatPainterActive) return;
             PushUndo();
-            var src = _formatPainterSource;
-            // 复制边框
-            target.Border = src.Border != null ? new BorderDef { Width = src.Border.Width, Color = src.Border.Color, Style = src.Border.Style, Top = src.Border.Top, Bottom = src.Border.Bottom, Left = src.Border.Left, Right = src.Border.Right } : null;
-            // 复制背景色
-            target.BackgroundColor = src.BackgroundColor;
-            // 复制TextElement样式
-            if (src is TextElement st && target is TextElement tt)
-            {
-                tt.Font.Family = st.Font.Family;
-                tt.Font.Size = st.Font.Size;
-                tt.Font.Bold = st.Font.Bold;
-                tt.Font.Italic = st.Font.Italic;
-                tt.Font.Color = st.Font.Color;
-                tt.Alignment = st.Alignment;
-            }
+            FormatPainterApplier.Apply(_formatPainterSource, target);
             MarkDirty();
             RefreshUI();
             _statusText.Text = "已应用格式刷";
