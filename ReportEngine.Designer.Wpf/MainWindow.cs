@@ -2007,35 +2007,16 @@ namespace ReportEngine.Designer.Wpf
 
         private ContextMenu BuildElementTreeContextMenu(ReportElement el, Band band)
         {
-            var menu = new ContextMenu();
-            var miSelect = new MenuItem { Header = "选中" };
-            miSelect.Click += (_, __) => { _selectedElement = el; _selectedBand = band; _selectedElements.Clear(); _selectedElements.Add(el); RefreshUI(); };
-            menu.Items.Add(miSelect);
-            menu.Items.Add(new Separator());
-            var miCopy = new MenuItem { Header = "复制" };
-            miCopy.Click += (_, __) => { _selectedElement = el; _selectedBand = band; CopySelected(); };
-            menu.Items.Add(miCopy);
-            var miCut = new MenuItem { Header = "剪切" };
-            miCut.Click += (_, __) => { _selectedElement = el; _selectedBand = band; CutSelected(); };
-            menu.Items.Add(miCut);
-            var miDel = new MenuItem { Header = "删除" };
-            miDel.Click += (_, __) => { _selectedElement = el; _selectedBand = band; DeleteSelected(); };
-            menu.Items.Add(miDel);
-            menu.Items.Add(new Separator());
-            var miRename = new MenuItem { Header = "重命名" };
-            miRename.Click += (_, __) => ShowRenameDialog(el);
-            menu.Items.Add(miRename);
-            var miLock = new MenuItem { Header = el.Locked ? "解锁" : "锁定" };
-            miLock.Click += (_, __) => { PushUndo(); el.Locked = !el.Locked; MarkDirty(); RefreshUI(); };
-            menu.Items.Add(miLock);
-            menu.Items.Add(new Separator());
-            var miTop = new MenuItem { Header = "置于顶层" };
-            miTop.Click += (_, __) => { _selectedElement = el; _selectedBand = band; MoveElementOrder("front"); };
-            menu.Items.Add(miTop);
-            var miBottom = new MenuItem { Header = "置于底层" };
-            miBottom.Click += (_, __) => { _selectedElement = el; _selectedBand = band; MoveElementOrder("back"); };
-            menu.Items.Add(miBottom);
-            return menu;
+            return ElementTreeContextMenuBuilder.Build(
+                isLocked: el.Locked,
+                onSelect: () => { _selectedElement = el; _selectedBand = band; _selectedElements.Clear(); _selectedElements.Add(el); RefreshUI(); },
+                onCopy: () => { _selectedElement = el; _selectedBand = band; CopySelected(); },
+                onCut: () => { _selectedElement = el; _selectedBand = band; CutSelected(); },
+                onDelete: () => { _selectedElement = el; _selectedBand = band; DeleteSelected(); },
+                onRename: () => ShowRenameDialog(el),
+                onToggleLock: () => { PushUndo(); el.Locked = !el.Locked; MarkDirty(); RefreshUI(); },
+                onBringToFront: () => { _selectedElement = el; _selectedBand = band; MoveElementOrder("front"); },
+                onSendToBack: () => { _selectedElement = el; _selectedBand = band; MoveElementOrder("back"); });
         }
 
         /// <summary>弹出重命名对话框</summary>
