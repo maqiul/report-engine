@@ -794,7 +794,7 @@ namespace ReportEngine.Designer.Wpf
             file.Items.Add(MakeMenuItem("数据源(_S)...", null, ShowDataSourceDialog));
             file.Items.Add(MakeMenuItem("数据绑定向导(_B)...", null, ShowDataBindingWizard));
             file.Items.Add(MakeMenuItem("模板参数(_P)...", null, ShowTemplateParamsDialog));
-            file.Items.Add(MakeMenuItem("加载预览数据(_L)...", null, LoadPreviewData));
+            file.Items.Add(MakeMenuItem("加载预览数据(_L)...", null, OnLoadPreviewDataClicked));
             file.Items.Add(new Separator());
             BuildRecentFilesMenu(file);
             file.Items.Add(new Separator());
@@ -2788,27 +2788,17 @@ namespace ReportEngine.Designer.Wpf
 
         // ============================== 数据源管理 ==============================
 
-        private void LoadPreviewData()
+        /// <summary>"加载预览数据" 菜单回调: 调用 LoadPreviewDataDialog 弹窗 + 应用副作用。</summary>
+        private void OnLoadPreviewDataClicked()
         {
-            var dlg = new OpenFileDialog { Filter = "JSON文件|*.json|所有文件|*.*", Title = "加载预览数据" };
-            if (dlg.ShowDialog() == true)
-            {
-                try
+            LoadPreviewDataDialog.Show(this,
+                onLoaded: (parsed, fileName) =>
                 {
-                    var text = File.ReadAllText(dlg.FileName);
-                    // 简单JSON解析: 支持 {"key":"value",...} 格式
-                    _previewData = Parse(text);
-                    _statusText.Text = "已加载预览数据: " + System.IO.Path.GetFileName(dlg.FileName) + " (" + (_previewData?.Count ?? 0) + " 个字段)";
+                    _previewData = parsed;
+                    _statusText.Text = "已加载预览数据: " + fileName + " (" + (_previewData?.Count ?? 0) + " 个字段)";
                     if (_viewMode == "preview") _previewRenderer.Render(_template!, _zoom, _previewData);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("加载失败: " + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-            }
+                });
         }
-
-        /// <summary>简单JSON解析 (浅层平铺 key-value), 兼容net462用Newtonsoft风格手动解析</summary>
 
         /// <summary>搜索元素对话框</summary>
         private void SearchElement()
