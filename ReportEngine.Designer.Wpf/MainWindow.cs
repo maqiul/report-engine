@@ -2158,128 +2158,21 @@ namespace ReportEngine.Designer.Wpf
                 var muInfo = _template.Page.MultiUp;
                 if (muInfo != null)
                 {
-                    // 多联信息卡片
-                    var muCard = new Border
-                    {
-                        Background = new SolidColorBrush(Color.FromRgb(245, 250, 245)),
-                        BorderBrush = new SolidColorBrush(Color.FromRgb(100, 180, 100)),
-                        BorderThickness = new Thickness(1),
-                        CornerRadius = new CornerRadius(4),
-                        Padding = new Thickness(8),
-                        Margin = new Thickness(0, 2, 0, 8)
-                    };
-                    var muStack = new StackPanel();
-                    
-                    // 标题行
-                    var muTitle = new DockPanel { Margin = new Thickness(0, 0, 0, 6) };
-                    muTitle.Children.Add(new TextBlock { Text = "✅ 多联打印已启用", FontWeight = FontWeights.Bold, Foreground = Brushes.DarkGreen, FontSize = 11 });
-                    muStack.Children.Add(muTitle);
-                    
-                    // 配置信息网格
-                    var muGrid = new Grid();
-                    muGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(70) });
-                    muGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-                    
-                    int muRow = 0;
-                    void AddMuRow(string label, string value)
-                    {
-                        muGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(22) });
-                        var lblTb = new TextBlock { Text = label + ":", Foreground = Brushes.Gray, FontSize = 10, VerticalAlignment = VerticalAlignment.Center };
-                        muGrid.Children.Add(lblTb);
-                        Grid.SetRow(lblTb, muRow);
-                        var valTb = new TextBlock { Text = value, Foreground = Brushes.Black, FontSize = 10, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
-                        Grid.SetColumn(valTb, 1);
-                        Grid.SetRow(valTb, muRow);
-                        muGrid.Children.Add(valTb);
-                        muRow++;
-                    }
-                    
-                    AddMuRow("布局", $"{muInfo.Rows} 行 × {muInfo.Columns} 列 = {muInfo.Count} 份/页");
-                    
-                    // 打印顺序 - 可切换
-                    var muDirRow = muRow;
-                    muGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(22) });
-                    var dirLbl = new TextBlock { Text = "打印顺序:", Foreground = Brushes.Gray, FontSize = 10, VerticalAlignment = VerticalAlignment.Center };
-                    muGrid.Children.Add(dirLbl);
-                    Grid.SetRow(dirLbl, muDirRow);
-                    
-                    // 值 + 按钮放在 DockPanel 中
-                    var dirPanel = new DockPanel();
-                    var dirValue = new TextBlock { Text = muInfo.Direction == "Vertical" ? "先列后行 (垂直)" : "先行后列 (水平/Z字形)", Foreground = Brushes.Black, FontSize = 10, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
-                    DockPanel.SetDock(dirValue, Dock.Left);
-                    dirPanel.Children.Add(dirValue);
-                    
-                    // 切换按钮
-                    var dirToggleBtn = new Button { Content = "⇄ 切换", Width = 50, Height = 18, FontSize = 9, Margin = new Thickness(8, 0, 0, 0) };
-                    dirToggleBtn.Click += (_, __) =>
-                    {
-                        PushUndo();
-                        muInfo.Direction = muInfo.Direction == "Vertical" ? "Horizontal" : "Vertical";
-                        dirValue.Text = muInfo.Direction == "Vertical" ? "先列后行 (垂直)" : "先行后列 (水平/Z字形)";
-                        MarkDirty();
-                        RefreshUI();
-                    };
-                    DockPanel.SetDock(dirToggleBtn, Dock.Left);
-                    dirPanel.Children.Add(dirToggleBtn);
-                    
-                    Grid.SetColumn(dirPanel, 1);
-                    Grid.SetRow(dirPanel, muDirRow);
-                    muGrid.Children.Add(dirPanel);
-                    muRow++;
-                    
-                    AddMuRow("间距", $"水平 {muInfo.HSpacing}mm  垂直 {muInfo.VSpacing}mm");
-                    
-                    // 计算单联尺寸
-                    double cw = (_template.Page.Width - muInfo.HSpacing * (muInfo.Columns - 1)) / muInfo.Columns;
-                    double ch = (_template.Page.Height - muInfo.VSpacing * (muInfo.Rows - 1)) / muInfo.Rows;
-                    AddMuRow("单联尺寸", $"{Math.Round(cw, 1)} × {Math.Round(ch, 1)} mm");
-                    
-                    muStack.Children.Add(muGrid);
-                    muCard.Child = muStack;
-                    _propertyStack.Children.Add(muCard);
-                    
-                    // 修改按钮
-                    var muEditBtn = new Button
-                    {
-                        Content = "⚙ 修改配置",
-                        Width = 100,
-                        Height = 24,
-                        Margin = new Thickness(0, 0, 0, 4),
-                        FontSize = 10,
-                        HorizontalAlignment = HorizontalAlignment.Right
-                    };
-                    muEditBtn.Click += (_, __) => ShowPageSetupDialog();
-                    _propertyStack.Children.Add(muEditBtn);
+                    _propertyStack.Children.Add(PropertyCardFactory.CreateMultiUpEnabledCard(
+                        muInfo, _template,
+                        onEdit: ShowPageSetupDialog,
+                        onDirectionToggled: newDir =>
+                        {
+                            PushUndo();
+                            muInfo.Direction = newDir;
+                            MarkDirty();
+                            RefreshUI();
+                        }));
                 }
                 else
                 {
-                    // 未启用提示卡片
-                    var muCard = new Border
-                    {
-                        Background = new SolidColorBrush(Color.FromRgb(250, 250, 250)),
-                        BorderBrush = new SolidColorBrush(Color.FromRgb(200, 200, 200)),
-                        BorderThickness = new Thickness(1),
-                        CornerRadius = new CornerRadius(4),
-                        Padding = new Thickness(8),
-                        Margin = new Thickness(0, 2, 0, 8)
-                    };
-                    var muStack = new StackPanel();
-                    muStack.Children.Add(new TextBlock { Text = "多联打印未启用", Foreground = Brushes.Gray, FontSize = 10, Margin = new Thickness(0, 0, 0, 4) });
-                    
-                    var muEnableBtn = new Button
-                    {
-                        Content = "+ 启用多联打印",
-                        Width = 100,
-                        Height = 24,
-                        FontSize = 10,
-                        HorizontalAlignment = HorizontalAlignment.Right,
-                        Foreground = Brushes.DarkBlue
-                    };
-                    muEnableBtn.Click += (_, __) => ShowPageSetupDialog();
-                    muStack.Children.Add(muEnableBtn);
-                    
-                    muCard.Child = muStack;
-                    _propertyStack.Children.Add(muCard);
+                    _propertyStack.Children.Add(PropertyCardFactory.CreateMultiUpDisabledCard(
+                        onEnable: ShowPageSetupDialog));
                 }
 
                 ctx.AddSection("元数据");
