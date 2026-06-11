@@ -194,7 +194,7 @@ dotnet test ReportEngine.slnx
 | 0.1.x | Core 引擎（解析 / 渲染 / 表达式 / 子报表） | ✅ |
 | 0.2.x | Excel/PDF 导出 + ZXing 条码 | ✅ |
 | 0.3.x | WPF 运行时预览（分页 / 缩放 / 打印） | 🚧 |
-| 0.4.x | WPF 可视化设计器 | 🚧（MainWindow 已从 5050 → 3402 行） |
+| 0.4.x | WPF 可视化设计器 | 🚧（MainWindow 已从 5050 → 3335 行） |
 | 0.5.x | WinForms 端对齐 | ⏳ |
 | 1.0   | 文档、单元测试、首个稳定 NuGet 发布 | 🚧（已 80 个测试） |
 
