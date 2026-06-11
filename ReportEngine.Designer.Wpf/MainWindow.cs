@@ -791,7 +791,7 @@ namespace ReportEngine.Designer.Wpf
             file.Items.Add(MakeMenuItem("导出图片(_I)...", null, ExportPng));
             file.Items.Add(MakeMenuItem("批量导出PDF+Excel(_B)...", null, ExportBatch));
             file.Items.Add(new Separator());
-            file.Items.Add(MakeMenuItem("数据源(_S)...", null, ShowDataSourceDialog));
+            file.Items.Add(MakeMenuItem("数据源(_S)...", null, OnShowDataSourceClicked));
             file.Items.Add(MakeMenuItem("数据绑定向导(_B)...", null, ShowDataBindingWizard));
             file.Items.Add(MakeMenuItem("模板参数(_P)...", null, ShowTemplateParamsDialog));
             file.Items.Add(MakeMenuItem("加载预览数据(_L)...", null, OnLoadPreviewDataClicked));
@@ -2828,160 +2828,9 @@ namespace ReportEngine.Designer.Wpf
                 });
         }
 
-        private void ShowDataSourceDialog()
+        private void OnShowDataSourceClicked()
         {
-            if (_template == null) return;
-
-            var dlg = new Window
-            {
-                Title = "数据源管理", Width = 600, Height = 480,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner, Owner = this,
-                Background = new SolidColorBrush(Color.FromRgb(245, 245, 245)),
-                ResizeMode = ResizeMode.CanResize,
-            };
-
-            var mainGrid = new Grid { Margin = new Thickness(12) };
-            mainGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(2, GridUnitType.Star) });
-            mainGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(12) });
-            mainGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(3, GridUnitType.Star) });
-
-            // 左侧：数据源列表
-            var leftPanel = new DockPanel();
-            leftPanel.Children.Add(new TextBlock { Text = "数据源列表:", FontSize = 12, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 4) });
-            DockPanel.SetDock(leftPanel.Children[0], Dock.Top);
-            var dsList = new ListBox { FontSize = 12, MinHeight = 300 };
-            RefreshDsList(dsList, null);
-            leftPanel.Children.Add(dsList);
-            // 添加/删除按钮
-            var dsBtnPanel = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 6, 0, 0) };
-            var btnAddDs = new Button { Content = "+ 新增", Width = 60, Height = 26, Margin = new Thickness(0, 0, 4, 0) };
-            var btnDelDs = new Button { Content = "- 删除", Width = 60, Height = 26 };
-            dsBtnPanel.Children.Add(btnAddDs); dsBtnPanel.Children.Add(btnDelDs);
-            DockPanel.SetDock(dsBtnPanel, Dock.Bottom);
-            leftPanel.Children.Add(dsBtnPanel);
-            Grid.SetColumn(leftPanel, 0);
-            mainGrid.Children.Add(leftPanel);
-
-            // 右侧：字段列表
-            var rightPanel = new DockPanel();
-            var fieldHeader = new DockPanel { Margin = new Thickness(0, 0, 0, 4) };
-            fieldHeader.Children.Add(new TextBlock { Text = "字段列表:", FontSize = 12, FontWeight = FontWeights.Bold });
-            var selectedDsLabel = new TextBlock { Text = "", FontSize = 11, Foreground = Brushes.DimGray, Margin = new Thickness(8, 0, 0, 0) };
-            DockPanel.SetDock(selectedDsLabel, Dock.Right);
-            fieldHeader.Children.Add(selectedDsLabel);
-            DockPanel.SetDock(fieldHeader, Dock.Top);
-            rightPanel.Children.Add(fieldHeader);
-
-            var fieldList = new ListBox { FontSize = 12, MinHeight = 280 };
-            rightPanel.Children.Add(fieldList);
-
-            // 添加/编辑字段按钮
-            var fieldBtnPanel = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 6, 0, 0) };
-            var btnAddField = new Button { Content = "+ 添加", Width = 60, Height = 26, Margin = new Thickness(0, 0, 4, 0) };
-            var btnEditField = new Button { Content = "✎ 编辑", Width = 60, Height = 26, Margin = new Thickness(0, 0, 4, 0) };
-            var btnDelField = new Button { Content = "- 删除", Width = 60, Height = 26 };
-            fieldBtnPanel.Children.Add(btnAddField); fieldBtnPanel.Children.Add(btnEditField); fieldBtnPanel.Children.Add(btnDelField);
-            DockPanel.SetDock(fieldBtnPanel, Dock.Bottom);
-            rightPanel.Children.Add(fieldBtnPanel);
-            Grid.SetColumn(rightPanel, 2);
-            mainGrid.Children.Add(rightPanel);
-
-            // 事件：选中数据源
-            dsList.SelectionChanged += (_, __) =>
-            {
-                if (dsList.SelectedItem is DataSourceDef ds)
-                {
-                    selectedDsLabel.Text = ds.Name;
-                    RefreshFieldList(fieldList, ds);
-                }
-            };
-
-            // 新增数据源
-            btnAddDs.Click += (_, __) =>
-            {
-                var input = new InputDialog("新增数据源", "请输入数据源名称:", "DataSource" + (_template.DataSources.Count + 1));
-                input.Owner = dlg;
-                if (input.ShowDialog() == true)
-                {
-                    PushUndo();
-                    var newDs = new DataSourceDef { Name = input.Result };
-                    _template.DataSources.Add(newDs);
-                    RefreshDsList(dsList, newDs);
-                    MarkDirty();
-                }
-            };
-
-            // 删除数据源
-            btnDelDs.Click += (_, __) =>
-            {
-                if (dsList.SelectedItem is DataSourceDef ds)
-                {
-                    PushUndo();
-                    _template.DataSources.Remove(ds);
-                    RefreshDsList(dsList, null);
-                    fieldList.Items.Clear();
-                    selectedDsLabel.Text = "";
-                    MarkDirty();
-                }
-            };
-
-            // 添加字段
-            btnAddField.Click += (_, __) =>
-            {
-                if (dsList.SelectedItem is DataSourceDef ds)
-                {
-                    var input = new FieldInputDialog("添加字段");
-                    input.Owner = dlg;
-                    if (input.ShowDialog() == true)
-                    {
-                        PushUndo();
-                        ds.Fields.Add(new FieldDef { Name = input.FieldName, Type = input.FieldType, Format = input.FieldFormat });
-                        RefreshFieldList(fieldList, ds);
-                        MarkDirty();
-                    }
-                }
-            };
-
-            // 编辑字段
-            btnEditField.Click += (_, __) =>
-            {
-                if (dsList.SelectedItem is DataSourceDef ds && fieldList.SelectedItem is FieldDef fd)
-                {
-                    var input = new FieldInputDialog("编辑字段", fd.Name, fd.Type, fd.Format);
-                    input.Owner = dlg;
-                    if (input.ShowDialog() == true)
-                    {
-                        PushUndo();
-                        fd.Name = input.FieldName;
-                        fd.Type = input.FieldType;
-                        fd.Format = input.FieldFormat;
-                        RefreshFieldList(fieldList, ds);
-                        MarkDirty();
-                    }
-                }
-            };
-
-            // 删除字段
-            btnDelField.Click += (_, __) =>
-            {
-                if (dsList.SelectedItem is DataSourceDef ds && fieldList.SelectedItem is FieldDef fd)
-                {
-                    PushUndo();
-                    ds.Fields.Remove(fd);
-                    RefreshFieldList(fieldList, ds);
-                    MarkDirty();
-                }
-            };
-
-            // 按钮
-            var bottomPanel = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 0) };
-            var btnClose = new Button { Content = "关闭", Width = 75, Height = 26, IsCancel = true };
-            btnClose.Click += (_, __) => dlg.DialogResult = true;
-            bottomPanel.Children.Add(btnClose);
-            mainGrid.Children.Add(bottomPanel);
-
-            dlg.Content = mainGrid;
-            dlg.ShowDialog();
+            DataSourceDialog.Show(this, _template, () => { PushUndo(); MarkDirty(); });
         }
 
         /// <summary>数据绑定向导 — 引导用户选择数据源并绑定字段到元素</summary>
@@ -3202,63 +3051,6 @@ namespace ReportEngine.Designer.Wpf
             public event EventHandler? CanExecuteChanged { add { } remove { } }
             public bool CanExecute(object? parameter) => true;
             public void Execute(object? parameter) => _execute();
-        }
-
-        private class InputDialog : Window
-        {
-            public string Result { get; private set; } = "";
-            public InputDialog(string title, string prompt, string defaultText = "")
-            {
-                Title = title; Width = 360; Height = 160;
-                WindowStartupLocation = WindowStartupLocation.CenterOwner;
-                ResizeMode = ResizeMode.NoResize;
-                var sp = new StackPanel { Margin = new Thickness(12) };
-                sp.Children.Add(new TextBlock { Text = prompt, FontSize = 12, Margin = new Thickness(0, 0, 0, 6) });
-                var tb = new TextBox { Text = defaultText, FontSize = 12, Padding = new Thickness(4, 3, 4, 3) };
-                tb.SelectAll(); tb.Focus();
-                sp.Children.Add(tb);
-                var btnRow = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 0) };
-                var btnOk = new Button { Content = "确定", Width = 60, Height = 26, Margin = new Thickness(0, 0, 8, 0), IsDefault = true };
-                var btnCancel = new Button { Content = "取消", Width = 60, Height = 26, IsCancel = true };
-                btnOk.Click += (_, __) => { Result = tb.Text; DialogResult = true; };
-                btnCancel.Click += (_, __) => DialogResult = false;
-                btnRow.Children.Add(btnOk); btnRow.Children.Add(btnCancel);
-                sp.Children.Add(btnRow);
-                Content = sp;
-            }
-        }
-
-        private class FieldInputDialog : Window
-        {
-            public string FieldName { get; private set; } = "";
-            public string FieldType { get; private set; } = "string";
-            public string? FieldFormat { get; private set; }
-            public FieldInputDialog(string title, string name = "", string type = "string", string? format = null)
-            {
-                Title = title; Width = 380; Height = 260;
-                WindowStartupLocation = WindowStartupLocation.CenterOwner;
-                ResizeMode = ResizeMode.NoResize;
-                var sp = new StackPanel { Margin = new Thickness(12) };
-                sp.Children.Add(new TextBlock { Text = "字段名:", FontSize = 11, Margin = new Thickness(0, 0, 0, 2) });
-                var nameBox = new TextBox { Text = name, FontSize = 12, Padding = new Thickness(4, 3, 4, 3) };
-                sp.Children.Add(nameBox);
-                sp.Children.Add(new TextBlock { Text = "类型:", FontSize = 11, Margin = new Thickness(0, 6, 0, 2) });
-                var typeCombo = new ComboBox { FontSize = 12, Padding = new Thickness(4, 3, 4, 3) };
-                foreach (var t in new[] { "string", "int", "decimal", "double", "DateTime", "bool" }) typeCombo.Items.Add(t);
-                typeCombo.SelectedItem = type;
-                sp.Children.Add(typeCombo);
-                sp.Children.Add(new TextBlock { Text = "格式 (可选):", FontSize = 11, Margin = new Thickness(0, 6, 0, 2) });
-                var fmtBox = new TextBox { Text = format ?? "", FontSize = 12, Padding = new Thickness(4, 3, 4, 3) };
-                sp.Children.Add(fmtBox);
-                var btnRow = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 0) };
-                var btnOk = new Button { Content = "确定", Width = 60, Height = 26, Margin = new Thickness(0, 0, 8, 0), IsDefault = true };
-                var btnCancel = new Button { Content = "取消", Width = 60, Height = 26, IsCancel = true };
-                btnOk.Click += (_, __) => { FieldName = nameBox.Text; FieldType = (string?)typeCombo.SelectedItem ?? "string"; FieldFormat = string.IsNullOrWhiteSpace(fmtBox.Text) ? null : fmtBox.Text; DialogResult = true; };
-                btnCancel.Click += (_, __) => DialogResult = false;
-                btnRow.Children.Add(btnOk); btnRow.Children.Add(btnCancel);
-                sp.Children.Add(btnRow);
-                Content = sp;
-            }
         }
     }
 }
