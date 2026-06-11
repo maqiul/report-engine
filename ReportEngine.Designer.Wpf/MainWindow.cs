@@ -2242,8 +2242,6 @@ namespace ReportEngine.Designer.Wpf
             dlg.ShowDialog();
         }
 
-        private int _propRowIndex;
-
         private bool _updatingProps;
 
         private void UpdatePropertyList()
@@ -2260,8 +2258,7 @@ namespace ReportEngine.Designer.Wpf
         private void UpdatePropertyListCore()
         {
             _propertyStack.Children.Clear();
-            _currentExpander = null;
-            _propRowIndex = 0;
+            using var ctx = new PropertyRowContext(_propertyStack);
             if (_template == null) return;
 
             // 更新选中对象标签
@@ -2282,16 +2279,16 @@ namespace ReportEngine.Designer.Wpf
             // 未选中任何 Band / 元素时显示页面级属性
             if (_selectedBand == null && _selectedElement == null)
             {
-                AddPropSection("页面");
-                AddPropLabel("纸张", _template.Page.Width + " × " + _template.Page.Height + " mm");
-                AddPropLabel("方向", _template.Page.Orientation == "landscape" ? "横向" : "纵向");
-                AddPropLabel("边距", "上" + _template.Page.Margin.Top + " 下" + _template.Page.Margin.Bottom + " 左" + _template.Page.Margin.Left + " 右" + _template.Page.Margin.Right);
-                AddPropColor("背景色", _template.Page.BackgroundColor ?? "", v => { PushUndo(); _template.Page.BackgroundColor = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); RefreshUI(); });
-                AddPropEditor("背景图片", _template.Page.BackgroundImage ?? "", v => { PushUndo(); _template.Page.BackgroundImage = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); RefreshUI(); });
-                AddPropEditor("水印文字", _template.Page.Watermark ?? "", v => { PushUndo(); _template.Page.Watermark = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); RefreshUI(); });
+                ctx.AddSection("页面");
+                ctx.AddLabel("纸张", _template.Page.Width + " × " + _template.Page.Height + " mm");
+                ctx.AddLabel("方向", _template.Page.Orientation == "landscape" ? "横向" : "纵向");
+                ctx.AddLabel("边距", "上" + _template.Page.Margin.Top + " 下" + _template.Page.Margin.Bottom + " 左" + _template.Page.Margin.Left + " 右" + _template.Page.Margin.Right);
+                ctx.AddColor(this, "背景色", _template.Page.BackgroundColor ?? "", v => { PushUndo(); _template.Page.BackgroundColor = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); RefreshUI(); });
+                ctx.AddEditor(this, "背景图片", _template.Page.BackgroundImage ?? "", v => { PushUndo(); _template.Page.BackgroundImage = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); RefreshUI(); });
+                ctx.AddEditor(this, "水印文字", _template.Page.Watermark ?? "", v => { PushUndo(); _template.Page.Watermark = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); RefreshUI(); });
                 
                 // 多联打印 - 分组卡片式
-                AddPropSection("多联打印");
+                ctx.AddSection("多联打印");
                 var muInfo = _template.Page.MultiUp;
                 if (muInfo != null)
                 {
@@ -2419,11 +2416,11 @@ namespace ReportEngine.Designer.Wpf
                     _propertyStack.Children.Add(muCard);
                 }
 
-                AddPropSection("元数据");
-                AddPropEditor("作者", _template.Author ?? "", v => { PushUndo(); _template.Author = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); });
-                AddPropEditor("描述", _template.Description ?? "", v => { PushUndo(); _template.Description = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); });
-                AddPropLabel("创建时间", _template.CreatedAt.ToString("yyyy-MM-dd HH:mm"));
-                AddPropLabel("修改时间", _template.ModifiedAt.ToString("yyyy-MM-dd HH:mm"));
+                ctx.AddSection("元数据");
+                ctx.AddEditor(this, "作者", _template.Author ?? "", v => { PushUndo(); _template.Author = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); });
+                ctx.AddEditor(this, "描述", _template.Description ?? "", v => { PushUndo(); _template.Description = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); });
+                ctx.AddLabel("创建时间", _template.CreatedAt.ToString("yyyy-MM-dd HH:mm"));
+                ctx.AddLabel("修改时间", _template.ModifiedAt.ToString("yyyy-MM-dd HH:mm"));
                 return;
             }
 
@@ -2431,18 +2428,18 @@ namespace ReportEngine.Designer.Wpf
             if (_selectedBand != null && _selectedElement == null)
             {
                 var band = _selectedBand;
-                AddPropSection("设计");
-                AddPropLabel("类型", Name(band.Type));
-                AddPropLabel("标识", band.Type.ToString());
+                ctx.AddSection("设计");
+                ctx.AddLabel("类型", Name(band.Type));
+                ctx.AddLabel("标识", band.Type.ToString());
 
-                AddPropSection("外观");
-                AddPropEditor("高度(mm)", band.Height.ToString(), v => { if (double.TryParse(v, out var d) && d > 0) { PushUndo(); band.Height = d; MarkDirty(); RefreshUI(); } });
+                ctx.AddSection("外观");
+                ctx.AddEditor(this, "高度(mm)", band.Height.ToString(), v => { if (double.TryParse(v, out var d) && d > 0) { PushUndo(); band.Height = d; MarkDirty(); RefreshUI(); } });
 
-                AddPropSection("行为");
-                AddPropBool("重复每页", band.RepeatOnNewPage, v => { PushUndo(); band.RepeatOnNewPage = v; MarkDirty(); });
+                ctx.AddSection("行为");
+                ctx.AddBool("重复每页", band.RepeatOnNewPage, v => { PushUndo(); band.RepeatOnNewPage = v; MarkDirty(); });
 
-                AddPropSection("其它");
-                AddPropEditor("数据源", band.DataSource ?? "", v => { PushUndo(); band.DataSource = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); });
+                ctx.AddSection("其它");
+                ctx.AddEditor(this, "数据源", band.DataSource ?? "", v => { PushUndo(); band.DataSource = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); });
             }
 
             // 元素属性
@@ -2458,114 +2455,114 @@ namespace ReportEngine.Designer.Wpf
                 var el = _selectedElement;
 
                 // === 设计 ===
-                AddPropSection("设计");
-                AddPropLabel("类型", ElementTypeName(el));
-                AddPropLabel("标识", el.Id ?? "");
-                AddPropEditor("名称", el.Name ?? "", v => { PushUndo(); el.Name = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); RefreshUI(); });
-                AddPropBool("可见", el.Visible, v => { PushUndo(); el.Visible = v; MarkDirty(); });
-                AddPropBool("锁定", el.Locked, v => { PushUndo(); el.Locked = v; MarkDirty(); RefreshUI(); });
-                AddPropEditor("旋转(°)", el.Rotation.ToString(), v => { if (double.TryParse(v, out var d)) { PushUndo(); el.Rotation = d % 360; MarkDirty(); RefreshUI(); } });
-                AddPropEditor("透明度", el.Opacity.ToString("F2"), v => { if (double.TryParse(v, out var d)) { PushUndo(); el.Opacity = Math.Max(0, Math.Min(1, d)); MarkDirty(); RefreshUI(); } });
+                ctx.AddSection("设计");
+                ctx.AddLabel("类型", ElementTypeName(el));
+                ctx.AddLabel("标识", el.Id ?? "");
+                ctx.AddEditor(this, "名称", el.Name ?? "", v => { PushUndo(); el.Name = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); RefreshUI(); });
+                ctx.AddBool("可见", el.Visible, v => { PushUndo(); el.Visible = v; MarkDirty(); });
+                ctx.AddBool("锁定", el.Locked, v => { PushUndo(); el.Locked = v; MarkDirty(); RefreshUI(); });
+                ctx.AddEditor(this, "旋转(°)", el.Rotation.ToString(), v => { if (double.TryParse(v, out var d)) { PushUndo(); el.Rotation = d % 360; MarkDirty(); RefreshUI(); } });
+                ctx.AddEditor(this, "透明度", el.Opacity.ToString("F2"), v => { if (double.TryParse(v, out var d)) { PushUndo(); el.Opacity = Math.Max(0, Math.Min(1, d)); MarkDirty(); RefreshUI(); } });
 
                 // === 外观 ===
-                AddPropSection("外观");
-                AddPropColor("背景色", el.BackgroundColor ?? "", v => { PushUndo(); el.BackgroundColor = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); RefreshUI(); });
+                ctx.AddSection("外观");
+                ctx.AddColor(this, "背景色", el.BackgroundColor ?? "", v => { PushUndo(); el.BackgroundColor = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); RefreshUI(); });
 
                 // 边框属性
-                AddPropSection("边框");
+                ctx.AddSection("边框");
                 var border = el.Border ?? new BorderDef();
-                AddPropEditor("边框宽", border.Width.ToString(), v =>
+                ctx.AddEditor(this, "边框宽", border.Width.ToString(), v =>
                 {
                     if (double.TryParse(v, out var d) && d >= 0) { PushUndo(); EnsureBorder(el).Width = d; MarkDirty(); RefreshUI(); }
                 });
-                AddPropColor("边框色", border.Color ?? "#000000", v =>
+                ctx.AddColor(this, "边框色", border.Color ?? "#000000", v =>
                 {
                     PushUndo(); EnsureBorder(el).Color = string.IsNullOrEmpty(v) ? "#000000" : v; MarkDirty(); RefreshUI();
                 });
-                AddPropCombo("边框样式", new[] { "Solid", "Dashed", "Dotted", "None" }, border.Style.ToString(), v =>
+                ctx.AddCombo("边框样式", new[] { "Solid", "Dashed", "Dotted", "None" }, border.Style.ToString(), v =>
                 {
                     PushUndo();
                     if (Enum.TryParse<BorderStyle>(v, out var bs)) EnsureBorder(el).Style = bs;
                     MarkDirty(); RefreshUI();
                 });
-                AddPropBool("上边框", border.Top, v => { PushUndo(); EnsureBorder(el).Top = v; MarkDirty(); RefreshUI(); });
-                AddPropBool("下边框", border.Bottom, v => { PushUndo(); EnsureBorder(el).Bottom = v; MarkDirty(); RefreshUI(); });
-                AddPropBool("左边框", border.Left, v => { PushUndo(); EnsureBorder(el).Left = v; MarkDirty(); RefreshUI(); });
-                AddPropBool("右边框", border.Right, v => { PushUndo(); EnsureBorder(el).Right = v; MarkDirty(); RefreshUI(); });
+                ctx.AddBool("上边框", border.Top, v => { PushUndo(); EnsureBorder(el).Top = v; MarkDirty(); RefreshUI(); });
+                ctx.AddBool("下边框", border.Bottom, v => { PushUndo(); EnsureBorder(el).Bottom = v; MarkDirty(); RefreshUI(); });
+                ctx.AddBool("左边框", border.Left, v => { PushUndo(); EnsureBorder(el).Left = v; MarkDirty(); RefreshUI(); });
+                ctx.AddBool("右边框", border.Right, v => { PushUndo(); EnsureBorder(el).Right = v; MarkDirty(); RefreshUI(); });
 
                 switch (el)
                 {
                     case TextElement t:
-                        AddPropFontRow(t);
-                        AddPropColor("字体色", t.Font.Color ?? "", v => { PushUndo(); t.Font.Color = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); RefreshUI(); });
-                        AddPropCombo("对齐", new[] { "左对齐", "居中", "右对齐", "两端对齐" }, AlignToCN(t.Alignment.ToString()), v => { var a = CNToAlign(v); PushUndo(); t.Alignment = a; MarkDirty(); RefreshUI(); });
+                        ctx.AddFontRow(this, t);
+                        ctx.AddColor(this, "字体色", t.Font.Color ?? "", v => { PushUndo(); t.Font.Color = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); RefreshUI(); });
+                        ctx.AddCombo("对齐", new[] { "左对齐", "居中", "右对齐", "两端对齐" }, AlignToCN(t.Alignment.ToString()), v => { var a = CNToAlign(v); PushUndo(); t.Alignment = a; MarkDirty(); RefreshUI(); });
                         break;
                     case LineElement l:
-                        AddPropEditor("线宽", l.LineWidth.ToString(), v => { if (double.TryParse(v, out var d)) { PushUndo(); l.LineWidth = d; MarkDirty(); RefreshUI(); } });
-                        AddPropColor("线色", l.LineColor, v => { PushUndo(); l.LineColor = v; MarkDirty(); RefreshUI(); });
+                        ctx.AddEditor(this, "线宽", l.LineWidth.ToString(), v => { if (double.TryParse(v, out var d)) { PushUndo(); l.LineWidth = d; MarkDirty(); RefreshUI(); } });
+                        ctx.AddColor(this, "线色", l.LineColor, v => { PushUndo(); l.LineColor = v; MarkDirty(); RefreshUI(); });
                         break;
                     case ShapeElement s:
-                        AddPropColor("填充色", s.FillColor, v => { PushUndo(); s.FillColor = v; MarkDirty(); RefreshUI(); });
-                        AddPropEditor("圆角", s.BorderRadius.ToString(), v => { if (double.TryParse(v, out var d)) { PushUndo(); s.BorderRadius = d; MarkDirty(); RefreshUI(); } });
+                        ctx.AddColor(this, "填充色", s.FillColor, v => { PushUndo(); s.FillColor = v; MarkDirty(); RefreshUI(); });
+                        ctx.AddEditor(this, "圆角", s.BorderRadius.ToString(), v => { if (double.TryParse(v, out var d)) { PushUndo(); s.BorderRadius = d; MarkDirty(); RefreshUI(); } });
                         break;
                     case BarcodeElement bc:
-                        AddPropColor("前景色", bc.ForeColor, v => { PushUndo(); bc.ForeColor = v; MarkDirty(); });
+                        ctx.AddColor(this, "前景色", bc.ForeColor, v => { PushUndo(); bc.ForeColor = v; MarkDirty(); });
                         break;
                     case TableElement tbl:
-                        AddPropEditor("边框宽", tbl.BorderWidth.ToString(), v => { if (double.TryParse(v, out var d)) { PushUndo(); tbl.BorderWidth = d; MarkDirty(); } });
-                        AddPropColor("边框色", tbl.BorderColor, v => { PushUndo(); tbl.BorderColor = v; MarkDirty(); });
+                        ctx.AddEditor(this, "边框宽", tbl.BorderWidth.ToString(), v => { if (double.TryParse(v, out var d)) { PushUndo(); tbl.BorderWidth = d; MarkDirty(); } });
+                        ctx.AddColor(this, "边框色", tbl.BorderColor, v => { PushUndo(); tbl.BorderColor = v; MarkDirty(); });
                         break;
                 }
 
                 // === 位置尺寸 ===
-                AddPropEditor("X(mm)", el.X.ToString(), v => { if (double.TryParse(v, out var d)) { PushUndo(); el.X = d; MarkDirty(); RefreshUI(); } });
-                AddPropEditor("Y(mm)", el.Y.ToString(), v => { if (double.TryParse(v, out var d)) { PushUndo(); el.Y = d; MarkDirty(); RefreshUI(); } });
-                AddPropEditor("宽(mm)", el.Width.ToString(), v => { if (double.TryParse(v, out var d) && d > 0) { PushUndo(); el.Width = d; MarkDirty(); RefreshUI(); } });
-                AddPropEditor("高(mm)", el.Height.ToString(), v => { if (double.TryParse(v, out var d) && d > 0) { PushUndo(); el.Height = d; MarkDirty(); RefreshUI(); } });
+                ctx.AddEditor(this, "X(mm)", el.X.ToString(), v => { if (double.TryParse(v, out var d)) { PushUndo(); el.X = d; MarkDirty(); RefreshUI(); } });
+                ctx.AddEditor(this, "Y(mm)", el.Y.ToString(), v => { if (double.TryParse(v, out var d)) { PushUndo(); el.Y = d; MarkDirty(); RefreshUI(); } });
+                ctx.AddEditor(this, "宽(mm)", el.Width.ToString(), v => { if (double.TryParse(v, out var d) && d > 0) { PushUndo(); el.Width = d; MarkDirty(); RefreshUI(); } });
+                ctx.AddEditor(this, "高(mm)", el.Height.ToString(), v => { if (double.TryParse(v, out var d) && d > 0) { PushUndo(); el.Height = d; MarkDirty(); RefreshUI(); } });
 
                 // === 行为 ===
-                AddPropSection("行为");
+                ctx.AddSection("行为");
                 switch (el)
                 {
                     case TextElement t:
-                        AddPropBool("自动增高", t.CanGrow, v => { PushUndo(); t.CanGrow = v; MarkDirty(); });
+                        ctx.AddBool("自动增高", t.CanGrow, v => { PushUndo(); t.CanGrow = v; MarkDirty(); });
                         break;
                     case LineElement l:
-                        AddPropCombo("方向", new[] { "水平", "垂直", "对角线" }, DirToCN(l.Direction.ToString()), v => { PushUndo(); l.Direction = CNToDir(v); MarkDirty(); RefreshUI(); });
+                        ctx.AddCombo("方向", new[] { "水平", "垂直", "对角线" }, DirToCN(l.Direction.ToString()), v => { PushUndo(); l.Direction = CNToDir(v); MarkDirty(); RefreshUI(); });
                         break;
                     case ShapeElement s:
-                        AddPropCombo("形状", new[] { "矩形", "椭圆", "圆角矩形", "三角形" }, ShapeToCN(s.Shape.ToString()), v => { PushUndo(); s.Shape = CNToShape(v); MarkDirty(); RefreshUI(); });
+                        ctx.AddCombo("形状", new[] { "矩形", "椭圆", "圆角矩形", "三角形" }, ShapeToCN(s.Shape.ToString()), v => { PushUndo(); s.Shape = CNToShape(v); MarkDirty(); RefreshUI(); });
                         break;
                     case ImageElement img:
-                        AddPropCombo("缩放", new[] { "拉伸", "等比缩放", "裁剪", "原始尺寸" }, SizingToCN(img.Sizing.ToString()), v => { PushUndo(); img.Sizing = CNToSizing(v); MarkDirty(); });
+                        ctx.AddCombo("缩放", new[] { "拉伸", "等比缩放", "裁剪", "原始尺寸" }, SizingToCN(img.Sizing.ToString()), v => { PushUndo(); img.Sizing = CNToSizing(v); MarkDirty(); });
                         break;
                     case SubReportElement sr:
-                        AddPropBool("每行重复", sr.RepeatPerRow, v => { PushUndo(); sr.RepeatPerRow = v; MarkDirty(); });
+                        ctx.AddBool("每行重复", sr.RepeatPerRow, v => { PushUndo(); sr.RepeatPerRow = v; MarkDirty(); });
                         break;
                     case BarcodeElement bc:
-                        AddPropCombo("格式", new[] { "Code128", "Code39", "EAN13", "EAN8", "UPC_A", "二维码(QR)", "DataMatrix", "PDF417" }, BcFmtToCN(bc.Format.ToString()), v => { PushUndo(); bc.Format = CNToBcFmt(v); MarkDirty(); RefreshUI(); });
-                        AddPropBool("显示文字", bc.ShowText, v => { PushUndo(); bc.ShowText = v; MarkDirty(); });
+                        ctx.AddCombo("格式", new[] { "Code128", "Code39", "EAN13", "EAN8", "UPC_A", "二维码(QR)", "DataMatrix", "PDF417" }, BcFmtToCN(bc.Format.ToString()), v => { PushUndo(); bc.Format = CNToBcFmt(v); MarkDirty(); RefreshUI(); });
+                        ctx.AddBool("显示文字", bc.ShowText, v => { PushUndo(); bc.ShowText = v; MarkDirty(); });
                         break;
                     case TableElement tbl:
-                        AddPropEditor("行数", tbl.RowCount.ToString(), v => { if (int.TryParse(v, out var i) && i > 0) { PushUndo(); tbl.RowCount = i; MarkDirty(); RefreshUI(); } });
-                        AddPropEditor("列数", tbl.ColCount.ToString(), v => { if (int.TryParse(v, out var i) && i > 0) { PushUndo(); tbl.ColCount = i; MarkDirty(); RefreshUI(); } });
+                        ctx.AddEditor(this, "行数", tbl.RowCount.ToString(), v => { if (int.TryParse(v, out var i) && i > 0) { PushUndo(); tbl.RowCount = i; MarkDirty(); RefreshUI(); } });
+                        ctx.AddEditor(this, "列数", tbl.ColCount.ToString(), v => { if (int.TryParse(v, out var i) && i > 0) { PushUndo(); tbl.ColCount = i; MarkDirty(); RefreshUI(); } });
                         break;
                     case CrossTabElement ct:
-                        AddPropBool("行合计", ct.ShowRowTotal, v => { PushUndo(); ct.ShowRowTotal = v; MarkDirty(); });
-                        AddPropBool("列合计", ct.ShowColumnTotal, v => { PushUndo(); ct.ShowColumnTotal = v; MarkDirty(); });
+                        ctx.AddBool("行合计", ct.ShowRowTotal, v => { PushUndo(); ct.ShowRowTotal = v; MarkDirty(); });
+                        ctx.AddBool("列合计", ct.ShowColumnTotal, v => { PushUndo(); ct.ShowColumnTotal = v; MarkDirty(); });
                         break;
                     case ChartElement ch:
-                        AddPropCombo("图表类型", new[] { "柱状图", "折线图", "饼图", "面积图", "散点图" },
+                        ctx.AddCombo("图表类型", new[] { "柱状图", "折线图", "饼图", "面积图", "散点图" },
                             ChartTypeCN(ch.ChartType), v => { PushUndo(); ch.ChartType = CNToChartType(v); MarkDirty(); RefreshUI(); });
                         break;
                 }
 
                 // === 其它 ===
-                AddPropSection("其它");
+                ctx.AddSection("其它");
                 switch (el)
                 {
                     case TextElement t:
-                        AddPropCombo("框类型", new[] { "静态框", "字段框", "统计框", "系统变量框" },
+                        ctx.AddCombo("框类型", new[] { "静态框", "字段框", "统计框", "系统变量框" },
                             BoxTypeToCN(t.BoxType), v => {
                                 PushUndo();
                                 switch (v) {
@@ -2577,41 +2574,41 @@ namespace ReportEngine.Designer.Wpf
                                 MarkDirty(); RefreshUI();
                             });
                         if (t.BoxType == TextBoxType.Static)
-                            AddPropEditor("文本", t.Text, v => { PushUndo(); t.Text = v; MarkDirty(); RefreshUI(); });
+                            ctx.AddEditor(this, "文本", t.Text, v => { PushUndo(); t.Text = v; MarkDirty(); RefreshUI(); });
                         if (t.BoxType == TextBoxType.Field)
-                            AddPropExpr("绑定字段", t.DataField ?? "", v => { PushUndo(); t.DataField = v; MarkDirty(); RefreshUI(); });
+                            ctx.AddExpr(this, "绑定字段", t.DataField ?? "", v => { PushUndo(); t.DataField = v; MarkDirty(); RefreshUI(); });
                         if (t.BoxType == TextBoxType.Summary)
                         {
-                            AddPropCombo("统计函数", new[] { "Sum", "Count", "Avg", "Max", "Min" },
+                            ctx.AddCombo("统计函数", new[] { "Sum", "Count", "Avg", "Max", "Min" },
                                 t.SummaryFunction ?? "Sum", v => { PushUndo(); t.SummaryFunction = v; MarkDirty(); RefreshUI(); });
-                            AddPropEditor("统计字段", t.SummaryField ?? "", v => { PushUndo(); t.SummaryField = v; MarkDirty(); RefreshUI(); });
+                            ctx.AddEditor(this, "统计字段", t.SummaryField ?? "", v => { PushUndo(); t.SummaryField = v; MarkDirty(); RefreshUI(); });
                         }
                         if (t.BoxType == TextBoxType.SysVar)
-                            AddPropCombo("系统变量", new[] { "PageNumber", "TotalPages", "PrintDate", "PrintTime", "ReportTitle" },
+                            ctx.AddCombo("系统变量", new[] { "PageNumber", "TotalPages", "PrintDate", "PrintTime", "ReportTitle" },
                                 t.SystemVariable ?? "PageNumber", v => { PushUndo(); t.SystemVariable = v; MarkDirty(); RefreshUI(); });
-                        AddPropExpr("格式", t.Format ?? "", v => { PushUndo(); t.Format = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); });
-                        AddPropExpr("超链接", t.Hyperlink ?? "", v => { PushUndo(); t.Hyperlink = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); });
+                        ctx.AddExpr(this, "格式", t.Format ?? "", v => { PushUndo(); t.Format = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); });
+                        ctx.AddExpr(this, "超链接", t.Hyperlink ?? "", v => { PushUndo(); t.Hyperlink = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); });
                         break;
                     case ImageElement img:
-                        AddPropEditor("图像源", img.Source, v => { PushUndo(); img.Source = v; MarkDirty(); });
+                        ctx.AddEditor(this, "图像源", img.Source, v => { PushUndo(); img.Source = v; MarkDirty(); });
                         break;
                     case SubReportElement sr:
-                        AddPropExpr("模板引用", sr.TemplateRef, v => { PushUndo(); sr.TemplateRef = v; MarkDirty(); RefreshUI(); });
-                        AddPropExpr("数据源", sr.DataBinding.Source, v => { PushUndo(); sr.DataBinding.Source = v; MarkDirty(); });
+                        ctx.AddExpr(this, "模板引用", sr.TemplateRef, v => { PushUndo(); sr.TemplateRef = v; MarkDirty(); RefreshUI(); });
+                        ctx.AddExpr(this, "数据源", sr.DataBinding.Source, v => { PushUndo(); sr.DataBinding.Source = v; MarkDirty(); });
                         break;
                     case BarcodeElement bc:
-                        AddPropExpr("内容", bc.Value, v => { PushUndo(); bc.Value = v; MarkDirty(); RefreshUI(); });
+                        ctx.AddExpr(this, "内容", bc.Value, v => { PushUndo(); bc.Value = v; MarkDirty(); RefreshUI(); });
                         break;
                     case CrossTabElement ct:
-                        AddPropExpr("数据源", ct.DataSource, v => { PushUndo(); ct.DataSource = v; MarkDirty(); RefreshUI(); });
-                        AddPropExpr("行字段", string.Join(",", ct.RowFields), v => { PushUndo(); ct.RowFields = v.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList(); MarkDirty(); });
-                        AddPropExpr("列字段", string.Join(",", ct.ColumnFields), v => { PushUndo(); ct.ColumnFields = v.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList(); MarkDirty(); });
-                        AddPropEditor("边框宽", ct.BorderWidth.ToString(), v => { if (double.TryParse(v, out var d)) { PushUndo(); ct.BorderWidth = d; MarkDirty(); } });
+                        ctx.AddExpr(this, "数据源", ct.DataSource, v => { PushUndo(); ct.DataSource = v; MarkDirty(); RefreshUI(); });
+                        ctx.AddExpr(this, "行字段", string.Join(",", ct.RowFields), v => { PushUndo(); ct.RowFields = v.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList(); MarkDirty(); });
+                        ctx.AddExpr(this, "列字段", string.Join(",", ct.ColumnFields), v => { PushUndo(); ct.ColumnFields = v.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList(); MarkDirty(); });
+                        ctx.AddEditor(this, "边框宽", ct.BorderWidth.ToString(), v => { if (double.TryParse(v, out var d)) { PushUndo(); ct.BorderWidth = d; MarkDirty(); } });
                         break;
                     case ChartElement ch:
-                        AddPropExpr("标题", ch.Title ?? "", v => { PushUndo(); ch.Title = v; MarkDirty(); });
-                        AddPropExpr("数据源", ch.DataSource, v => { PushUndo(); ch.DataSource = v; MarkDirty(); });
-                        AddPropExpr("分类字段", ch.CategoryField, v => { PushUndo(); ch.CategoryField = v; MarkDirty(); });
+                        ctx.AddExpr(this, "标题", ch.Title ?? "", v => { PushUndo(); ch.Title = v; MarkDirty(); });
+                        ctx.AddExpr(this, "数据源", ch.DataSource, v => { PushUndo(); ch.DataSource = v; MarkDirty(); });
+                        ctx.AddExpr(this, "分类字段", ch.CategoryField, v => { PushUndo(); ch.CategoryField = v; MarkDirty(); });
                         break;
                 }
             }
@@ -2622,227 +2619,53 @@ namespace ReportEngine.Designer.Wpf
         /// <summary>多选批量编辑属性面板</summary>
         private void UpdateMultiSelectProperties()
         {
+            using var ctx = new PropertyRowContext(_propertyStack);
             var targets = _selectedElements;
-            AddPropSection("批量编辑 (" + targets.Count + " 个元素)");
-            AddPropLabel("数量", targets.Count.ToString());
+            ctx.AddSection("批量编辑 (" + targets.Count + " 个元素)");
+            ctx.AddLabel("数量", targets.Count.ToString());
 
             // 通用属性
-            AddPropSection("位置尺寸");
-            AddPropEditor("宽(mm)", "", v => { if (double.TryParse(v, out var d) && d > 0) { PushUndo(); foreach (var el in targets) el.Width = d; MarkDirty(); RefreshUI(); } });
-            AddPropEditor("高(mm)", "", v => { if (double.TryParse(v, out var d) && d > 0) { PushUndo(); foreach (var el in targets) el.Height = d; MarkDirty(); RefreshUI(); } });
-            AddPropEditor("X(mm)", "", v => { if (double.TryParse(v, out var d)) { PushUndo(); foreach (var el in targets) el.X = d; MarkDirty(); RefreshUI(); } });
-            AddPropEditor("Y(mm)", "", v => { if (double.TryParse(v, out var d)) { PushUndo(); foreach (var el in targets) el.Y = d; MarkDirty(); RefreshUI(); } });
+            ctx.AddSection("位置尺寸");
+            ctx.AddEditor(this, "宽(mm)", "", v => { if (double.TryParse(v, out var d) && d > 0) { PushUndo(); foreach (var el in targets) el.Width = d; MarkDirty(); RefreshUI(); } });
+            ctx.AddEditor(this, "高(mm)", "", v => { if (double.TryParse(v, out var d) && d > 0) { PushUndo(); foreach (var el in targets) el.Height = d; MarkDirty(); RefreshUI(); } });
+            ctx.AddEditor(this, "X(mm)", "", v => { if (double.TryParse(v, out var d)) { PushUndo(); foreach (var el in targets) el.X = d; MarkDirty(); RefreshUI(); } });
+            ctx.AddEditor(this, "Y(mm)", "", v => { if (double.TryParse(v, out var d)) { PushUndo(); foreach (var el in targets) el.Y = d; MarkDirty(); RefreshUI(); } });
 
-            AddPropSection("设计");
+            ctx.AddSection("设计");
             bool allVisible = targets.All(e => e.Visible);
-            AddPropBool("可见", allVisible, v => { PushUndo(); foreach (var el in targets) el.Visible = v; MarkDirty(); });
+            ctx.AddBool("可见", allVisible, v => { PushUndo(); foreach (var el in targets) el.Visible = v; MarkDirty(); });
             bool allLocked = targets.All(e => e.Locked);
-            AddPropBool("锁定", allLocked, v => { PushUndo(); foreach (var el in targets) el.Locked = v; MarkDirty(); RefreshUI(); });
+            ctx.AddBool("锁定", allLocked, v => { PushUndo(); foreach (var el in targets) el.Locked = v; MarkDirty(); RefreshUI(); });
 
-            AddPropSection("外观");
-            AddPropColor("背景色", "", v => { PushUndo(); foreach (var el in targets) el.BackgroundColor = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); RefreshUI(); });
+            ctx.AddSection("外观");
+            ctx.AddColor(this, "背景色", "", v => { PushUndo(); foreach (var el in targets) el.BackgroundColor = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); RefreshUI(); });
 
             // 批量边框编辑
-            AddPropSection("边框");
-            AddPropEditor("边框宽", "", v => { if (double.TryParse(v, out var d) && d >= 0) { PushUndo(); foreach (var el in targets) EnsureBorder(el).Width = d; MarkDirty(); RefreshUI(); } });
-            AddPropColor("边框色", "", v => { PushUndo(); foreach (var el in targets) EnsureBorder(el).Color = string.IsNullOrEmpty(v) ? "#000000" : v; MarkDirty(); RefreshUI(); });
-            AddPropBool("上边框", true, v => { PushUndo(); foreach (var el in targets) EnsureBorder(el).Top = v; MarkDirty(); RefreshUI(); });
-            AddPropBool("下边框", true, v => { PushUndo(); foreach (var el in targets) EnsureBorder(el).Bottom = v; MarkDirty(); RefreshUI(); });
-            AddPropBool("左边框", true, v => { PushUndo(); foreach (var el in targets) EnsureBorder(el).Left = v; MarkDirty(); RefreshUI(); });
-            AddPropBool("右边框", true, v => { PushUndo(); foreach (var el in targets) EnsureBorder(el).Right = v; MarkDirty(); RefreshUI(); });
+            ctx.AddSection("边框");
+            ctx.AddEditor(this, "边框宽", "", v => { if (double.TryParse(v, out var d) && d >= 0) { PushUndo(); foreach (var el in targets) EnsureBorder(el).Width = d; MarkDirty(); RefreshUI(); } });
+            ctx.AddColor(this, "边框色", "", v => { PushUndo(); foreach (var el in targets) EnsureBorder(el).Color = string.IsNullOrEmpty(v) ? "#000000" : v; MarkDirty(); RefreshUI(); });
+            ctx.AddBool("上边框", true, v => { PushUndo(); foreach (var el in targets) EnsureBorder(el).Top = v; MarkDirty(); RefreshUI(); });
+            ctx.AddBool("下边框", true, v => { PushUndo(); foreach (var el in targets) EnsureBorder(el).Bottom = v; MarkDirty(); RefreshUI(); });
+            ctx.AddBool("左边框", true, v => { PushUndo(); foreach (var el in targets) EnsureBorder(el).Left = v; MarkDirty(); RefreshUI(); });
+            ctx.AddBool("右边框", true, v => { PushUndo(); foreach (var el in targets) EnsureBorder(el).Right = v; MarkDirty(); RefreshUI(); });
 
             // 如果所有选中元素都是 TextElement，显示文本共有属性
             if (targets.All(e => e is TextElement))
             {
                 var texts = targets.Cast<TextElement>().ToList();
-                AddPropSection("字体");
+                ctx.AddSection("字体");
                 string commonFamily = texts.Select(t => t.Font.Family).Distinct().Count() == 1 ? texts[0].Font.Family : "";
-                AddPropEditor("字体", commonFamily, v => { if (!string.IsNullOrEmpty(v)) { PushUndo(); foreach (var t in texts) t.Font.Family = v; MarkDirty(); RefreshUI(); } });
+                ctx.AddEditor(this, "字体", commonFamily, v => { if (!string.IsNullOrEmpty(v)) { PushUndo(); foreach (var t in texts) t.Font.Family = v; MarkDirty(); RefreshUI(); } });
                 string commonSize = texts.Select(t => t.Font.Size).Distinct().Count() == 1 ? texts[0].Font.Size.ToString() : "";
-                AddPropEditor("字号", commonSize, v => { if (double.TryParse(v, out var sz) && sz > 0) { PushUndo(); foreach (var t in texts) t.Font.Size = sz; MarkDirty(); RefreshUI(); } });
+                ctx.AddEditor(this, "字号", commonSize, v => { if (double.TryParse(v, out var sz) && sz > 0) { PushUndo(); foreach (var t in texts) t.Font.Size = sz; MarkDirty(); RefreshUI(); } });
                 bool allBold = texts.All(t => t.Font.Bold);
-                AddPropBool("加粗", allBold, v => { PushUndo(); foreach (var t in texts) t.Font.Bold = v; MarkDirty(); RefreshUI(); });
+                ctx.AddBool("加粗", allBold, v => { PushUndo(); foreach (var t in texts) t.Font.Bold = v; MarkDirty(); RefreshUI(); });
                 bool allItalic = texts.All(t => t.Font.Italic);
-                AddPropBool("斜体", allItalic, v => { PushUndo(); foreach (var t in texts) t.Font.Italic = v; MarkDirty(); RefreshUI(); });
-                AddPropColor("字体色", "", v => { PushUndo(); foreach (var t in texts) t.Font.Color = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); RefreshUI(); });
-                AddPropCombo("对齐", new[] { "左对齐", "居中", "右对齐", "两端对齐" }, "",
+                ctx.AddBool("斜体", allItalic, v => { PushUndo(); foreach (var t in texts) t.Font.Italic = v; MarkDirty(); RefreshUI(); });
+                ctx.AddColor(this, "字体色", "", v => { PushUndo(); foreach (var t in texts) t.Font.Color = string.IsNullOrEmpty(v) ? null : v; MarkDirty(); RefreshUI(); });
+                ctx.AddCombo("对齐", new[] { "左对齐", "居中", "右对齐", "两端对齐" }, "",
                     v => { var a = CNToAlign(v); PushUndo(); foreach (var t in texts) t.Alignment = a; MarkDirty(); RefreshUI(); });
             }
-        }
-
-        private Expander? _currentExpander;
-
-        private void AddPropSection(string title)
-        {
-            var content = new StackPanel();
-            var expander = new Expander
-            {
-                Header = title,
-                IsExpanded = true,
-                Content = content,
-                Margin = new Thickness(0, 0, 0, 0),
-                Padding = new Thickness(0),
-                FontSize = 12,
-                FontWeight = FontWeights.Bold,
-                Foreground = new SolidColorBrush(Color.FromRgb(0, 100, 140)),
-                BorderBrush = new SolidColorBrush(Color.FromRgb(210, 210, 210)),
-                BorderThickness = new Thickness(0, 0, 0, 1),
-            };
-            _propertyStack.Children.Add(expander);
-            _currentExpander = expander;
-        }
-
-        private void AddPropToCurrentSection(UIElement element)
-        {
-            // 交替行背景色
-            if (element is Grid g)
-            {
-                g.Background = _propRowIndex % 2 == 0 ? Brushes.White : new SolidColorBrush(Color.FromRgb(245, 245, 245));
-                _propRowIndex++;
-            }
-            if (_currentExpander?.Content is StackPanel sp)
-                sp.Children.Add(element);
-            else
-                _propertyStack.Children.Add(element);
-        }
-
-        private void AddPropLabel(string label, string value)
-        {
-            var grid = new Grid { Margin = new Thickness(0), MinHeight = 22 };
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            var lb = new TextBlock { Text = label, Foreground = Brushes.DimGray, FontSize = 11, FontWeight = FontWeights.Normal, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 0, 0) };
-            var vb = new TextBlock { Text = value, Foreground = Brushes.Black, FontSize = 11, FontWeight = FontWeights.Normal, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0, 4, 0) };
-            // 分隔线
-            var sep = new Border { Width = 1, Background = new SolidColorBrush(Color.FromRgb(220, 220, 220)), HorizontalAlignment = HorizontalAlignment.Right };
-            Grid.SetColumn(lb, 0); Grid.SetColumn(sep, 0); Grid.SetColumn(vb, 1);
-            grid.Children.Add(lb); grid.Children.Add(sep); grid.Children.Add(vb);
-            AddPropToCurrentSection(grid);
-        }
-
-        private void AddPropEditor(string label, string value, Action<string> onCommit)
-        {
-            var grid = new Grid { Margin = new Thickness(0), MinHeight = 22 };
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            var lb = new TextBlock { Text = label, Foreground = Brushes.DimGray, FontSize = 11, FontWeight = FontWeights.Normal, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 0, 0) };
-            var tb = new TextBox
-            {
-                Text = value, FontSize = 11,
-                Background = Brushes.Transparent,
-                Foreground = Brushes.Black,
-                BorderThickness = new Thickness(0),
-                Padding = new Thickness(4, 1, 4, 1),
-                VerticalAlignment = VerticalAlignment.Center,
-            };
-            tb.GotFocus += (_, __) => { tb.Background = Brushes.White; tb.BorderThickness = new Thickness(1); tb.BorderBrush = new SolidColorBrush(Color.FromRgb(100, 150, 200)); };
-            tb.LostFocus += (_, __) => { tb.Background = Brushes.Transparent; tb.BorderThickness = new Thickness(0); onCommit(tb.Text); };
-            tb.KeyDown += (_, args) => { if (args.Key == Key.Enter) onCommit(tb.Text); };
-            var sep = new Border { Width = 1, Background = new SolidColorBrush(Color.FromRgb(220, 220, 220)), HorizontalAlignment = HorizontalAlignment.Right };
-            Grid.SetColumn(lb, 0); Grid.SetColumn(sep, 0); Grid.SetColumn(tb, 1);
-            grid.Children.Add(lb); grid.Children.Add(sep); grid.Children.Add(tb);
-            AddPropToCurrentSection(grid);
-        }
-
-        private void AddPropExpr(string label, string value, Action<string> onCommit)
-        {
-            var grid = new Grid { Margin = new Thickness(0), MinHeight = 22 };
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(26) });
-            var lb = new TextBlock { Text = label, Foreground = Brushes.DimGray, FontSize = 11, FontWeight = FontWeights.Normal, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 0, 0) };
-            var tb = new TextBox
-            {
-                Text = value, FontSize = 11,
-                Background = Brushes.Transparent,
-                Foreground = Brushes.Black,
-                BorderThickness = new Thickness(0),
-                Padding = new Thickness(4, 1, 4, 1),
-                VerticalAlignment = VerticalAlignment.Center,
-            };
-            tb.GotFocus += (_, __) => { tb.Background = Brushes.White; tb.BorderThickness = new Thickness(1); tb.BorderBrush = new SolidColorBrush(Color.FromRgb(100, 150, 200)); };
-            tb.LostFocus += (_, __) => { tb.Background = Brushes.Transparent; tb.BorderThickness = new Thickness(0); onCommit(tb.Text); };
-            tb.KeyDown += (_, args) => { if (args.Key == Key.Enter) onCommit(tb.Text); };
-            // 表达式按钮
-            var exprBtn = new Button
-            {
-                Content = "🧮", FontSize = 11, Width = 22, Height = 18,
-                Padding = new Thickness(0), Background = Brushes.Transparent,
-                BorderThickness = new Thickness(0), Cursor = Cursors.Hand,
-                ToolTip = "打开表达式编辑器",
-            };
-            exprBtn.Click += (_, __) => ExpressionEditorDialog.Show(this, tb.Text, v => { tb.Text = v; onCommit(v); });
-            var sep = new Border { Width = 1, Background = new SolidColorBrush(Color.FromRgb(220, 220, 220)), HorizontalAlignment = HorizontalAlignment.Right };
-            Grid.SetColumn(lb, 0); Grid.SetColumn(sep, 0); Grid.SetColumn(tb, 1); Grid.SetColumn(exprBtn, 2);
-            grid.Children.Add(lb); grid.Children.Add(sep); grid.Children.Add(tb); grid.Children.Add(exprBtn);
-            AddPropToCurrentSection(grid);
-        }
-
-        private void AddPropColor(string label, string value, Action<string> onCommit)
-        {
-            var grid = new Grid { Margin = new Thickness(0), MinHeight = 22 };
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(24) });
-            var lb = new TextBlock { Text = label, Foreground = Brushes.DimGray, FontSize = 11, FontWeight = FontWeights.Normal, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 0, 0) };
-            var tb = new TextBox
-            {
-                Text = value ?? "", FontSize = 11,
-                Background = Brushes.Transparent, Foreground = Brushes.Black,
-                BorderThickness = new Thickness(0), Padding = new Thickness(4, 1, 4, 1),
-                VerticalAlignment = VerticalAlignment.Center,
-            };
-            tb.GotFocus += (_, __) => { tb.Background = Brushes.White; tb.BorderThickness = new Thickness(1); tb.BorderBrush = new SolidColorBrush(Color.FromRgb(100, 150, 200)); };
-            tb.LostFocus += (_, __) => { tb.Background = Brushes.Transparent; tb.BorderThickness = new Thickness(0); onCommit(tb.Text); };
-            tb.KeyDown += (_, args) => { if (args.Key == Key.Enter) onCommit(tb.Text); };
-
-            // 颜色预览块 + 点击弹出选色器
-            var colorPreview = new Border { Width = 16, Height = 16, CornerRadius = new CornerRadius(2), BorderBrush = Brushes.Gray, BorderThickness = new Thickness(1), Margin = new Thickness(2), Cursor = Cursors.Hand, VerticalAlignment = VerticalAlignment.Center };
-            colorPreview.Background = BrushParser.Parse(value ?? "", Brushes.Transparent);
-            colorPreview.MouseLeftButtonDown += (_, __) =>
-            {
-                var picked = ColorPickerDialog.Show(this, value ?? "");
-                if (picked != null)
-                {
-                    tb.Text = picked;
-                    colorPreview.Background = BrushParser.Parse(picked, Brushes.Transparent);
-                    onCommit(picked);
-                }
-            };
-
-            var sep = new Border { Width = 1, Background = new SolidColorBrush(Color.FromRgb(220, 220, 220)), HorizontalAlignment = HorizontalAlignment.Right };
-            Grid.SetColumn(lb, 0); Grid.SetColumn(sep, 0); Grid.SetColumn(tb, 1); Grid.SetColumn(colorPreview, 2);
-            grid.Children.Add(lb); grid.Children.Add(sep); grid.Children.Add(tb); grid.Children.Add(colorPreview);
-            AddPropToCurrentSection(grid);
-        }
-
-        private void AddPropBool(string label, bool value, Action<bool> onCommit)
-        {
-            AddPropCombo(label, new[] { "是", "否" }, value ? "是" : "否", v => onCommit(v == "是"));
-        }
-
-        private void AddPropCombo(string label, string[] options, string current, Action<string> onCommit)
-        {
-            var grid = new Grid { Margin = new Thickness(0), MinHeight = 22 };
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            var lb = new TextBlock { Text = label, Foreground = Brushes.DimGray, FontSize = 11, FontWeight = FontWeights.Normal, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 0, 0) };
-            var cb = new ComboBox
-            {
-                FontSize = 11,
-                Background = Brushes.Transparent,
-                Foreground = Brushes.Black,
-                BorderThickness = new Thickness(0),
-                Padding = new Thickness(2, 0, 2, 0),
-                VerticalAlignment = VerticalAlignment.Center,
-            };
-            foreach (var opt in options) cb.Items.Add(opt);
-            cb.SelectedItem = current;
-            cb.SelectionChanged += (_, __) => { if (cb.SelectedItem is string s) onCommit(s); };
-            var sep = new Border { Width = 1, Background = new SolidColorBrush(Color.FromRgb(220, 220, 220)), HorizontalAlignment = HorizontalAlignment.Right };
-            Grid.SetColumn(lb, 0); Grid.SetColumn(sep, 0); Grid.SetColumn(cb, 1);
-            grid.Children.Add(lb); grid.Children.Add(sep); grid.Children.Add(cb);
-            AddPropToCurrentSection(grid);
         }
 
         // ============================== 其他 ==============================
@@ -2961,28 +2784,6 @@ namespace ReportEngine.Designer.Wpf
             PageSetupDialog.Show(this, _template, () => {
                 PushUndo(); MarkDirty(); RefreshUI();
             });
-        }
-
-        // ============================== 字体选择弹窗 ==============================
-
-        private void AddPropFontRow(TextElement t)
-        {
-            string fontDesc = t.Font.Family + "(" + t.Font.Size + ")";
-            if (t.Font.Bold) fontDesc += ",粗体";
-            if (t.Font.Italic) fontDesc += ",斜体";
-
-            var grid = new Grid { Margin = new Thickness(0), MinHeight = 22 };
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(24) });
-            var lb = new TextBlock { Text = "字体", Foreground = Brushes.DimGray, FontSize = 11, FontWeight = FontWeights.Normal, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 0, 0) };
-            var vb = new TextBlock { Text = fontDesc, Foreground = Brushes.Black, FontSize = 11, FontWeight = FontWeights.Normal, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0, 0, 0), TextTrimming = TextTrimming.CharacterEllipsis };
-            var btn = new Button { Content = "...", Width = 22, Height = 18, FontSize = 10, Padding = new Thickness(0), Background = Brushes.Transparent, BorderThickness = new Thickness(1), BorderBrush = new SolidColorBrush(Color.FromRgb(180, 180, 180)), Cursor = Cursors.Hand, VerticalAlignment = VerticalAlignment.Center };
-            btn.Click += (_, __) => FontDialog.Show(this, t);
-            var sep = new Border { Width = 1, Background = new SolidColorBrush(Color.FromRgb(220, 220, 220)), HorizontalAlignment = HorizontalAlignment.Right };
-            Grid.SetColumn(lb, 0); Grid.SetColumn(sep, 0); Grid.SetColumn(vb, 1); Grid.SetColumn(btn, 2);
-            grid.Children.Add(lb); grid.Children.Add(sep); grid.Children.Add(vb); grid.Children.Add(btn);
-            AddPropToCurrentSection(grid);
         }
 
         // ============================== 数据源管理 ==============================
