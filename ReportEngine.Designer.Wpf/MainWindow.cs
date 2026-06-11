@@ -882,8 +882,8 @@ namespace ReportEngine.Designer.Wpf
             menu.Items.Add(format);
 
             var help = new MenuItem { Header = "帮助(_H)" };
-            help.Items.Add(MakeMenuItem("快捷键...", "F1", ShowShortcutsDialog));
-            help.Items.Add(MakeMenuItem("关于...", null, ShowAboutDialog));
+            help.Items.Add(MakeMenuItem("快捷键...", "F1", () => ShortcutsDialog.Show(this)));
+            help.Items.Add(MakeMenuItem("关于...", null, () => AboutDialog.Show(this)));
             menu.Items.Add(help);
 
             return menu;
@@ -902,7 +902,7 @@ namespace ReportEngine.Designer.Wpf
             InputBindings.Add(new KeyBinding(new RelayCmd(DeleteSelected), Key.Delete, ModifierKeys.None));
             InputBindings.Add(new KeyBinding(new RelayCmd(SelectAll), Key.A, ModifierKeys.Control));
             InputBindings.Add(new KeyBinding(new RelayCmd(DuplicateSelected), Key.D, ModifierKeys.Control));
-            InputBindings.Add(new KeyBinding(new RelayCmd(ShowShortcutsDialog), Key.F1, ModifierKeys.None));
+            InputBindings.Add(new KeyBinding(new RelayCmd(() => ShortcutsDialog.Show(this)), Key.F1, ModifierKeys.None));
             InputBindings.Add(new KeyBinding(new RelayCmd(SearchElement), Key.F, ModifierKeys.Control));
 
             // 方向键微调
@@ -2809,73 +2809,6 @@ namespace ReportEngine.Designer.Wpf
         }
 
         /// <summary>简单JSON解析 (浅层平铺 key-value), 兼容net462用Newtonsoft风格手动解析</summary>
-
-        /// <summary>快捷键一览对话框</summary>
-        private void ShowShortcutsDialog()
-        {
-            var dlg = new Window
-            {
-                Title = "快捷键列表",
-                Width = 380, Height = 420,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                Owner = this, ResizeMode = ResizeMode.NoResize,
-            };
-            var sp = new StackPanel { Margin = new Thickness(12) };
-            var shortcuts = new[]
-            {
-                ("Ctrl+N", "新建模板"), ("Ctrl+O", "打开模板"), ("Ctrl+S", "保存"),
-                ("Ctrl+Z", "撤销"), ("Ctrl+Y", "重做"),
-                ("Ctrl+C", "复制"), ("Ctrl+X", "剪切"), ("Ctrl+V", "粘贴"),
-                ("Ctrl+D", "复制并偏移"), ("Delete", "删除"), ("Ctrl+A", "全选"),
-                ("F1", "快捷键列表"), ("Tab", "切换选中"), ("Shift+Tab", "反向切换"),
-                ("方向键", "微调0.5mm"), ("Shift+方向键", "微调5mm"),
-                ("Ctrl+滚轮", "缩放"),
-            };
-            var grid = new Grid();
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            int row = 0;
-            foreach (var (key, desc) in shortcuts)
-            {
-                grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(22) });
-                grid.Children.Add(new TextBlock { Text = key, FontWeight = FontWeights.Bold, Foreground = Brushes.DarkBlue, VerticalAlignment = VerticalAlignment.Center });
-                var tb = new TextBlock { Text = desc, Foreground = Brushes.Black, VerticalAlignment = VerticalAlignment.Center };
-                Grid.SetColumn(tb, 1);
-                Grid.SetRow(tb, row);
-                Grid.SetColumn(grid.Children[grid.Children.Count - 1], 0);
-                Grid.SetRow(grid.Children[grid.Children.Count - 1], row);
-                grid.Children.Add(tb);
-                row++;
-            }
-            sp.Children.Add(grid);
-            var btnClose = new Button { Content = "关闭", Width = 70, Height = 26, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 0), IsDefault = true };
-            btnClose.Click += (_, __) => dlg.Close();
-            sp.Children.Add(btnClose);
-            dlg.Content = sp;
-            dlg.ShowDialog();
-        }
-
-        /// <summary>关于对话框</summary>
-        private void ShowAboutDialog()
-        {
-            var dlg = new Window
-            {
-                Title = "关于",
-                Width = 320, Height = 200,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                Owner = this, ResizeMode = ResizeMode.NoResize,
-            };
-            var sp = new StackPanel { Margin = new Thickness(20), HorizontalAlignment = HorizontalAlignment.Center };
-            sp.Children.Add(new TextBlock { Text = "报表设计器", FontSize = 18, FontWeight = FontWeights.Bold, Foreground = Brushes.DarkBlue, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 0, 0, 8) });
-            sp.Children.Add(new TextBlock { Text = "基于 ReportEngine.Core", FontSize = 12, Foreground = Brushes.Gray, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 0, 0, 4) });
-            sp.Children.Add(new TextBlock { Text = "版本 1.0.0", FontSize = 11, Foreground = Brushes.DimGray, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 0, 0, 16) });
-            sp.Children.Add(new TextBlock { Text = "支持元素拖拽、吸附对齐、格式刷、分组、旋转、透明度等", FontSize = 10, Foreground = Brushes.Gray, TextWrapping = TextWrapping.Wrap, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 0, 0, 12) });
-            var btnClose = new Button { Content = "关闭", Width = 70, Height = 26, HorizontalAlignment = HorizontalAlignment.Center, IsDefault = true };
-            btnClose.Click += (_, __) => dlg.Close();
-            sp.Children.Add(btnClose);
-            dlg.Content = sp;
-            dlg.ShowDialog();
-        }
 
         /// <summary>搜索元素对话框</summary>
         private void SearchElement()
