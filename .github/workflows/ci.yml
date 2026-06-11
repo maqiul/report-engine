@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: 8.0.x
+  DOTNET_VERSION_LEGACY: 6.0.x
+
+jobs:
+  build-and-test:
+    name: Build & Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            ${{ env.DOTNET_VERSION }}
+            ${{ env.DOTNET_VERSION_LEGACY }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+            ${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore ReportEngine.slnx
+
+      - name: Build
+        run: dotnet build ReportEngine.slnx --no-restore --configuration Debug
+
+      - name: Test (net8.0)
+        run: dotnet test ReportEngine.slnx --no-build --configuration Debug --logger "console;verbosity=normal"
+
+  pack:
+    name: Pack NuGet (Linux)
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            ${{ env.DOTNET_VERSION }}
+            ${{ env.DOTNET_VERSION_LEGACY }}
+
+      - name: Pack Core
+        run: dotnet pack ReportEngine.Core/ReportEngine.Core.csproj -c Release --no-build -o ./artifacts
+
+      - name: Pack Export.Excel
+        run: dotnet pack ReportEngine.Export.Excel/ReportEngine.Export.Excel.csproj -c Release --no-build -o ./artifacts
+
+      - name: Pack Export.Pdf
+        run: dotnet pack ReportEngine.Export.Pdf/ReportEngine.Export.Pdf.csproj -c Release --no-build -o ./artifacts
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-packages
+          path: ./artifacts/*.nupkg
+          if-no-files-found: error
+          retention-days: 14

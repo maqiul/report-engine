@@ -1,0 +1,86 @@
+# EditorConfig is awesome: https://EditorConfig.org
+
+# Top-most EditorConfig file
+root = true
+
+# Default settings for all files
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+# YAML / JSON / TOML files
+[*.{yml,yaml,json,toml}]
+indent_size = 2
+
+# Markdown / docs
+[*.md]
+trim_trailing_whitespace = false
+
+# C# files (the bulk of this project)
+[*.cs]
+# Style
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+
+# C# language rules
+csharp_style_namespace_declarations = file_scoped:warning
+csharp_style_var_for_built_in_types = false:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_elsewhere = false:suggestion
+
+csharp_prefer_simple_using_statement = true:suggestion
+csharp_style_pattern_matching_over_is_with_cast_check = true:suggestion
+csharp_style_pattern_matching_over_as_with_null_check = true:suggestion
+csharp_style_expression_bodied_methods = when_on_single_line:suggestion
+csharp_style_expression_bodied_properties = true:suggestion
+csharp_style_expression_bodied_accessors = true:suggestion
+
+# this. and Me. preferences
+csharp_style_qualification_for_field = false:suggestion
+csharp_style_qualification_for_property = false:suggestion
+csharp_style_qualification_for_method = false:suggestion
+csharp_style_qualification_for_event = false:suggestion
+
+# Naming conventions (project-wide)
+# Public members: PascalCase
+# Private fields: _camelCase
+# Constants: PascalCase
+dotnet_naming_rule.public_members_pascal_case.severity = warning
+dotnet_naming_rule.public_members_pascal_case.symbols  = public_symbols
+dotnet_naming_rule.public_members_pascal_case.style    = pascal_case_style
+
+dotnet_naming_symbols.public_symbols.applicable_kinds           = property,method,field,event,delegate
+dotnet_naming_symbols.public_symbols.applicable_accessibilities = public,protected,internal
+
+dotnet_naming_style.pascal_case_style.capitalization = pascal_case
+
+# Private fields must start with underscore + camelCase
+dotnet_naming_rule.private_fields_underscore.severity = warning
+dotnet_naming_rule.private_fields_underscore.symbols  = private_fields
+dotnet_naming_rule.private_fields_underscore.style    = underscore_camel_case
+
+dotnet_naming_symbols.private_fields.applicable_kinds           = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private,protected_internal
+
+dotnet_naming_style.underscore_camel_case.required_prefix = _
+dotnet_naming_style.underscore_camel_case.capitalization  = camel_case
+
+# Diagnostic suppression: some rules are too noisy for this codebase
+# CA1014: CLSCompliant - we don't target CLS yet
+dotnet_diagnostic.CA1014.severity = none
+# CA1305: IFormatProvider - too aggressive on ToString()
+dotnet_diagnostic.CA1305.severity = none
+# CA1848: LoggerMessage source generators - we don't use structured logging
+dotnet_diagnostic.CA1848.severity = none
+
+# .NET project files
+[*.{csproj,sln,slnx,props,targets}]
+indent_size = 2
+
+# Shell scripts (keep shellcheck happy)
+[*.sh]
+end_of_line = lf
