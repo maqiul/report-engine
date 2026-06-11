@@ -1719,28 +1719,18 @@ namespace ReportEngine.Designer.Wpf
         private void DuplicateSelected()
         {
             if (_selectedElement == null || _template == null) return;
-            try
-            {
-                var t = new ReportTemplate();
-                t.Bands.Add(new Band { Elements = { _selectedElement } });
-                var json = _parser.Serialize(t);
-                var t2 = _parser.Parse(json);
-                var newEl = t2.Bands.FirstOrDefault()?.Elements.FirstOrDefault();
-                if (newEl == null) return;
-                newEl.Id = Guid.NewGuid().ToString("N");
-                newEl.X += 3; newEl.Y += 3;
-                var band = _selectedBand ?? _template.Bands.FirstOrDefault();
-                if (band == null) return;
-                PushUndo();
-                band.Elements.Add(newEl);
-                _selectedElement = newEl;
-                _selectedElements.Clear();
-                _selectedElements.Add(newEl);
-                MarkDirty();
-                RefreshUI();
-                _statusText.Text = "已复制元素 (Ctrl+D)";
-            }
-            catch { }
+            var band = _selectedBand ?? _template.Bands.FirstOrDefault();
+            if (band == null) return;
+            var newEl = ElementDuplicator.Duplicate(_selectedElement, _parser);
+            if (newEl == null) return;
+            PushUndo();
+            band.Elements.Add(newEl);
+            _selectedElement = newEl;
+            _selectedElements.Clear();
+            _selectedElements.Add(newEl);
+            MarkDirty();
+            RefreshUI();
+            _statusText.Text = "已复制元素 (Ctrl+D)";
         }
 
         private void SelectAll()
