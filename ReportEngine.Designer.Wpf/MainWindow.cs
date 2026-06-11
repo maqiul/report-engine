@@ -1844,27 +1844,8 @@ namespace ReportEngine.Designer.Wpf
         private void MoveElementOrder(string direction)
         {
             if (_selectedElement == null || _selectedBand == null) return;
-            var list = _selectedBand.Elements;
-            int idx = list.IndexOf(_selectedElement);
-            if (idx < 0) return;
+            if (!ZOrderHelper.Move(_selectedBand.Elements, _selectedElement, direction)) return;
             PushUndo();
-            switch (direction)
-            {
-                case "front":
-                    list.Remove(_selectedElement);
-                    list.Add(_selectedElement);
-                    break;
-                case "back":
-                    list.Remove(_selectedElement);
-                    list.Insert(0, _selectedElement);
-                    break;
-                case "up":
-                    if (idx < list.Count - 1) { list.Remove(_selectedElement); list.Insert(idx + 1, _selectedElement); }
-                    break;
-                case "down":
-                    if (idx > 0) { list.Remove(_selectedElement); list.Insert(idx - 1, _selectedElement); }
-                    break;
-            }
             MarkDirty();
             RefreshUI();
         }
