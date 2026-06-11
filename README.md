@@ -172,10 +172,10 @@ exporter.Export(template, orders, "output.xlsx");
 
 | 项目 | 覆盖范围 | 测试数 |
 |------|----------|--------|
-| `ReportEngine.Core.Tests` | 模板解析 / 表达式引擎 / ZXing 条码 / 子报表解析 / ClosedXML 导出 / 渲染主路径 | **48** |
+| `ReportEngine.Core.Tests` | 模板解析 / 表达式引擎 / ZXing 条码 / 子报表解析（FileSystem + Composite）/ ClosedXML 导出 / 渲染主路径 | **57** |
 | `ReportEngine.Export.Pdf.Tests`（v0.1.7 新增）| `PdfSharpExporter` 主路径 — text / line / shape / image 断源 / barcode / border / 多页 / 磁盘文件 | **10** |
 
-**总计 58 个测试**，全绿。运行：
+**总计 67 个测试**，全绿。运行：
 
 ```bash
 dotnet test ReportEngine.slnx
@@ -187,7 +187,7 @@ dotnet test ReportEngine.slnx
 
 ## 🗓️ 版本与路线图
 
-当前版本：**v0.1.10**（31 commits / 10 tags；详细里程碑见 `git tag -l`）
+当前版本：**v0.1.11**（32 commits / 11 tags；详细里程碑见 `git tag -l`）
 
 | 阶段 | 内容 | 状态 |
 |------|------|------|
@@ -196,7 +196,7 @@ dotnet test ReportEngine.slnx
 | 0.3.x | WPF 运行时预览（分页 / 缩放 / 打印） | 🚧 |
 | 0.4.x | WPF 可视化设计器 | 🚧（MainWindow 已从 5050 → 3402 行） |
 | 0.5.x | WinForms 端对齐 | ⏳ |
-| 1.0   | 文档、单元测试、首个稳定 NuGet 发布 | 🚧（已 58 个测试） |
+| 1.0   | 文档、单元测试、首个稳定 NuGet 发布 | 🚧（已 67 个测试） |
 
 ### 🗺️ v0.2 详细路线图
 
