@@ -198,6 +198,39 @@ dotnet test ReportEngine.slnx
 | 0.5.x | WinForms 端对齐 | ⏳ |
 | 1.0   | 文档、单元测试、首个稳定 NuGet 发布 | 🚧（已 50 个测试） |
 
+### 🗺️ v0.2 详细路线图
+
+**v0.2 目标**：把 `MainWindow.cs` 进一步拆到 < 3000 行；把测试覆盖扩到 100 条；把文档化补齐。
+
+#### 已识别候选（按 ROI 排序）
+
+| 优先级 | 任务 | 预估影响 | 备注 |
+|--------|------|----------|------|
+| 🥇 P0 | **Step4.A** 抽 8 个 `AddProp*` 工厂方法 | MainWindow -175 行 | 需把 `_propertyStack` / `_currentExpander` / `_propRowIndex` 打包进 `PropertyRowContext` |
+| 🥇 P0 | **D2** 补 ClosedXmlExporter 边界用例（条件格式 / 嵌套表） | +6 测试 | `ConditionalFormatRule` 覆盖 |
+| 🥈 P1 | **A1** 补 SubReport/Barcode 集成测试（端到端） | +4 测试 | 跨模块的 `RenderedReport` 集成 |
+| 🥈 P1 | **Step4.B** 抽 `LoadPreviewData` + `ShowShortcutsDialog` + 杂项弹窗 | MainWindow -120 行 | 单调用方，走 Step3.B 模式 |
+| 🥉 P2 | **D3** 补 `ReportRenderer` 边界用例（空模板 / 嵌套子报表 / 异常输入） | +5 测试 | 提高 Core 健壮性 |
+| 🥉 P2 | **D4** 补 `ExpressionEngine` 边界用例（嵌套表达式 / 类型推断） | +4 测试 | 表达式语法边界 |
+| ⏳ P3 | **D5** 补 Designer.Wpf 测试项目（需先加 net8.0 Designer 测试项目） | +N 测试 | 跨项目引用复杂，等 v0.4.x |
+| ⏳ P3 | **v0.4.x** MainWindow 拆解 Stage 2（事件处理 / 拖拽 / 选中） | MainWindow -1000 行 | 深度耦合 WPF 状态，ROI 中等 |
+
+#### v0.2 验收标准
+
+- [ ] MainWindow.cs ≤ 3000 行
+- [ ] 单元测试 ≥ 100 条（全绿）
+- [ ] `ReportRenderer` / `ExpressionEngine` 边界用例覆盖
+- [ ] `CONTRIBUTING.md` 已发布
+- [ ] `LICENSE` / `README.md` / `CHANGELOG.md` 三件套到位
+- [ ] 首次 `dotnet pack` 能产出 NuGet 包（`ReportEngine.Core` 0.3.x + `ReportEngine.Export.Excel` + `ReportEngine.Export.Pdf`）
+
+#### v0.3+ 展望（暂不排期）
+
+- **v0.3.x** — WPF 运行时预览补完（分页 / 缩放 / 打印对话框）
+- **v0.4.x** — WPF 可视化设计器剩余拆解 + Designer 单元测试
+- **v0.5.x** — WinForms 端对齐
+- **v1.0** — 首版稳定 NuGet 发布 + 完整文档站（GitHub Pages / DocFX）
+
 ### v0.1.1 拆 `MainWindow.cs` 进度
 
 `ReportEngine.Designer.Wpf/MainWindow.cs` 在 v0.1.0 起步时是个 271 KB / 5050 行的"巨无霸"，
@@ -240,12 +273,17 @@ WPF/WinForms 端暂无测试项目（涉及 Windows 桌面依赖，等以后加 
 
 ## 🤝 贡献
 
-欢迎 PR 和 Issue。当前最需要帮忙的方向：
+欢迎 PR 和 Issue！详细开发流程、代码规范、提 PR 步骤请见 [`CONTRIBUTING.md`](./CONTRIBUTING.md)。
 
-1. 单元测试覆盖（特别是 `TemplateParser`、`ExpressionEngine`）
-2. WPF 设计器的属性面板与拖拽画布
-3. 文档：模板字段参考、API 参考、最佳实践
-4. 多语言资源与 .editorconfig（统一 UTF-8）
+当前最需要帮忙的方向（按 ROI 排序，详见上节"🗺️ v0.2 详细路线图"）：
+
+1. **P0** Step4.A 抽 8 个 `AddProp*` 工厂方法（属性面板重构，最大单点收益）
+2. **P0** D2 补 ClosedXmlExporter 边界用例（条件格式 / 嵌套表）
+3. **P1** A1 补 SubReport/Barcode 集成测试
+4. **P1** Step4.B 抽杂项弹窗（`LoadPreviewData` / `ShowShortcutsDialog`）
+5. **P2** D3/D4 补 `ReportRenderer` / `ExpressionEngine` 边界用例
+6. 文档：模板字段参考、API 参考、最佳实践
+7. 多语言资源与 .editorconfig（统一 UTF-8 + 风格）
 
 ---
 
