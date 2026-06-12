@@ -227,39 +227,23 @@ namespace ReportEngine.Designer.Wpf
 
         private ToolBar BuildToolBar()
         {
-            var tb = new ToolBar
-            {
-                Background = new SolidColorBrush(Color.FromRgb(240, 240, 240)),
-                Foreground = Brushes.Black,
-                Band = 0,
-            };
-            tb.Items.Add(MakeToolBtn(" 新建", NewTemplate));
-            tb.Items.Add(MakeToolBtn("📂 打开", OpenTemplate));
-            tb.Items.Add(MakeToolBtn("💾 保存", () => SaveTemplate(false)));
-            tb.Items.Add(new Separator());
-            _undoBtn = MakeToolBtn("↩ 撤销", Undo);
-            _redoBtn = MakeToolBtn("↪ 重做", Redo);
-            tb.Items.Add(_undoBtn);
-            tb.Items.Add(_redoBtn);
-            tb.Items.Add(new Separator());
-            _cutBtn = MakeToolBtn("✂ 剪切", CutSelected);
-            _copyBtn = MakeToolBtn("📋 复制", CopySelected);
-            _pasteBtn = MakeToolBtn("📌 粘贴", PasteElement);
-            _deleteBtn = MakeToolBtn("🗑 删除", DeleteSelected);
-            tb.Items.Add(_cutBtn);
-            tb.Items.Add(_copyBtn);
-            tb.Items.Add(_pasteBtn);
-            tb.Items.Add(_deleteBtn);
-            tb.Items.Add(new Separator());
-            tb.Items.Add(MakeToolBtn("🔍 页面设置", ShowPageSetupDialog));
-            tb.Items.Add(new Separator());
-            tb.Items.Add(MakeToolBtn("📑 PDF", ExportPdf));
-            tb.Items.Add(MakeToolBtn("📊 Excel", ExportExcel));
-            tb.Items.Add(new Separator());
-            tb.Items.Add(MakeToolBtn("🔍+ 放大", () => { _zoomSlider.Value = Math.Min(400, _zoomSlider.Value + 25); }));
-            tb.Items.Add(MakeToolBtn("🔍- 缩小", () => { _zoomSlider.Value = Math.Max(25, _zoomSlider.Value - 25); }));
-            tb.Items.Add(MakeToolBtn("🔍 适合", () => { _zoomSlider.Value = 100; }));
-            return tb;
+            return ToolBarBuilder.Build(
+                onNew: NewTemplate,
+                onOpen: OpenTemplate,
+                onSave: () => SaveTemplate(false),
+                onUndo: Undo,
+                onRedo: Redo,
+                onCut: CutSelected,
+                onCopy: CopySelected,
+                onPaste: PasteElement,
+                onDelete: DeleteSelected,
+                onPageSetup: ShowPageSetupDialog,
+                onExportPdf: ExportPdf,
+                onExportExcel: ExportExcel,
+                onZoomIn: () => { _zoomSlider.Value = Math.Min(400, _zoomSlider.Value + 25); },
+                onZoomOut: () => { _zoomSlider.Value = Math.Max(25, _zoomSlider.Value - 25); },
+                onZoomFit: () => { _zoomSlider.Value = 100; },
+                out _undoBtn, out _redoBtn, out _cutBtn, out _copyBtn, out _pasteBtn, out _deleteBtn);
         }
 
         private Border BuildStatusBar()
