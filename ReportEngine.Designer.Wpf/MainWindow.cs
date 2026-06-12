@@ -1140,40 +1140,25 @@ namespace ReportEngine.Designer.Wpf
         /// <summary>导出当前画布为PNG图片</summary>
         private void ExportPng()
         {
-            if (_template == null) return;
-            var dlg = new SaveFileDialog { Filter = "PNG 图片 (*.png)|*.png", Title = "导出图片", FileName = (_currentFilePath != null ? System.IO.Path.GetFileNameWithoutExtension(_currentFilePath) : "报表") + ".png" };
-            if (dlg.ShowDialog() != true) return;
-            try
-            {
-                _statusText.Text = "正在导出PNG...";
-                // 临时渲染到100%缩放以保证清晰度
-                double oldZoom = _zoom;
-                _zoom = 1.0;
-                _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand);
-
-                // 计算画布实际大小
-                var (bmpW, bmpH) = CanvasSizeCalculator.ComputePixelSize(_template, PixelsPerMm, CanvasPadding);
-                var bmp = new System.Windows.Media.Imaging.RenderTargetBitmap(
-                    bmpW, bmpH,
-                    96, 96,
-                    System.Windows.Media.PixelFormats.Pbgra32);
-                bmp.Render(_canvas);
-
-                // 保存为PNG
-                var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
-                encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bmp));
-                using (var stream = System.IO.File.Create(dlg.FileName))
-                    encoder.Save(stream);
-
-                _zoom = oldZoom;
-                _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand);
-                _statusText.Text = "PNG已导出: " + System.IO.Path.GetFileName(dlg.FileName);
-                MessageBox.Show("PNG 导出完成！\n" + dlg.FileName, "导出成功", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("PNG导出失败: " + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            _statusText.Text = "正在导出PNG...";
+            double oldZoom = _zoom;
+            CanvasImageExporter.Export(
+                template: _template,
+                pixelsPerMm: PixelsPerMm,
+                canvasPadding: CanvasPadding,
+                canvas: _canvas,
+                currentFilePath: _currentFilePath,
+                renderAt100: () =>
+                {
+                    _zoom = 1.0;
+                    _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand);
+                },
+                renderAtCurrent: () =>
+                {
+                    _zoom = oldZoom;
+                    _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand);
+                },
+                onSuccess: path => _statusText.Text = "PNG已导出: " + System.IO.Path.GetFileName(path));
         }
 
         /// <summary>批量导出PDF+Excel到同一目录</summary>
