@@ -598,48 +598,26 @@ namespace ReportEngine.Designer.Wpf
 
         private DockPanel BuildLeftPanel()
         {
-            var panel = new DockPanel { Background = new SolidColorBrush(Color.FromRgb(245, 245, 245)) };
-
-            // 标题
-            var toolHeader = new Border
-            {
-                Background = new SolidColorBrush(Color.FromRgb(230, 230, 230)),
-                Padding = new Thickness(6, 3, 6, 3),
-                Child = new TextBlock { Text = "插入元素", FontWeight = FontWeights.Bold, Foreground = Brushes.Black, FontSize = 12 },
-            };
-            DockPanel.SetDock(toolHeader, Dock.Top);
-            panel.Children.Add(toolHeader);
-
-            // 插入工具按钮
-            var toolbox = new StackPanel { Margin = new Thickness(4) };
-            AddToolboxBtn(toolbox, "📝 静态框", () => InsertElement(NewText()), "Text");
-            AddToolboxBtn(toolbox, "📊 字段框", () => InsertElement(NewFieldBox()), "Field");
-            AddToolboxBtn(toolbox, "Σ 统计框", () => InsertElement(NewSummaryBox()), "Summary");
-            AddToolboxBtn(toolbox, "@ 系统变量框", () => InsertElement(NewSysVarBox()), "SysVar");
-            AddToolboxBtn(toolbox, "📏 线段", () => InsertElement(NewLine()), "Line");
-            AddToolboxBtn(toolbox, "▬ 图形框", () => InsertElement(NewShape()), "Shape");
-            AddToolboxBtn(toolbox, "🖼 图象框", () => InsertElement(NewImage()), "Image");
-            AddToolboxBtn(toolbox, "▦ 条形码&二维码", () => InsertElement(NewBarcode()), "Barcode");
-            AddToolboxBtn(toolbox, "▤ 表格", () => InsertElement(NewTable()), "Table");
-            AddToolboxBtn(toolbox, "⊞ 交叉表", () => InsertElement(NewCrossTab()), "CrossTab");
-            AddToolboxBtn(toolbox, "📈 图表", () => InsertElement(NewChart()), "Chart");
-            AddToolboxBtn(toolbox, "📄 子报表", () => InsertElement(NewSubReport()), "SubReport");
-
-            // 区域插入
-            toolbox.Children.Add(new Border { Height = 8 });
-            toolbox.Children.Add(new TextBlock { Text = "插入区域", FontWeight = FontWeights.Bold, Foreground = Brushes.Black, Margin = new Thickness(0, 4, 0, 4), FontSize = 11 });
-            AddToolboxBtn(toolbox, "▤ 页眉", () => AddBand(BandType.Header, 15));
-            AddToolboxBtn(toolbox, "▤ 明细", () => AddBand(BandType.Detail, 10));
-            AddToolboxBtn(toolbox, "▤ 页脚", () => AddBand(BandType.Footer, 10));
-            AddToolboxBtn(toolbox, "▤ 分组头", () => AddBand(BandType.GroupHeader, 12));
-            AddToolboxBtn(toolbox, "▤ 分组尾", () => AddBand(BandType.GroupFooter, 10));
-            AddToolboxBtn(toolbox, "▤ 报表头", () => AddBand(BandType.ReportHeader, 20));
-            AddToolboxBtn(toolbox, "▤ 报表尾", () => AddBand(BandType.ReportFooter, 10));
-
-            var toolScroll = new ScrollViewer { Content = toolbox, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
-            panel.Children.Add(toolScroll);
-
-            return panel;
+            return LeftToolBoxBuilder.Build(
+                onInsertText: () => InsertElement(NewText()),
+                onInsertFieldBox: () => InsertElement(NewFieldBox()),
+                onInsertSummaryBox: () => InsertElement(NewSummaryBox()),
+                onInsertSysVarBox: () => InsertElement(NewSysVarBox()),
+                onInsertLine: () => InsertElement(NewLine()),
+                onInsertShape: () => InsertElement(NewShape()),
+                onInsertImage: () => InsertElement(NewImage()),
+                onInsertBarcode: () => InsertElement(NewBarcode()),
+                onInsertTable: () => InsertElement(NewTable()),
+                onInsertCrossTab: () => InsertElement(NewCrossTab()),
+                onInsertChart: () => InsertElement(NewChart()),
+                onInsertSubReport: () => InsertElement(NewSubReport()),
+                onAddHeader: () => AddBand(BandType.Header, 15),
+                onAddDetail: () => AddBand(BandType.Detail, 10),
+                onAddFooter: () => AddBand(BandType.Footer, 10),
+                onAddGroupHeader: () => AddBand(BandType.GroupHeader, 12),
+                onAddGroupFooter: () => AddBand(BandType.GroupFooter, 10),
+                onAddReportHeader: () => AddBand(BandType.ReportHeader, 20),
+                onAddReportFooter: () => AddBand(BandType.ReportFooter, 10));
         }
 
         private Grid BuildCenterPanel()
