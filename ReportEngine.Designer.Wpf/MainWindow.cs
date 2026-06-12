@@ -1592,21 +1592,15 @@ namespace ReportEngine.Designer.Wpf
             if (element != null) { _selectedElement = element; _selectedBand = band; RefreshUI(); }
             else if (band != null) { _selectedElement = null; _selectedBand = band; RefreshUI(); }
 
-            var menu = new ContextMenu();
-            if (_selectedElement != null)
-            {
-                var miCut = new MenuItem { Header = "剪切" }; miCut.Click += (_, __) => CutSelected(); menu.Items.Add(miCut);
-                var miCopy = new MenuItem { Header = "复制" }; miCopy.Click += (_, __) => CopySelected(); menu.Items.Add(miCopy);
-                var miDel = new MenuItem { Header = "删除" }; miDel.Click += (_, __) => DeleteSelected(); menu.Items.Add(miDel);
-                menu.Items.Add(new Separator());
-            }
-            if (_clipboardJson != null)
-            {
-                var miPaste = new MenuItem { Header = "粘贴" }; miPaste.Click += (_, __) => PasteElement(); menu.Items.Add(miPaste);
-            }
-            menu.Items.Add(new Separator());
-
-            var miInsert = InsertElementMenuBuilder.Build(
+            var menu = RightClickMenuBuilder.Build(
+                selectedElement: _selectedElement,
+                hasClipboard: _clipboardJson != null,
+                selectedBand: _selectedBand,
+                bandName: _selectedBand != null ? Name(_selectedBand.Type) : null,
+                onCut: CutSelected,
+                onCopy: CopySelected,
+                onDelete: DeleteSelected,
+                onPaste: PasteElement,
                 onInsert: InsertElement,
                 staticText: NewText,
                 field: NewFieldBox,
@@ -1619,17 +1613,8 @@ namespace ReportEngine.Designer.Wpf
                 table: NewTable,
                 crossTab: NewCrossTab,
                 chart: NewChart,
-                subReport: NewSubReport);
-            menu.Items.Add(miInsert);
-
-            var miBand = InsertBandMenuBuilder.Build(onAddBand: AddBand);
-            menu.Items.Add(miBand);
-
-            // 删除当前区域 + 页面设置
-            PageMenuBuilder.AppendTo(
-                menu: menu,
-                selectedBand: _selectedBand,
-                bandName: _selectedBand != null ? Name(_selectedBand.Type) : null,
+                subReport: NewSubReport,
+                onAddBand: AddBand,
                 onDeleteBand: DeleteBand,
                 onPageSetup: ShowPageSetupDialog);
 
