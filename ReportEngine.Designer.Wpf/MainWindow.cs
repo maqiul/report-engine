@@ -317,45 +317,20 @@ namespace ReportEngine.Designer.Wpf
 
         private Border BuildStatusBar()
         {
-            var outer = new DockPanel { Height = 26 };
-
-            // 左侧：视图标签
-            var tabPanel = new StackPanel { Orientation = Orientation.Horizontal, Background = new SolidColorBrush(Color.FromRgb(240, 240, 240)) };
-            var tabDesign = MakeStatusTab("普通视图", true);
-            var tabPreview = MakeStatusTab("页面视图", false);
-            var tabPageSetup = MakeStatusTab("页面设置", false, ShowPageSetupDialog);
-            tabDesign.MouseLeftButtonDown += (_, __) => SwitchView("design", tabDesign, tabPreview);
-            tabPreview.MouseLeftButtonDown += (_, __) => SwitchView("preview", tabDesign, tabPreview);
-            tabPanel.Children.Add(tabDesign);
-            tabPanel.Children.Add(tabPreview);
-            tabPanel.Children.Add(tabPageSetup);
-            DockPanel.SetDock(tabPanel, Dock.Left);
-            outer.Children.Add(tabPanel);
-
-            // 右侧主栏
-            var grid = new Grid { Background = new SolidColorBrush(Color.FromRgb(0, 122, 204)) };
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(150) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(180) });
-
-            _statusText.Margin = new Thickness(8, 0, 0, 0);
-            Grid.SetColumn(_statusText, 0);
-            grid.Children.Add(_statusText);
-
-            _posLabel.Margin = new Thickness(4, 0, 0, 0);
-            Grid.SetColumn(_posLabel, 1);
-            grid.Children.Add(_posLabel);
-
-            var zoomPanel = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(4, 0, 8, 0), VerticalAlignment = VerticalAlignment.Center };
-            zoomPanel.Children.Add(_zoomSlider);
-            zoomPanel.Children.Add(new TextBlock { Text = " ", VerticalAlignment = VerticalAlignment.Center });
-            zoomPanel.Children.Add(_zoomLabel);
-            Grid.SetColumn(zoomPanel, 2);
-            grid.Children.Add(zoomPanel);
-
-            outer.Children.Add(grid);
-            return new Border { Child = outer };
+            return StatusBarBuilder.Build(
+                statusText: _statusText,
+                posLabel: _posLabel,
+                zoomSlider: _zoomSlider,
+                zoomLabel: _zoomLabel,
+                onSwitchDesign: (d, p) => SwitchView("design", d, p),
+                onSwitchPreview: (d, p) => SwitchView("preview", d, p),
+                onShowPageSetup: ShowPageSetupDialog,
+                out _tabDesign,
+                out _tabPreview);
         }
+
+        private Border _tabDesign = null!;
+        private Border _tabPreview = null!;
 
         private ToolBarTray BuildFontToolBar()
         {
