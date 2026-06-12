@@ -905,17 +905,16 @@ namespace ReportEngine.Designer.Wpf
                 }
                 else
                 {
-                    double newX = Math.Max(0, _dragStartX + dx);
-                    double newY = Math.Max(0, _dragStartY + dy);
-                    if (_snapEnabled && _selectedBand != null)
-                    {
-                        SnapHelper.Snap(ref newX, ref newY, _selectedElement.Width, _selectedElement.Height, _selectedBand,
-                            excludedElements: new[] { _selectedElement }.Concat(_selectedElements).Distinct(),
-                            vGuides: _vGuides, hGuides: _hGuides, snapThresholdMm: SnapThresholdMm,
-                            snapLinesX: _snapLinesX, snapLinesY: _snapLinesY);
-                    }
-                    _selectedElement.X = Math.Round(newX * 2) / 2;
-                    _selectedElement.Y = Math.Round(newY * 2) / 2;
+                    ElementMover.MoveSingle(
+                        element: _selectedElement,
+                        band: _selectedBand,
+                        startX: _dragStartX, startY: _dragStartY,
+                        dx: dx, dy: dy,
+                        snapEnabled: _snapEnabled,
+                        excludedElements: _selectedElements,
+                        vGuides: _vGuides, hGuides: _hGuides,
+                        snapThresholdMm: SnapThresholdMm,
+                        snapLinesX: _snapLinesX, snapLinesY: _snapLinesY);
                 }
                 _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand);
             }
