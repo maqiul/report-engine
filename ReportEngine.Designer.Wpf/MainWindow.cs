@@ -1110,29 +1110,19 @@ namespace ReportEngine.Designer.Wpf
 
         private void OpenTemplate()
         {
-            if (!ConfirmDiscard()) return;
-            var dlg = new OpenFileDialog { Filter = "报表模板 (*.rptx)|*.rptx|所有文件|*.*", Title = "打开报表模板" };
-            if (dlg.ShowDialog() == true)
+            TemplateFileOpener.Open(_parser, ConfirmDiscard, (path, template) =>
             {
-                try
-                {
-                    var json = File.ReadAllText(dlg.FileName);
-                    _template = _parser.Parse(json);
-                    _currentFilePath = dlg.FileName;
-                    _dirty = false;
-                    _undoStack.Clear();
-                    _redoStack.Clear();
-                    _selectedElement = null;
-                    _selectedBand = null;
-                    RefreshUI();
-                    _statusText.Text = "已打开: " + System.IO.Path.GetFileName(dlg.FileName);
-                    AddRecentFile(dlg.FileName);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("打开失败: " + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-            }
+                _template = template;
+                _currentFilePath = path;
+                _dirty = false;
+                _undoStack.Clear();
+                _redoStack.Clear();
+                _selectedElement = null;
+                _selectedBand = null;
+                RefreshUI();
+                _statusText.Text = "已打开: " + System.IO.Path.GetFileName(path);
+                AddRecentFile(path);
+            });
         }
 
         private void SaveTemplate(bool saveAs)
