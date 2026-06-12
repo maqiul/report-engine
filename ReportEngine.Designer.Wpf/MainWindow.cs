@@ -1625,17 +1625,13 @@ namespace ReportEngine.Designer.Wpf
             var miBand = InsertBandMenuBuilder.Build(onAddBand: AddBand);
             menu.Items.Add(miBand);
 
-            // 删除当前区域
-            if (_selectedBand != null)
-            {
-                var miDelBand = new MenuItem { Header = "删除区域 [" + Name(_selectedBand.Type) + "]" };
-                var delB = _selectedBand;
-                miDelBand.Click += (_, __) => DeleteBand(delB);
-                menu.Items.Add(miDelBand);
-            }
-
-            menu.Items.Add(new Separator());
-            var miPage = new MenuItem { Header = "页面设置..." }; miPage.Click += (_, __) => ShowPageSetupDialog(); menu.Items.Add(miPage);
+            // 删除当前区域 + 页面设置
+            PageMenuBuilder.AppendTo(
+                menu: menu,
+                selectedBand: _selectedBand,
+                bandName: _selectedBand != null ? Name(_selectedBand.Type) : null,
+                onDeleteBand: DeleteBand,
+                onPageSetup: ShowPageSetupDialog);
 
             _canvas.ContextMenu = menu;
             menu.IsOpen = true;
