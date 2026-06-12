@@ -1614,30 +1614,23 @@ namespace ReportEngine.Designer.Wpf
             }
             menu.Items.Add(new Separator());
 
-            var miInsert = new MenuItem { Header = "插入" };
-            miInsert.Items.Add(MakeMenuItem("静态框", null, () => InsertElement(NewText())));
-            miInsert.Items.Add(MakeMenuItem("字段框", null, () => InsertElement(NewFieldBox())));
-            miInsert.Items.Add(MakeMenuItem("统计框", null, () => InsertElement(NewSummaryBox())));
-            miInsert.Items.Add(MakeMenuItem("系统变量框", null, () => InsertElement(NewSysVarBox())));
-            miInsert.Items.Add(new Separator());
-            miInsert.Items.Add(MakeMenuItem("线段", null, () => InsertElement(NewLine())));
-            miInsert.Items.Add(MakeMenuItem("图形框", null, () => InsertElement(NewShape())));
-            miInsert.Items.Add(MakeMenuItem("图象框", null, () => InsertElement(NewImage())));
-            miInsert.Items.Add(MakeMenuItem("条形码&二维码", null, () => InsertElement(NewBarcode())));
-            miInsert.Items.Add(MakeMenuItem("表格", null, () => InsertElement(NewTable())));
-            miInsert.Items.Add(MakeMenuItem("交叉表", null, () => InsertElement(NewCrossTab())));
-            miInsert.Items.Add(MakeMenuItem("图表", null, () => InsertElement(NewChart())));
-            miInsert.Items.Add(MakeMenuItem("子报表", null, () => InsertElement(NewSubReport())));
+            var miInsert = InsertElementMenuBuilder.Build(
+                onInsert: InsertElement,
+                staticText: NewText,
+                field: NewFieldBox,
+                summary: NewSummaryBox,
+                sysVar: NewSysVarBox,
+                line: NewLine,
+                shape: NewShape,
+                image: NewImage,
+                barcode: NewBarcode,
+                table: NewTable,
+                crossTab: NewCrossTab,
+                chart: NewChart,
+                subReport: NewSubReport);
             menu.Items.Add(miInsert);
 
-            var miBand = new MenuItem { Header = "插入区域" };
-            miBand.Items.Add(MakeMenuItem("页眉", null, () => AddBand(BandType.Header, 15)));
-            miBand.Items.Add(MakeMenuItem("明细", null, () => AddBand(BandType.Detail, 10)));
-            miBand.Items.Add(MakeMenuItem("页脚", null, () => AddBand(BandType.Footer, 10)));
-            miBand.Items.Add(MakeMenuItem("分组头", null, () => AddBand(BandType.GroupHeader, 12)));
-            miBand.Items.Add(MakeMenuItem("分组尾", null, () => AddBand(BandType.GroupFooter, 10)));
-            miBand.Items.Add(MakeMenuItem("报表头", null, () => AddBand(BandType.ReportHeader, 20)));
-            miBand.Items.Add(MakeMenuItem("报表尾", null, () => AddBand(BandType.ReportFooter, 10)));
+            var miBand = InsertBandMenuBuilder.Build(onAddBand: AddBand);
             menu.Items.Add(miBand);
 
             // 删除当前区域
