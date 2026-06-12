@@ -1928,22 +1928,7 @@ namespace ReportEngine.Designer.Wpf
         /// <summary>弹出重命名对话框</summary>
         private void ShowRenameDialog(ReportElement el)
         {
-            var dlg = new Window
-            {
-                Title = "重命名元素",
-                Width = 300, Height = 120,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                Owner = this, ResizeMode = ResizeMode.NoResize,
-            };
-            var sp = new StackPanel { Margin = new Thickness(12) };
-            sp.Children.Add(new TextBlock { Text = "名称:", Margin = new Thickness(0, 0, 0, 4), Foreground = Brushes.Black });
-            var tb = new TextBox { Text = el.Name ?? "", Margin = new Thickness(0, 0, 0, 8), Foreground = Brushes.Black };
-            sp.Children.Add(tb);
-            var btnOk = new Button { Content = "确定", Width = 70, Height = 26, HorizontalAlignment = HorizontalAlignment.Right, IsDefault = true };
-            btnOk.Click += (_, __) => { PushUndo(); el.Name = string.IsNullOrEmpty(tb.Text) ? null : tb.Text; MarkDirty(); RefreshUI(); dlg.Close(); };
-            sp.Children.Add(btnOk);
-            dlg.Content = sp;
-            dlg.ShowDialog();
+            RenameDialog.Show(this, el, name => { PushUndo(); el.Name = string.IsNullOrEmpty(name) ? null : name; MarkDirty(); RefreshUI(); });
         }
 
         private bool _updatingProps;
