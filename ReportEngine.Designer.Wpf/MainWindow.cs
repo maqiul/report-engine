@@ -1121,69 +1121,20 @@ namespace ReportEngine.Designer.Wpf
 
         private async void ExportPdf()
         {
-            if (_template == null) return;
-            
-            // 导出前预览确认
-            var previewResult = MessageBox.Show(
-                "导出前预览:\n" +
-                (_previewData != null && _previewData.Count > 0 ? $"数据源: {_previewData.Count} 条记录" : "无预览数据，将导出空模板") + "\n\n是否继续导出？",
-                "导出确认",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-            if (previewResult != MessageBoxResult.Yes) return;
-
-            var dlg = new SaveFileDialog { Filter = "PDF 文件 (*.pdf)|*.pdf", Title = "导出PDF", FileName = (_currentFilePath != null ? System.IO.Path.GetFileNameWithoutExtension(_currentFilePath) : "报表") + ".pdf" };
-            if (dlg.ShowDialog() != true) return;
-            try
+            _statusText.Text = "正在导出PDF...";
+            await ReportFileExporter.ExportPdfAsync(_template, _previewData, _currentFilePath, path =>
             {
-                _statusText.Text = "正在导出PDF...";
-                var resolver = new FileSystemTemplateResolver(System.IO.Path.GetDirectoryName(_currentFilePath) ?? ".");
-                var renderer = new ReportRenderer(resolver);
-                // 如果有预览数据，导出时带入
-                var data = Build(_previewData);
-                var rendered = await renderer.RenderAsync(_template, data);
-                var exporter = new PdfSharpExporter();
-                exporter.ExportToFile(rendered, dlg.FileName);
-                _statusText.Text = "PDF已导出: " + System.IO.Path.GetFileName(dlg.FileName);
-                MessageBox.Show("PDF 导出完成！\n" + dlg.FileName, "导出成功", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("PDF导出失败: " + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+                _statusText.Text = "PDF已导出: " + System.IO.Path.GetFileName(path);
+            });
         }
 
         private async void ExportExcel()
         {
-            if (_template == null) return;
-
-            // 导出前预览确认
-            var previewResult = MessageBox.Show(
-                "导出前预览:\n" +
-                (_previewData != null && _previewData.Count > 0 ? $"数据源: {_previewData.Count} 条记录" : "无预览数据，将导出空模板") + "\n\n是否继续导出？",
-                "导出确认",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-            if (previewResult != MessageBoxResult.Yes) return;
-
-            var dlg = new SaveFileDialog { Filter = "Excel 文件 (*.xlsx)|*.xlsx", Title = "导出Excel", FileName = (_currentFilePath != null ? System.IO.Path.GetFileNameWithoutExtension(_currentFilePath) : "报表") + ".xlsx" };
-            if (dlg.ShowDialog() != true) return;
-            try
+            _statusText.Text = "正在导出Excel...";
+            await ReportFileExporter.ExportExcelAsync(_template, _previewData, _currentFilePath, path =>
             {
-                _statusText.Text = "正在导出Excel...";
-                var resolver = new FileSystemTemplateResolver(System.IO.Path.GetDirectoryName(_currentFilePath) ?? ".");
-                var renderer = new ReportRenderer(resolver);
-                var data = Build(_previewData);
-                var rendered = await renderer.RenderAsync(_template, data);
-                var exporter = new ClosedXmlExporter();
-                exporter.ExportToFile(rendered, dlg.FileName);
-                _statusText.Text = "Excel已导出: " + System.IO.Path.GetFileName(dlg.FileName);
-                MessageBox.Show("Excel 导出完成！\n" + dlg.FileName, "导出成功", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Excel导出失败: " + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+                _statusText.Text = "Excel已导出: " + System.IO.Path.GetFileName(path);
+            });
         }
 
         /// <summary>导出当前画布为PNG图片</summary>
