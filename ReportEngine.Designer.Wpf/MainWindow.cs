@@ -900,11 +900,7 @@ namespace ReportEngine.Designer.Wpf
                 // 多选时批量移动
                 if (_selectedElements.Count > 1)
                 {
-                    foreach (var el in _selectedElements)
-                    {
-                        el.X = Math.Max(0, Math.Round((el.X + dx) * 2) / 2);
-                        el.Y = Math.Max(0, Math.Round((el.Y + dy) * 2) / 2);
-                    }
+                    ElementMover.MoveMultiple(_selectedElements, dx, dy);
                     _dragStart = pos;
                 }
                 else
