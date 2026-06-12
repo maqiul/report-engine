@@ -749,24 +749,15 @@ namespace ReportEngine.Designer.Wpf
         private void OnRulerGuideMouseMove(object sender, MouseEventArgs e)
         {
             if (!_draggingGuide || _template == null) return;
-            double mmPx = PixelsPerMm * _zoom;
-            if (_draggingHGuide)
+            if (RulerGuideMover.Update(
+                _draggingHGuide, _draggingGuideIndex,
+                e.GetPosition(_hRuler), e.GetPosition(_vRuler),
+                _zoom, PixelsPerMm, CanvasPadding,
+                _scrollViewer.HorizontalOffset, _scrollViewer.VerticalOffset,
+                _hGuides, _vGuides))
             {
-                double py = e.GetPosition(_vRuler).Y;
-                double offsetY = -_scrollViewer.VerticalOffset + CanvasPadding;
-                double mm = Math.Round((py - offsetY) / mmPx, 1);
-                if (_draggingGuideIndex >= 0 && _draggingGuideIndex < _hGuides.Count)
-                    _hGuides[_draggingGuideIndex] = mm;
+                _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand);
             }
-            else
-            {
-                double px = e.GetPosition(_hRuler).X;
-                double offsetX = -_scrollViewer.HorizontalOffset + CanvasPadding;
-                double mm = Math.Round((px - offsetX) / mmPx, 1);
-                if (_draggingGuideIndex >= 0 && _draggingGuideIndex < _vGuides.Count)
-                    _vGuides[_draggingGuideIndex] = mm;
-            }
-            _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand);
         }
 
         private void OnRulerGuideMouseUp(object sender, MouseButtonEventArgs e)
