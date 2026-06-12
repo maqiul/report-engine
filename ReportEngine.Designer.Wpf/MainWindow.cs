@@ -671,22 +671,10 @@ namespace ReportEngine.Designer.Wpf
             }
 
             if (_selectedElements.Count == 0 && _selectedElement == null) return;
-            double step = Keyboard.Modifiers == ModifierKeys.Shift ? 5 : 0.5; // Shift=5mm, 否则 0.5mm
-            bool handled = true;
-            switch (e.Key)
-            {
-                case Key.Left:
-                    NudgeSelected(-step, 0); break;
-                case Key.Right:
-                    NudgeSelected(step, 0); break;
-                case Key.Up:
-                    NudgeSelected(0, -step); break;
-                case Key.Down:
-                    NudgeSelected(0, step); break;
-                default:
-                    handled = false; break;
-            }
-            if (handled) { e.Handled = true; }
+            var delta = KeyNudgeCalculator.TryGetDelta(e.Key, Keyboard.Modifiers);
+            if (delta == null) return;
+            NudgeSelected(delta.Value.dx, delta.Value.dy);
+            e.Handled = true;
         }
 
         private void NudgeSelected(double dx, double dy)
