@@ -941,13 +941,9 @@ namespace ReportEngine.Designer.Wpf
             {
                 // 绘制框选矩形
                 if (_marqueeRect != null) _canvas.Children.Remove(_marqueeRect);
-                double mx = Math.Min(pos.X, _dragStart.X);
-                double my = Math.Min(pos.Y, _dragStart.Y);
-                double mw = Math.Abs(pos.X - _dragStart.X);
-                double mh = Math.Abs(pos.Y - _dragStart.Y);
-                _marqueeRect = new Rectangle { Width = mw, Height = mh, Stroke = Brushes.DodgerBlue, StrokeThickness = 1, StrokeDashArray = new DoubleCollection { 4, 2 }, Fill = new SolidColorBrush(Color.FromArgb(30, 30, 144, 255)) };
-                Canvas.SetLeft(_marqueeRect, mx);
-                Canvas.SetTop(_marqueeRect, my);
+                _marqueeRect = MarqueeRenderer.Create(pos, _dragStart);
+                Canvas.SetLeft(_marqueeRect, Math.Min(pos.X, _dragStart.X));
+                Canvas.SetTop(_marqueeRect, Math.Min(pos.Y, _dragStart.Y));
                 _canvas.Children.Add(_marqueeRect);
             }
         }
