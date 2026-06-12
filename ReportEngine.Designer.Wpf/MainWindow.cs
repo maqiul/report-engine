@@ -1566,19 +1566,7 @@ namespace ReportEngine.Designer.Wpf
 
         private void BuildRecentFilesMenu(MenuItem parent)
         {
-            if (_recentFiles.Count == 0)
-            {
-                var empty = new MenuItem { Header = "(无最近文件)", IsEnabled = false };
-                parent.Items.Add(empty);
-                return;
-            }
-            for (int i = 0; i < _recentFiles.Count; i++)
-            {
-                var fp = _recentFiles[i];
-                var mi = new MenuItem { Header = (i + 1) + ". " + System.IO.Path.GetFileName(fp) };
-                mi.Click += (_, __) => OpenFileDirect(fp);
-                parent.Items.Add(mi);
-            }
+            RecentFilesMenuBuilder.Build(parent, _recentFiles, OpenFileDirect);
         }
 
         private void OpenFileDirect(string path)
