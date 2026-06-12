@@ -801,20 +801,16 @@ namespace ReportEngine.Designer.Wpf
             var pos = e.GetPosition(_canvas);
 
             // 检查 resize 手柄
-            if (_selectedElement != null && !_selectedElement.Locked)
+            _resizeHandle = ResizeHandleDetector.Detect(_canvas, pos, _selectedElement);
+            if (_resizeHandle != ResizeHandleDetector.NoHandle)
             {
-                var hit = _canvas.InputHitTest(pos) as FrameworkElement;
-                if (hit?.Tag is string tag && tag.StartsWith("handle_"))
-                {
-                    _resizeHandle = int.Parse(tag.Substring(7));
-                    _dragMode = DragMode.ResizeElement;
-                    _dragStart = pos;
-                    _dragStartX = _selectedElement.X; _dragStartY = _selectedElement.Y;
-                    _dragStartW = _selectedElement.Width; _dragStartH = _selectedElement.Height;
-                    _canvas.CaptureMouse();
-                    PushUndo();
-                    return;
-                }
+                _dragMode = DragMode.ResizeElement;
+                _dragStart = pos;
+                _dragStartX = _selectedElement!.X; _dragStartY = _selectedElement.Y;
+                _dragStartW = _selectedElement.Width; _dragStartH = _selectedElement.Height;
+                _canvas.CaptureMouse();
+                PushUndo();
+                return;
             }
 
             // 检查 Band 调整
