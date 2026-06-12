@@ -827,62 +827,39 @@ namespace ReportEngine.Designer.Wpf
                 return;
             }
 
-            var (band, element) = HitTester.Hit(pos, _template, _zoom, CanvasPadding, PixelsPerMm);
-
-            // 格式刷模式：点击元素应用格式
-            if (element != null && _formatPainterActive)
-            {
-                ApplyFormatToTarget(element);
-                StopFormatPainter();
-                return;
-            }
-
-            if (element != null)
-            {
-                // Ctrl+Click 多选
-                if (Keyboard.Modifiers == ModifierKeys.Control)
+            Band? hitBand;
+            ReportElement? hitElement;
+            CanvasMouseDownHandler.Handle(
+                canvas: _canvas,
+                pos: pos,
+                template: _template,
+                zoom: _zoom,
+                canvasPadding: CanvasPadding,
+                pixelsPerMm: PixelsPerMm,
+                selectedElements: _selectedElements,
+                formatPainterActive: _formatPainterActive,
+                onApplyFormat: () => ApplyFormatToTarget(_selectedElement!),
+                onStopPainter: StopFormatPainter,
+                onStartMove: el =>
                 {
-                    if (_selectedElements.Contains(element))
-                        _selectedElements.Remove(element);
-                    else
-                        _selectedElements.Add(element);
-                    _selectedElement = element;
-                    _selectedBand = band;
-                }
-                else
+                    _dragMode = DragMode.MoveElement;
+                    _dragStart = pos;
+                    _dragStartX = el.X;
+                    _dragStartY = el.Y;
+                    _canvas.CaptureMouse();
+                    PushUndo();
+                },
+                onStartMarquee: () =>
                 {
-                    _selectedElements.Clear();
-                    _selectedElements.Add(element);
-                    _selectedElement = element;
-                    _selectedBand = band;
-                    if (!element.Locked)
-                    {
-                        _dragMode = DragMode.MoveElement;
-                        _dragStart = pos;
-                        _dragStartX = element.X;
-                        _dragStartY = element.Y;
-                        _canvas.CaptureMouse();
-                        PushUndo();
-                    }
-                }
-            }
-            else if (band != null)
-            {
-                _selectedElement = null;
-                _selectedElements.Clear();
-                _selectedBand = band;
-            }
-            else
-            {
-                // 空白区域开始框选
-                _selectedElement = null;
-                _selectedElements.Clear();
-                _selectedBand = null;
-                _dragMode = DragMode.MarqueeSelect;
-                _dragStart = pos;
-                _canvas.CaptureMouse();
-            }
+                    _dragMode = DragMode.MarqueeSelect;
+                    _dragStart = pos;
+                    _canvas.CaptureMouse();
+                },
+                out hitBand,
+                out hitElement);
 
+            _selectedElement = hitElement;
+            _selectedBand = hitBand;
             RefreshUI();
         }
 
