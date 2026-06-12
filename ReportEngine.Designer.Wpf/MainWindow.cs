@@ -460,8 +460,7 @@ namespace ReportEngine.Designer.Wpf
             var targets = _selectedElements.Count > 1 ? _selectedElements : (_selectedElements.Count == 0 && _selectedElement != null ? new List<ReportElement> { _selectedElement } : _selectedElements);
             if (targets.Count < 2) { _statusText.Text = "请选中2个以上元素再组合"; return; }
             PushUndo();
-            string groupId = "grp_" + Guid.NewGuid().ToString("N").Substring(0, 8);
-            foreach (var el in targets) el.GroupId = groupId;
+            ElementGrouper.Group(targets);
             MarkDirty();
             RefreshUI();
             _statusText.Text = "已组合 " + targets.Count + " 个元素";
@@ -473,7 +472,7 @@ namespace ReportEngine.Designer.Wpf
             var targets = _selectedElements.Count > 0 ? _selectedElements : (_selectedElement != null ? new List<ReportElement> { _selectedElement } : new List<ReportElement>());
             if (targets.Count == 0 || targets.All(e => e.GroupId == null)) { _statusText.Text = "选中的元素未分组"; return; }
             PushUndo();
-            foreach (var el in targets) el.GroupId = null;
+            ElementGrouper.Ungroup(targets);
             MarkDirty();
             RefreshUI();
             _statusText.Text = "已取消组合";
