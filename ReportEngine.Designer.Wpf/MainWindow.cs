@@ -603,34 +603,14 @@ namespace ReportEngine.Designer.Wpf
 
         private Grid BuildCenterPanel()
         {
-            var grid = new Grid();
-            grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(RulerSize) });
-            grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(RulerSize) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-
-            // 左上角
-            var corner = new Border { Background = new SolidColorBrush(Color.FromRgb(230, 230, 230)) };
-            Grid.SetRow(corner, 0); Grid.SetColumn(corner, 0);
-            grid.Children.Add(corner);
-
-            Grid.SetRow(_hRuler, 0); Grid.SetColumn(_hRuler, 1);
-            grid.Children.Add(_hRuler);
-
-            Grid.SetRow(_vRuler, 1); Grid.SetColumn(_vRuler, 0);
-            grid.Children.Add(_vRuler);
-
-            Grid.SetRow(_scrollViewer, 1); Grid.SetColumn(_scrollViewer, 1);
-            _scrollViewer.ScrollChanged += (_, __) => _canvasRenderer.RenderRulers(_template!, _zoom);
-            _scrollViewer.PreviewMouseWheel += OnCanvasWheel;
-            grid.Children.Add(_scrollViewer);
-
-            // 预览视图（叠加在同一位置）
-            Grid.SetRow(_previewScrollViewer, 0); Grid.SetColumn(_previewScrollViewer, 0);
-            Grid.SetRowSpan(_previewScrollViewer, 2); Grid.SetColumnSpan(_previewScrollViewer, 2);
-            grid.Children.Add(_previewScrollViewer);
-
-            return grid;
+            return CenterPanelBuilder.Build(
+                rulerSize: RulerSize,
+                hRuler: _hRuler,
+                vRuler: _vRuler,
+                scrollViewer: _scrollViewer,
+                previewScrollViewer: _previewScrollViewer,
+                onScrollChanged: () => _canvasRenderer.RenderRulers(_template!, _zoom),
+                onPreviewMouseWheel: OnCanvasWheel);
         }
 
         private Grid BuildRightPanel()
