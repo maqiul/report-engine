@@ -419,34 +419,16 @@ namespace ReportEngine.Designer.Wpf
         /// <summary>启动时检查是否有自动保存的草稿</summary>
         private void CheckAutoSaveRecovery()
         {
-            if (!System.IO.File.Exists(AutoSavePath)) return;
-            var result = MessageBox.Show("发现未保存的草稿文件，是否恢复？\n(" + AutoSavePath + ")", "恢复草稿", MessageBoxButton.YesNo, MessageBoxImage.Question);
-            if (result == MessageBoxResult.Yes)
-            {
-                try
+            AutoSaveRecoveryChecker.Check(AutoSavePath, _parser,
+                onRecovered: template =>
                 {
-                    var json = System.IO.File.ReadAllText(AutoSavePath);
-                    _template = _parser.Parse(json);
+                    _template = template;
                     _currentFilePath = null;
                     _dirty = false;
                     RefreshUI();
                     _statusText.Text = "已从草稿恢复";
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("恢复草稿失败: " + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-            }
-            else
-            {
-                // 用户选择不恢复，删除草稿文件
-                try
-                {
-                    System.IO.File.Delete(AutoSavePath);
-                    _statusText.Text = "已忽略草稿文件";
-                }
-                catch { }
-            }
+                },
+                onSkipped: () => { _statusText.Text = "已忽略草稿文件"; });
         }
 
         /// <summary>手动保存后删除自动保存草稿</summary>
