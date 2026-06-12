@@ -927,18 +927,8 @@ namespace ReportEngine.Designer.Wpf
             {
                 double dx = (pos.X - _dragStart.X) / mmPx;
                 double dy = (pos.Y - _dragStart.Y) / mmPx;
-                double newX = _dragStartX, newY = _dragStartY, newW = _dragStartW, newH = _dragStartH;
-                switch (_resizeHandle)
-                {
-                    case 0: newX += dx; newY += dy; newW -= dx; newH -= dy; break;
-                    case 1: newY += dy; newH -= dy; break;
-                    case 2: newY += dy; newW += dx; newH -= dy; break;
-                    case 3: newW += dx; break;
-                    case 4: newW += dx; newH += dy; break;
-                    case 5: newH += dy; break;
-                    case 6: newX += dx; newW -= dx; newH += dy; break;
-                    case 7: newX += dx; newW -= dx; break;
-                }
+                var (newX, newY, newW, newH) = ResizeCalculator.Compute(
+                    _resizeHandle, dx, dy, _dragStartX, _dragStartY, _dragStartW, _dragStartH);
                 _selectedElement.X = Math.Max(0, Math.Round(newX * 2) / 2);
                 _selectedElement.Y = Math.Max(0, Math.Round(newY * 2) / 2);
                 _selectedElement.Width = Math.Max(2, Math.Round(newW * 2) / 2);
