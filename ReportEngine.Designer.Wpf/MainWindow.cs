@@ -359,36 +359,17 @@ namespace ReportEngine.Designer.Wpf
 
         private ToolBarTray BuildFontToolBar()
         {
-            var tray = new ToolBarTray { Background = new SolidColorBrush(Color.FromRgb(245, 245, 245)) };
-            var tb = new ToolBar { Background = new SolidColorBrush(Color.FromRgb(245, 245, 245)), Band = 0 };
-
-            _fontFamilyCombo = new ComboBox { Width = 120, FontSize = 11, IsEditable = true };
-            foreach (var f in new[] { "宋体", "黑体", "微软雅黑", "楷体", "仿宋", "Arial", "Times New Roman", "Courier New" })
-                _fontFamilyCombo.Items.Add(f);
-            _fontFamilyCombo.Text = "宋体";
-            _fontFamilyCombo.SelectionChanged += (_, __) => ApplyFontFamily();
-            _fontFamilyCombo.LostFocus += (_, __) => ApplyFontFamily();
-            tb.Items.Add(_fontFamilyCombo);
-
-            _fontSizeCombo = new ComboBox { Width = 60, FontSize = 11, IsEditable = true };
-            foreach (var s in new[] { "8", "9", "10", "10.5", "11", "12", "14", "16", "18", "20", "22", "24", "28", "36", "48", "72" })
-                _fontSizeCombo.Items.Add(s);
-            _fontSizeCombo.Text = "10";
-            _fontSizeCombo.SelectionChanged += (_, __) => ApplyFontSize();
-            _fontSizeCombo.LostFocus += (_, __) => ApplyFontSize();
-            tb.Items.Add(_fontSizeCombo);
-
-            tb.Items.Add(new Separator());
-            tb.Items.Add(MakeFmtBtn("B", FontWeights.Bold, () => ToggleFontBold()));
-            tb.Items.Add(MakeFmtBtn("I", FontWeights.Normal, () => ToggleFontItalic(), true));
-            tb.Items.Add(MakeFmtBtn("U", FontWeights.Normal, () => ToggleFontUnderline(), false, true));
-            tb.Items.Add(new Separator());
-            tb.Items.Add(MakeToolBtn("☰ 左", () => SetAlignment(ReportEngine.Core.TextAlignment.Left)));
-            tb.Items.Add(MakeToolBtn("☰ 中", () => SetAlignment(ReportEngine.Core.TextAlignment.Center)));
-            tb.Items.Add(MakeToolBtn("☰ 右", () => SetAlignment(ReportEngine.Core.TextAlignment.Right)));
-
-            tray.ToolBars.Add(tb);
-            return tray;
+            return FontToolBarBuilder.Build(
+                onFontFamilyChanged: ApplyFontFamily,
+                onFontSizeChanged: ApplyFontSize,
+                onToggleBold: ToggleFontBold,
+                onToggleItalic: ToggleFontItalic,
+                onToggleUnderline: ToggleFontUnderline,
+                onAlignLeft: () => SetAlignment(ReportEngine.Core.TextAlignment.Left),
+                onAlignCenter: () => SetAlignment(ReportEngine.Core.TextAlignment.Center),
+                onAlignRight: () => SetAlignment(ReportEngine.Core.TextAlignment.Right),
+                out _fontFamilyCombo,
+                out _fontSizeCombo);
         }
 
         private void ApplyFontFamily()
