@@ -1137,30 +1137,14 @@ namespace ReportEngine.Designer.Wpf
 
         private void SaveTemplate(bool saveAs)
         {
-            if (_template == null) return;
-            var path = _currentFilePath;
-            if (saveAs || string.IsNullOrEmpty(path))
+            TemplateFileSaver.Save(_template, _parser, _currentFilePath, saveAs, path =>
             {
-                var dlg = new SaveFileDialog { Filter = "报表模板 (*.rptx)|*.rptx", Title = "保存报表模板" };
-                if (!string.IsNullOrEmpty(path)) dlg.FileName = path;
-                if (dlg.ShowDialog() != true) return;
-                path = dlg.FileName;
-            }
-            try
-            {
-                _template.ModifiedAt = DateTime.Now;
-                var json = _parser.Serialize(_template);
-                File.WriteAllText(path!, json);
                 _currentFilePath = path;
                 _dirty = false;
                 UpdateTitle();
                 ClearAutoSave();
-                _statusText.Text = "已保存: " + System.IO.Path.GetFileName(path!);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("保存失败: " + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+                _statusText.Text = "已保存: " + System.IO.Path.GetFileName(path);
+            });
         }
 
         private async void ExportPdf()
