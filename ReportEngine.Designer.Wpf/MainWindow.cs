@@ -654,77 +654,11 @@ namespace ReportEngine.Designer.Wpf
 
         private Grid BuildRightPanel()
         {
-            var grid = new Grid { Background = new SolidColorBrush(Color.FromRgb(245, 245, 245)) };
-            grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(180) });
-            grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(5) });
-            grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-
-            // 上半部分：对象树
-            var treePanel = new DockPanel();
-            var treeHeader = new Border
-            {
-                Background = new SolidColorBrush(Color.FromRgb(230, 230, 230)),
-                Padding = new Thickness(6, 3, 6, 3),
-                Child = new TextBlock { Text = "报表主对象", FontWeight = FontWeights.Bold, FontSize = 12, Foreground = Brushes.Black },
-            };
-            DockPanel.SetDock(treeHeader, Dock.Top);
-            treePanel.Children.Add(treeHeader);
-            treePanel.Children.Add(_bandTree);
-            Grid.SetRow(treePanel, 0);
-            grid.Children.Add(treePanel);
-
-            // 分隔条
-            var splitter = new GridSplitter { Height = 5, HorizontalAlignment = HorizontalAlignment.Stretch, Background = new SolidColorBrush(Color.FromRgb(210, 210, 210)) };
-            Grid.SetRow(splitter, 1);
-            grid.Children.Add(splitter);
-
-            // 下半部分：属性网格
-            var propPanel = new DockPanel();
-
-            // 选中对象名 + 操作图标
-            _selectedObjLabel = new TextBlock { Text = "", FontSize = 11, FontWeight = FontWeights.Bold, Foreground = Brushes.Black, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0, 0, 0) };
-            var objNameBar = new DockPanel { Background = new SolidColorBrush(Color.FromRgb(230, 230, 230)), Height = 24 };
-            var objIconPanel = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(2, 0, 4, 0) };
-            objIconPanel.Children.Add(MakeSmallIconBtn("📎", "属性"));
-            objIconPanel.Children.Add(MakeSmallIconBtn("⚡", "事件"));
-            DockPanel.SetDock(objIconPanel, Dock.Left);
-            objNameBar.Children.Add(objIconPanel);
-            objNameBar.Children.Add(_selectedObjLabel);
-
-            // 重置按钮
-            var btnReset = new Button { Content = "↺ 重置", Width = 50, Height = 18, FontSize = 9, Margin = new Thickness(0, 0, 4, 0), HorizontalAlignment = HorizontalAlignment.Right };
-            btnReset.Click += (_, __) => ResetSelectedProperties();
-            DockPanel.SetDock(btnReset, Dock.Right);
-            objNameBar.Children.Add(btnReset);
-
-            DockPanel.SetDock(objNameBar, Dock.Top);
-            propPanel.Children.Add(objNameBar);
-
-            // 属性分类标题栏
-            var propTitleBar = new Border
-            {
-                Background = new SolidColorBrush(Color.FromRgb(230, 230, 230)),
-                Padding = new Thickness(6, 2, 6, 2),
-                BorderBrush = new SolidColorBrush(Color.FromRgb(200, 200, 200)),
-                BorderThickness = new Thickness(0, 0, 0, 1),
-            };
-            var propTitleRow = new DockPanel();
-            // 排序/分类图标
-            var sortIcons = new StackPanel { Orientation = Orientation.Horizontal };
-            sortIcons.Children.Add(MakeSmallIconBtn("≡", "分类视图"));
-            sortIcons.Children.Add(MakeSmallIconBtn("↕", "字母排序"));
-            DockPanel.SetDock(sortIcons, Dock.Left);
-            propTitleRow.Children.Add(sortIcons);
-            propTitleRow.Children.Add(new TextBlock { Text = "", FontSize = 10 });
-            propTitleBar.Child = propTitleRow;
-            DockPanel.SetDock(propTitleBar, Dock.Top);
-            propPanel.Children.Add(propTitleBar);
-
-            propPanel.Children.Add(_propertyPanel);
-            Grid.SetRow(propPanel, 2);
-            grid.Children.Add(propPanel);
-
-            return grid;
+            return RightPanelBuilder.Build(
+                bandTree: _bandTree,
+                propertyPanel: _propertyPanel,
+                onResetSelected: ResetSelectedProperties,
+                out _selectedObjLabel);
         }
 
         private TextBlock _selectedObjLabel = null!;
