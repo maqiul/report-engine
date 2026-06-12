@@ -77,6 +77,58 @@ internal static class ReportFileExporter
             onSuccess: onSuccess);
     }
 
+    /// <summary>批量导出 PDF + Excel (复用同一 RenderedReport)。</summary>
+    public static async Task ExportBatchAsync(
+        ReportTemplate? template,
+        IReadOnlyDictionary<string, object>? previewData,
+        string? currentFilePath,
+        Action<string, string> onSuccess)
+    {
+        if (template == null) return;
+
+        // 1. 预览确认
+        var previewResult = MessageBox.Show(
+            "批量导出预览:\n" +
+            (previewData != null && previewData.Count > 0 ? $"数据源: {previewData.Count} 条记录" : "无预览数据，将导出空模板") + "\n\n是否继续导出？",
+            "批量导出确认",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+        if (previewResult != MessageBoxResult.Yes) return;
+
+        // 2. 选目录基名
+        var dlg = new SaveFileDialog
+        {
+            Filter = "PDF 文件 (*.pdf)|*.pdf",
+            Title = "选择保存位置和文件名",
+            FileName = (currentFilePath != null ? Path.GetFileNameWithoutExtension(currentFilePath) : "报表"),
+        };
+        if (dlg.ShowDialog() != true) return;
+
+        var baseName = Path.GetFileNameWithoutExtension(dlg.FileName);
+        var dir = Path.GetDirectoryName(dlg.FileName)!;
+        var pdfPath = Path.Combine(dir, baseName + ".pdf");
+        var excelPath = Path.Combine(dir, baseName + ".xlsx");
+
+        // 3. 渲染一次 + 双导出
+        try
+        {
+            var resolver = new FileSystemTemplateResolver(Path.GetDirectoryName(currentFilePath) ?? ".");
+            var renderer = new ReportRenderer(resolver);
+            var data = ExportDataBuilder.Build(previewData);
+            var rendered = await renderer.RenderAsync(template, data);
+
+            new PdfSharpExporterAdapter().ExportToFile(rendered, pdfPath);
+            new ClosedXmlExporterAdapter().ExportToFile(rendered, excelPath);
+
+            onSuccess(pdfPath, excelPath);
+            MessageBox.Show($"批量导出完成！\nPDF: {pdfPath}\nExcel: {excelPath}", "导出成功", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show("批量导出失败: " + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
     private static async Task ExportCoreAsync(
         ReportTemplate? template,
         IReadOnlyDictionary<string, object>? previewData,

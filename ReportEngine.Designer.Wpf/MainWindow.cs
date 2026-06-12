@@ -1164,48 +1164,9 @@ namespace ReportEngine.Designer.Wpf
         /// <summary>批量导出PDF+Excel到同一目录</summary>
         private async void ExportBatch()
         {
-            if (_template == null) return;
-            
-            // 导出前预览确认
-            var previewResult = MessageBox.Show(
-                "批量导出预览:\n" +
-                (_previewData != null && _previewData.Count > 0 ? $"数据源: {_previewData.Count} 条记录" : "无预览数据，将导出空模板") + "\n\n是否继续导出？",
-                "批量导出确认",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-            if (previewResult != MessageBoxResult.Yes) return;
-
-            var dlg = new SaveFileDialog { Filter = "PDF 文件 (*.pdf)|*.pdf", Title = "选择保存位置和文件名", FileName = (_currentFilePath != null ? System.IO.Path.GetFileNameWithoutExtension(_currentFilePath) : "报表") };
-            if (dlg.ShowDialog() != true) return;
-            
-            string baseName = System.IO.Path.GetFileNameWithoutExtension(dlg.FileName);
-            string dir = System.IO.Path.GetDirectoryName(dlg.FileName)!;
-            string pdfPath = System.IO.Path.Combine(dir, baseName + ".pdf");
-            string excelPath = System.IO.Path.Combine(dir, baseName + ".xlsx");
-
-            try
-            {
-                _statusText.Text = "正在批量导出...";
-                var resolver = new FileSystemTemplateResolver(System.IO.Path.GetDirectoryName(_currentFilePath) ?? ".");
-                var renderer = new ReportRenderer(resolver);
-                var data = Build(_previewData);
-                var rendered = await renderer.RenderAsync(_template, data);
-
-                // 导出PDF
-                var pdfExporter = new PdfSharpExporter();
-                pdfExporter.ExportToFile(rendered, pdfPath);
-
-                // 导出Excel
-                var excelExporter = new ClosedXmlExporter();
-                excelExporter.ExportToFile(rendered, excelPath);
-
-                _statusText.Text = "批量导出完成";
-                MessageBox.Show($"批量导出完成！\nPDF: {pdfPath}\nExcel: {excelPath}", "导出成功", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("批量导出失败: " + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            _statusText.Text = "正在批量导出...";
+            await ReportFileExporter.ExportBatchAsync(_template, _previewData, _currentFilePath,
+                (pdfPath, excelPath) => { _statusText.Text = "批量导出完成"; });
         }
 
         private bool ConfirmDiscard()
