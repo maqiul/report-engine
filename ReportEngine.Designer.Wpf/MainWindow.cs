@@ -766,16 +766,14 @@ namespace ReportEngine.Designer.Wpf
             // 如果拖到负数区域（标尺外）则删除
             if (_draggingHGuide)
             {
-                if (_draggingGuideIndex >= 0 && _draggingGuideIndex < _hGuides.Count && _hGuides[_draggingGuideIndex] < 0)
-                    _hGuides.RemoveAt(_draggingGuideIndex);
+                GuideListEditor.RemoveIfNegative(_hGuides, _draggingGuideIndex);
                 _vRuler.ReleaseMouseCapture();
                 _vRuler.MouseMove -= OnRulerGuideMouseMove;
                 _vRuler.MouseLeftButtonUp -= OnRulerGuideMouseUp;
             }
             else
             {
-                if (_draggingGuideIndex >= 0 && _draggingGuideIndex < _vGuides.Count && _vGuides[_draggingGuideIndex] < 0)
-                    _vGuides.RemoveAt(_draggingGuideIndex);
+                GuideListEditor.RemoveIfNegative(_vGuides, _draggingGuideIndex);
                 _hRuler.ReleaseMouseCapture();
                 _hRuler.MouseMove -= OnRulerGuideMouseMove;
                 _hRuler.MouseLeftButtonUp -= OnRulerGuideMouseUp;
