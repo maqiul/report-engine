@@ -703,25 +703,15 @@ namespace ReportEngine.Designer.Wpf
         private void SwitchView(string mode, Border tabDesign, Border tabPreview)
         {
             _viewMode = mode;
-            if (mode == "preview")
-            {
-                _scrollViewer.Visibility = Visibility.Collapsed;
-                _hRuler.Visibility = Visibility.Collapsed;
-                _vRuler.Visibility = Visibility.Collapsed;
-                _previewScrollViewer.Visibility = Visibility.Visible;
-                tabDesign.Background = new SolidColorBrush(Color.FromRgb(220, 220, 220));
-                tabPreview.Background = Brushes.White;
-                _previewRenderer.Render(_template!, _zoom, _previewData);
-            }
-            else
-            {
-                _previewScrollViewer.Visibility = Visibility.Collapsed;
-                _scrollViewer.Visibility = Visibility.Visible;
-                _hRuler.Visibility = Visibility.Visible;
-                _vRuler.Visibility = Visibility.Visible;
-                tabDesign.Background = Brushes.White;
-                tabPreview.Background = new SolidColorBrush(Color.FromRgb(220, 220, 220));
-            }
+            ViewSwitcher.Switch(
+                mode: mode,
+                tabDesign: tabDesign,
+                tabPreview: tabPreview,
+                scrollViewer: _scrollViewer,
+                hRuler: _hRuler,
+                vRuler: _vRuler,
+                previewScrollViewer: _previewScrollViewer,
+                onPreviewRender: () => _previewRenderer.Render(_template!, _zoom, _previewData));
         }
 
         // ============================== 标尺 ==============================
