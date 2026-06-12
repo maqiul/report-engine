@@ -998,32 +998,14 @@ namespace ReportEngine.Designer.Wpf
             if (_dragMode == DragMode.MarqueeSelect)
             {
                 // 框选结束：找出框内元素
-                var pos = e.GetPosition(_canvas);
-                double z = _zoom;
-                double mmPx = PixelsPerMm * z;
-                double mx = Math.Min(pos.X, _dragStart.X) - CanvasPadding;
-                double my = Math.Min(pos.Y, _dragStart.Y) - CanvasPadding;
-                double mw = Math.Abs(pos.X - _dragStart.X);
-                double mh = Math.Abs(pos.Y - _dragStart.Y);
-                var rect = new Rect(mx / mmPx, my / mmPx, mw / mmPx, mh / mmPx);
+                var hits = MarqueeSelector.Select(
+                    _dragStart, e.GetPosition(_canvas), _zoom, PixelsPerMm, CanvasPadding, _template);
 
                 _selectedElements.Clear();
-                if (_template != null)
+                foreach (var (el, band) in hits)
                 {
-                    double bandY = 0;
-                    foreach (var band in _template.Bands)
-                    {
-                        foreach (var el in band.Elements)
-                        {
-                            var elRect = new Rect(el.X, bandY + el.Y, el.Width, el.Height);
-                            if (rect.IntersectsWith(elRect))
-                            {
-                                _selectedElements.Add(el);
-                                _selectedBand = band;
-                            }
-                        }
-                        bandY += band.Height;
-                    }
+                    _selectedElements.Add(el);
+                    _selectedBand = band;
                 }
                 if (_selectedElements.Count > 0)
                     _selectedElement = _selectedElements[0];
