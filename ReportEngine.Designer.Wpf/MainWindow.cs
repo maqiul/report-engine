@@ -214,68 +214,15 @@ namespace ReportEngine.Designer.Wpf
 
         private void BuildLayout()
         {
-            var root = new DockPanel();
-
-            // 菜单
-            var menu = BuildMenu();
-            menu.Background = new SolidColorBrush(Color.FromRgb(240, 240, 240));
-            menu.Foreground = Brushes.Black;
-            DockPanel.SetDock(menu, Dock.Top);
-            root.Children.Add(menu);
-
-            // 工具栏
-            var toolbar = BuildToolBar();
-            DockPanel.SetDock(toolbar, Dock.Top);
-            root.Children.Add(toolbar);
-
-            // 字体格式工具栏
-            var fontBar = BuildFontToolBar();
-            DockPanel.SetDock(fontBar, Dock.Top);
-            root.Children.Add(fontBar);
-
-            // 对齐工具栏
-            var alignBar = BuildAlignToolBar();
-            DockPanel.SetDock(alignBar, Dock.Top);
-            root.Children.Add(alignBar);
-
-            // 状态栏
-            var statusBar = BuildStatusBar();
-            DockPanel.SetDock(statusBar, Dock.Bottom);
-            root.Children.Add(statusBar);
-
-            // 三栏主体
-            var mainGrid = new Grid();
-            mainGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(220) });
-            mainGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(5) });
-            mainGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            mainGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(5) });
-            mainGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(280) });
-
-            // 左栏
-            var leftPanel = BuildLeftPanel();
-            Grid.SetColumn(leftPanel, 0);
-            mainGrid.Children.Add(leftPanel);
-
-            var sp1 = new GridSplitter { Width = 5, HorizontalAlignment = HorizontalAlignment.Stretch, Background = new SolidColorBrush(Color.FromRgb(210, 210, 210)) };
-            Grid.SetColumn(sp1, 1);
-            mainGrid.Children.Add(sp1);
-
-            // 中央：标尺 + 画布
-            var centerPanel = BuildCenterPanel();
-            Grid.SetColumn(centerPanel, 2);
-            mainGrid.Children.Add(centerPanel);
-
-            var sp2 = new GridSplitter { Width = 5, HorizontalAlignment = HorizontalAlignment.Stretch, Background = new SolidColorBrush(Color.FromRgb(210, 210, 210)) };
-            Grid.SetColumn(sp2, 3);
-            mainGrid.Children.Add(sp2);
-
-            // 右栏
-            var rightPanel = BuildRightPanel();
-            Grid.SetColumn(rightPanel, 4);
-            mainGrid.Children.Add(rightPanel);
-
-            root.Children.Add(mainGrid);
-            Content = root;
+            Content = RootLayoutBuilder.Build(
+                menu: BuildMenu(),
+                toolbar: BuildToolBar(),
+                fontBar: BuildFontToolBar(),
+                alignBar: BuildAlignToolBar(),
+                statusBar: BuildStatusBar(),
+                leftPanel: BuildLeftPanel(),
+                centerPanel: BuildCenterPanel(),
+                rightPanel: BuildRightPanel());
         }
 
         private ToolBar BuildToolBar()
