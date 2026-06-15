@@ -1158,26 +1158,16 @@ namespace ReportEngine.Designer.Wpf
         private void DeleteSelected()
         {
             if (_template == null) return;
-            if (_selectedElements.Count > 0)
-            {
-                PushUndo();
-                foreach (var el in _selectedElements)
-                    foreach (var b in _template.Bands)
-                        b.Elements.Remove(el);
-                _selectedElements.Clear();
-                _selectedElement = null;
-                MarkDirty();
-                RefreshUI();
-            }
-            else if (_selectedElement != null)
-            {
-                PushUndo();
-                foreach (var b in _template.Bands)
-                    b.Elements.Remove(_selectedElement);
-                _selectedElement = null;
-                MarkDirty();
-                RefreshUI();
-            }
+            var targets = _selectedElements.Count > 0
+                ? (IList<ReportElement>)_selectedElements
+                : (_selectedElement != null ? new List<ReportElement> { _selectedElement } : null);
+            if (targets == null) return;
+            PushUndo();
+            ElementDeleter.DeleteFromBands(_template.Bands, targets);
+            _selectedElements.Clear();
+            _selectedElement = null;
+            MarkDirty();
+            RefreshUI();
         }
 
         private void CutSelected()
