@@ -1560,18 +1560,9 @@ namespace ReportEngine.Designer.Wpf
         /// <summary>数据绑定向导 — 引导用户选择数据源并绑定字段到元素</summary>
         private void OnShowDataBindingWizardClicked()
         {
-            if (_template == null || _selectedElement == null)
-            {
-                _statusText.Text = "请先选中一个元素再打开数据绑定向导";
-                return;
-            }
-            if (_template.DataSources.Count == 0)
-            {
-                _statusText.Text = "请先添加数据源（文件→数据源）";
-                return;
-            }
-            DataBindingWizardDialog.Show(this, _template, _selectedElement,
-                (dsName, fieldName, propChoice, expression) =>
+            DataBindingWizardLauncher.Launch(this, _template, _selectedElement,
+                setStatus: s => _statusText.Text = s,
+                onCommit: (propChoice, expression) =>
                 {
                     if (_selectedElement == null) return;
                     PushUndo();
