@@ -850,13 +850,11 @@ namespace ReportEngine.Designer.Wpf
         {
             if (_template == null) return;
             var pos = e.GetPosition(_canvas);
-            double z = _zoom;
-            double mmPx = PixelsPerMm * z;
 
             // 状态栏坐标
-            double mmX = (pos.X - CanvasPadding) / mmPx;
-            double mmY = (pos.Y - CanvasPadding) / mmPx;
-            _posLabel.Text = $"X: {mmX:F1}mm  Y: {mmY:F1}mm";
+            CanvasCoordinateLabel.Update(_posLabel, pos, _zoom, PixelsPerMm, CanvasPadding);
+            double z = _zoom;
+            double mmPx = PixelsPerMm * z;
 
             if (_dragMode == DragMode.MoveElement && _selectedElement != null)
             {
