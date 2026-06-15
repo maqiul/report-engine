@@ -1049,12 +1049,7 @@ namespace ReportEngine.Designer.Wpf
 
         private void LoadRecentFiles()
         {
-            try
-            {
-                if (File.Exists(RecentFilesPath))
-                    _recentFiles.AddRange(File.ReadAllLines(RecentFilesPath).Where(l => !string.IsNullOrWhiteSpace(l)).Take(10));
-            }
-            catch { }
+            RecentFileLoader.Load(_recentFiles, RecentFilesPath, 10);
         }
 
         private void BuildRecentFilesMenu(MenuItem parent)
