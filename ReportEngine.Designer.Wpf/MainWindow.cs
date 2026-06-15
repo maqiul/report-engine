@@ -428,10 +428,7 @@ namespace ReportEngine.Designer.Wpf
         /// <summary>手动保存后删除自动保存草稿</summary>
         private void ClearAutoSave()
         {
-            if (System.IO.File.Exists(AutoSavePath))
-            {
-                try { System.IO.File.Delete(AutoSavePath); } catch { }
-            }
+            FileDeleter.SafeDelete(AutoSavePath);
         }
 
         /// <summary>重置选中元素的属性为默认值</summary>
