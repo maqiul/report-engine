@@ -388,8 +388,7 @@ namespace ReportEngine.Designer.Wpf
         /// <summary>关闭格式刷</summary>
         private void StopFormatPainter()
         {
-            _formatPainterActive = false;
-            _formatPainterSource = null;
+            FormatPainterState.Reset(ref _formatPainterActive, ref _formatPainterSource);
         }
 
         /// <summary>设置自动保存定时器：每60秒自动保存一次草稿</summary>
