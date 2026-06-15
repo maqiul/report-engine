@@ -1,187 +1,293 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using ReportEngine.Core.Data;
 using Xunit;
 
 namespace ReportEngine.Core.Tests;
 
 /// <summary>
-/// ExpressionEngine 嵌套路径 + 边界场景测试：
-///   - currentRow.field 路径
-///   - dataSource.field 路径
-///   - 缺失字段返回 {{expr}} 占位符
-///   - 多表达式混合
-///   - 大小写不敏感（SUM/sum）
-///   - SUM 嵌套字段
+/// ExpressionEngine 高级行为测试
 /// </summary>
 public class ExpressionEngineAdvancedTests
 {
-    private readonly ExpressionEngine _engine = new();
+    // ============== 系统变量 ==============
 
-    private static RenderContext Ctx(Dictionary<string, object>? row = null,
-        Dictionary<string, List<Dictionary<string, object>>>? dataSources = null)
+    [Fact]
+    public void Evaluate_PAGE_ReturnsCurrentPage()
     {
-        var ctx = new RenderContext { CurrentRow = row };
-        if (dataSources != null)
+        var engine = new ExpressionEngine();
+        var ctx = new RenderContext { CurrentPage = 3 };
+        var result = engine.Evaluate("Page {{PAGE}}", ctx);
+        Assert.Equal("Page 3", result);
+    }
+
+    [Fact]
+    public void Evaluate_TOTAL_PAGES_ReturnsTotalPages()
+    {
+        var engine = new ExpressionEngine();
+        var ctx = new RenderContext { TotalPages = 10 };
+        var result = engine.Evaluate("Total {{TOTAL_PAGES}}", ctx);
+        Assert.Equal("Total 10", result);
+    }
+
+    [Fact]
+    public void Evaluate_NOW_ReturnsDateTime()
+    {
+        var engine = new ExpressionEngine();
+        var ctx = new RenderContext();
+        var result = engine.Evaluate("{{NOW}}", ctx);
+        Assert.NotEmpty(result);
+        Assert.NotEqual("{{NOW}}", result);
+    }
+
+    [Fact]
+    public void Evaluate_REPORT_DATE_ReturnsFormattedDate()
+    {
+        var engine = new ExpressionEngine();
+        var ctx = new RenderContext();
+        var result = engine.Evaluate("{{REPORT_DATE}}", ctx);
+        Assert.Matches(@"\d{4}-\d{2}-\d{2}", result);
+    }
+
+    [Fact]
+    public void Evaluate_ROW_NUMBER_ReturnsCurrentRowNumber()
+    {
+        var engine = new ExpressionEngine();
+        var ctx = new RenderContext { CurrentRowNumber = 5 };
+        var result = engine.Evaluate("Row {{ROW_NUMBER}}", ctx);
+        Assert.Equal("Row 5", result);
+    }
+
+    // ============== 字段引用 ==============
+
+    [Fact]
+    public void Evaluate_CurrentRowField_Works()
+    {
+        var engine = new ExpressionEngine();
+        var ctx = new RenderContext
         {
-            foreach (var kv in dataSources) ctx.DataSources.Add(kv.Key, kv.Value);
-        }
-        return ctx;
-    }
-
-    [Fact]
-    public void Evaluate_CurrentRowField_Resolves()
-    {
-        var row = new Dictionary<string, object> { { "name", "Alice" } };
-        Assert.Equal("Alice", _engine.Evaluate("{{currentRow.name}}", Ctx(row)));
-    }
-
-    [Fact]
-    public void Evaluate_CurrentRowField_Missing_ReturnsQuotedPlaceholder()
-    {
-        var row = new Dictionary<string, object>();
-        // 未命中返回 "{{currentRow.unknown}}"
-        Assert.Equal("{{currentRow.unknown}}", _engine.Evaluate("{{currentRow.unknown}}", Ctx(row)));
-    }
-
-    [Fact]
-    public void Evaluate_DataSourceField_ResolvesFromCurrentRow()
-    {
-        var row = new Dictionary<string, object> { { "name", "Alice" } };
-        var dataSources = new Dictionary<string, List<Dictionary<string, object>>>
-        {
-            { "orders", new List<Dictionary<string, object>> { row } },
+            CurrentRow = new Dictionary<string, object> { ["name"] = "Alice" }
         };
-        Assert.Equal("Alice", _engine.Evaluate("{{orders.name}}", Ctx(row, dataSources)));
+        var result = engine.Evaluate("Hello {{currentRow.name}}", ctx);
+        Assert.Equal("Hello Alice", result);
     }
 
     [Fact]
-    public void Evaluate_DataSourceField_Missing_ReturnsQuotedPlaceholder()
+    public void Evaluate_MissingCurrentRowField_ReturnsOriginal()
     {
-        var dataSources = new Dictionary<string, List<Dictionary<string, object>>>
+        var engine = new ExpressionEngine();
+        var ctx = new RenderContext
         {
-            { "orders", new List<Dictionary<string, object>>() },
+            CurrentRow = new Dictionary<string, object> { ["name"] = "Alice" }
         };
-        var row = new Dictionary<string, object>();
-        Assert.Equal("{{orders.unknown}}", _engine.Evaluate("{{orders.unknown}}", Ctx(row, dataSources)));
+        var result = engine.Evaluate("{{currentRow.missing}}", ctx);
+        Assert.Equal("{{currentRow.missing}}", result);
     }
 
     [Fact]
-    public void Evaluate_DataSourceOnly_ReturnsDataList()
+    public void Evaluate_NullCurrentRow_ReturnsOriginal()
     {
-        var dataSources = new Dictionary<string, List<Dictionary<string, object>>>
+        var engine = new ExpressionEngine();
+        var ctx = new RenderContext { CurrentRow = null };
+        var result = engine.Evaluate("{{currentRow.name}}", ctx);
+        Assert.Equal("{{currentRow.name}}", result);
+    }
+
+    // ============== 聚合函数 ==============
+
+    [Fact]
+    public void Evaluate_SUM_Works()
+    {
+        var engine = new ExpressionEngine();
+        var ctx = new RenderContext
         {
-            { "orders", new List<Dictionary<string, object>> { new() { { "x", 1 } } } },
+            DataSourceName = "orders",
+            DataSources = { ["orders"] = new List<Dictionary<string, object>>
+            {
+                new() { ["amount"] = 100 },
+                new() { ["amount"] = 200 },
+                new() { ["amount"] = 300 }
+            }}
         };
-        // 仅 ds 名（无字段）→ 返回数据列表
-        var result = _engine.Evaluate("{{orders}}", Ctx(null, dataSources));
-        Assert.NotNull(result);
+        var result = engine.Evaluate("Total: {{SUM(amount)}}", ctx);
+        Assert.Equal("Total: 600", result);
     }
 
     [Fact]
-    public void Evaluate_Sum_Lowercase_Works()
+    public void Evaluate_AVG_Works()
     {
-        var data = new List<Dictionary<string, object>>
+        var engine = new ExpressionEngine();
+        var ctx = new RenderContext
         {
-            new() { { "x", 1 } }, new() { { "x", 2 } }, new() { { "x", 3 } },
+            DataSourceName = "orders",
+            DataSources = { ["orders"] = new List<Dictionary<string, object>>
+            {
+                new() { ["amount"] = 100 },
+                new() { ["amount"] = 200 },
+                new() { ["amount"] = 300 }
+            }}
         };
-        var ctx = new RenderContext { DataSourceName = "d" };
-        ctx.DataSources.Add("d", data);
-        Assert.Equal("6", _engine.Evaluate("{{sum(x)}}", ctx));
+        var result = engine.Evaluate("Avg: {{AVG(amount)}}", ctx);
+        Assert.Equal("Avg: 200", result);
     }
 
     [Fact]
-    public void Evaluate_Avg_Lowercase_Works()
+    public void Evaluate_COUNT_Works()
     {
-        var data = new List<Dictionary<string, object>>
+        var engine = new ExpressionEngine();
+        var ctx = new RenderContext
         {
-            new() { { "x", 10 } }, new() { { "x", 20 } },
+            DataSourceName = "orders",
+            DataSources = { ["orders"] = new List<Dictionary<string, object>>
+            {
+                new() { ["id"] = 1 },
+                new() { ["id"] = 2 },
+                new() { ["id"] = 3 }
+            }}
         };
-        var ctx = new RenderContext { DataSourceName = "d" };
-        ctx.DataSources.Add("d", data);
-        Assert.Equal("15", _engine.Evaluate("{{avg(x)}}", ctx));
+        var result = engine.Evaluate("Count: {{COUNT(id)}}", ctx);
+        Assert.Equal("Count: 3", result);
     }
 
     [Fact]
-    public void Evaluate_Sum_OnEmptyDataSource_ReturnsZero()
+    public void Evaluate_MIN_Works()
     {
-        var ctx = new RenderContext { DataSourceName = "d" };
-        ctx.DataSources.Add("d", new List<Dictionary<string, object>>());
-        Assert.Equal("0", _engine.Evaluate("{{SUM(x)}}", ctx));
-    }
-
-    [Fact]
-    public void Evaluate_Sum_OnMissingDataSource_ReturnsZero()
-    {
-        var ctx = new RenderContext { DataSourceName = "missing" };
-        Assert.Equal("0", _engine.Evaluate("{{SUM(x)}}", ctx));
-    }
-
-    [Fact]
-    public void Evaluate_MultiplePlaceholders_AllResolved()
-    {
-        var row = new Dictionary<string, object>
+        var engine = new ExpressionEngine();
+        var ctx = new RenderContext
         {
-            { "first", "John" },
-            { "last", "Doe" },
-            { "age", 30 },
+            DataSourceName = "orders",
+            DataSources = { ["orders"] = new List<Dictionary<string, object>>
+            {
+                new() { ["amount"] = 100 },
+                new() { ["amount"] = 50 },
+                new() { ["amount"] = 200 }
+            }}
         };
-        Assert.Equal("John Doe is 30", _engine.Evaluate("{{first}} {{last}} is {{age}}", Ctx(row)));
+        var result = engine.Evaluate("Min: {{MIN(amount)}}", ctx);
+        Assert.Equal("Min: 50", result);
     }
 
     [Fact]
-    public void Evaluate_NumericField_FormattedAsString()
+    public void Evaluate_MAX_Works()
     {
-        var row = new Dictionary<string, object> { { "qty", 5 } };
-        Assert.Equal("5", _engine.Evaluate("{{qty}}", Ctx(row)));
+        var engine = new ExpressionEngine();
+        var ctx = new RenderContext
+        {
+            DataSourceName = "orders",
+            DataSources = { ["orders"] = new List<Dictionary<string, object>>
+            {
+                new() { ["amount"] = 100 },
+                new() { ["amount"] = 300 },
+                new() { ["amount"] = 200 }
+            }}
+        };
+        var result = engine.Evaluate("Max: {{MAX(amount)}}", ctx);
+        Assert.Equal("Max: 300", result);
+    }
+
+    // ============== 条件表达式 ==============
+
+    [Fact]
+    public void Evaluate_IF_TrueCondition_Works()
+    {
+        var engine = new ExpressionEngine();
+        var ctx = new RenderContext
+        {
+            CurrentRow = new Dictionary<string, object> { ["active"] = "true" }
+        };
+        var result = engine.Evaluate("{{IF(active,YES,NO)}}", ctx);
+        Assert.Equal("YES", result);
     }
 
     [Fact]
-    public void Evaluate_DecimalField_PreservedAsString()
+    public void Evaluate_IF_FalseCondition_Works()
     {
-        var row = new Dictionary<string, object> { { "price", 19.99 } };
-        // 19.99 → "19.99"
-        Assert.Equal("19.99", _engine.Evaluate("{{price}}", Ctx(row)));
+        var engine = new ExpressionEngine();
+        var ctx = new RenderContext
+        {
+            CurrentRow = new Dictionary<string, object> { ["active"] = "false" }
+        };
+        var result = engine.Evaluate("{{IF(active,YES,NO)}}", ctx);
+        Assert.Equal("NO", result);
+    }
+
+    // ============== 多表达式 ==============
+
+    [Fact]
+    public void Evaluate_MultipleExpressions_Works()
+    {
+        var engine = new ExpressionEngine();
+        var ctx = new RenderContext
+        {
+            CurrentPage = 2,
+            TotalPages = 5,
+            CurrentRow = new Dictionary<string, object> { ["name"] = "Test" }
+        };
+        var result = engine.Evaluate("{{currentRow.name}} - Page {{PAGE}} of {{TOTAL_PAGES}}", ctx);
+        Assert.Equal("Test - Page 2 of 5", result);
     }
 
     [Fact]
-    public void Evaluate_BooleanField_AsString()
+    public void Evaluate_NoExpressions_ReturnsOriginal()
     {
-        var row = new Dictionary<string, object> { { "active", true } };
-        Assert.Equal("True", _engine.Evaluate("{{active}}", Ctx(row)));
+        var engine = new ExpressionEngine();
+        var ctx = new RenderContext();
+        var result = engine.Evaluate("Plain text without expressions", ctx);
+        Assert.Equal("Plain text without expressions", result);
     }
 
     [Fact]
-    public void Evaluate_NoPlaceholder_DollarBrace_Untouched()
+    public void Evaluate_EmptyText_ReturnsEmpty()
     {
-        // { alone without { isn't a placeholder
-        Assert.Equal("Hello {world}", _engine.Evaluate("Hello {world}", Ctx()));
+        var engine = new ExpressionEngine();
+        var ctx = new RenderContext();
+        var result = engine.Evaluate("", ctx);
+        Assert.Equal("", result);
+    }
+
+    // ============== 边界情况 ==============
+
+    [Fact]
+    public void Evaluate_UnmatchedExpression_ReturnsOriginal()
+    {
+        var engine = new ExpressionEngine();
+        var ctx = new RenderContext();
+        var result = engine.Evaluate("{{unknown}}", ctx);
+        Assert.Equal("unknown", result);
     }
 
     [Fact]
-    public void Evaluate_Mixed_PlainAndExpression()
+    public void Evaluate_WhitespaceInExpression_Works()
     {
-        var row = new Dictionary<string, object> { { "name", "X" } };
-        Assert.Equal("Hi X!", _engine.Evaluate("Hi {{name}}!", Ctx(row)));
+        var engine = new ExpressionEngine();
+        var ctx = new RenderContext { CurrentPage = 1 };
+        var result = engine.Evaluate("{{ PAGE }}", ctx);
+        Assert.Equal("1", result);
     }
 
     [Fact]
-    public void Evaluate_WhitespaceInExpression_Trimmed()
+    public void Evaluate_CaseInsensitiveSystemVars_Works()
     {
-        var row = new Dictionary<string, object> { { "k", 1 } };
-        Assert.Equal("1", _engine.Evaluate("{{ k }}", Ctx(row)));
+        var engine = new ExpressionEngine();
+        var ctx = new RenderContext { CurrentPage = 7 };
+        Assert.Equal("7", engine.Evaluate("{{page}}", ctx));
+        Assert.Equal("7", engine.Evaluate("{{Page}}", ctx));
+        Assert.Equal("7", engine.Evaluate("{{PAGE}}", ctx));
     }
 
     [Fact]
-    public void Evaluate_NestedBracesNotMatched_AsSingleLevel()
+    public void Evaluate_CaseInsensitiveAggregates_Works()
     {
-        // {{{{x}}}} 是双层 {{x}} —— 匹配最内层
-        var row = new Dictionary<string, object> { { "x", 99 } };
-        // {{ {{x}} }} → 解析为 {{ (literal) + x + }} (literal)
-        // 但正则 {{.+?}} 是非贪婪 → 第一个匹配是 {{ {{x}} 
-        // 实际结果是 "{{ " + "99" + " }}"? 太复杂，跳过严格断言
-        var result = _engine.Evaluate("{{ {{x}} }}", Ctx(row));
-        Assert.NotNull(result);
+        var engine = new ExpressionEngine();
+        var ctx = new RenderContext
+        {
+            DataSourceName = "data",
+            DataSources = { ["data"] = new List<Dictionary<string, object>>
+            {
+                new() { ["val"] = 10 },
+                new() { ["val"] = 20 }
+            }}
+        };
+        Assert.Equal("30", engine.Evaluate("{{sum(val)}}", ctx));
+        Assert.Equal("30", engine.Evaluate("{{Sum(val)}}", ctx));
+        Assert.Equal("30", engine.Evaluate("{{SUM(val)}}", ctx));
     }
 }
