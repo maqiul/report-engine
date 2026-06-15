@@ -395,11 +395,7 @@ namespace ReportEngine.Designer.Wpf
         /// <summary>设置自动保存定时器：每60秒自动保存一次草稿</summary>
         private void SetupAutoSave()
         {
-            _autoSaveTimer = new System.Windows.Threading.DispatcherTimer
-            {
-                Interval = TimeSpan.FromMinutes(1)
-            };
-            _autoSaveTimer.Tick += (_, __) =>
+            _autoSaveTimer = AutoSaveTimerBuilder.Build(TimeSpan.FromMinutes(1), (_, __) =>
             {
                 if (_dirty && _template != null)
                 {
@@ -411,8 +407,7 @@ namespace ReportEngine.Designer.Wpf
                     }
                     catch { }
                 }
-            };
-            _autoSaveTimer.Start();
+            });
         }
 
         /// <summary>启动时检查是否有自动保存的草稿</summary>
