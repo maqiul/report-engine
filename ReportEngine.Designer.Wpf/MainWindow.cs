@@ -1190,14 +1190,8 @@ namespace ReportEngine.Designer.Wpf
         private void CopySelected()
         {
             if (_selectedElement == null) return;
-            try
-            {
-                var t = new ReportTemplate();
-                t.Bands.Add(new Band { Elements = { _selectedElement } });
-                _clipboardJson = _parser.Serialize(t);
-                _statusText.Text = "已复制元素";
-            }
-            catch { }
+            _clipboardJson = ClipboardHelper.SerializeElement(_selectedElement, _parser);
+            _statusText.Text = "已复制元素";
         }
 
         private void PasteElement()
