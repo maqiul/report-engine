@@ -1,0 +1,136 @@
+using System;
+using System.Windows.Controls;
+using static ReportEngine.Designer.Wpf.UiFactory;
+
+namespace ReportEngine.Designer.Wpf;
+
+/// <summary>
+/// 主菜单构造 - 把 BuildMenu 从 MainWindow 抽离，集中管理菜单项。
+/// 等价抽离自 MainWindow.BuildMenu() (115 行)。
+///
+/// 通过 owner 调 MainWindow 的方法 (NewTemplate, OpenTemplate, ...) 和字段 (_zoomSlider, _showGrid, ...)。
+/// </summary>
+internal static class MenuBuilder
+{
+    public static Menu Build(MainWindow owner)
+    {
+        var menu = new Menu();
+
+        // ============ 文件 ============
+        var file = new MenuItem { Header = "文件(_F)" };
+        file.Items.Add(MakeMenuItem("新建(_N)", "Ctrl+N", owner.NewTemplate));
+        file.Items.Add(MakeMenuItem("打开(_O)...", "Ctrl+O", owner.OpenTemplate));
+        file.Items.Add(new Separator());
+        file.Items.Add(MakeMenuItem("保存(_S)", "Ctrl+S", () => owner.SaveTemplate(false)));
+        file.Items.Add(MakeMenuItem("另存为(_A)...", null, () => owner.SaveTemplate(true)));
+        file.Items.Add(new Separator());
+        file.Items.Add(MakeMenuItem("页面设置(_P)...", null, owner.ShowPageSetupDialog));
+        file.Items.Add(new Separator());
+        file.Items.Add(MakeMenuItem("导出PDF(_D)...", null, owner.ExportPdf));
+        file.Items.Add(MakeMenuItem("导出Excel(_E)...", null, owner.ExportExcel));
+        file.Items.Add(MakeMenuItem("导出图片(_I)...", null, owner.ExportPng));
+        file.Items.Add(MakeMenuItem("批量导出PDF+Excel(_B)...", null, owner.ExportBatch));
+        file.Items.Add(new Separator());
+        file.Items.Add(MakeMenuItem("数据源(_S)...", null, owner.OnShowDataSourceClicked));
+        file.Items.Add(MakeMenuItem("数据绑定向导(_B)...", null, owner.OnShowDataBindingWizardClicked));
+        file.Items.Add(MakeMenuItem("模板参数(_P)...", null, owner.OnShowTemplateParamsClicked));
+        file.Items.Add(MakeMenuItem("加载预览数据(_L)...", null, owner.OnLoadPreviewDataClicked));
+        file.Items.Add(new Separator());
+        owner.BuildRecentFilesMenu(file);
+        file.Items.Add(new Separator());
+        file.Items.Add(MakeMenuItem("退出(_X)", "Alt+F4", owner.Close));
+        menu.Items.Add(file);
+
+        // ============ 编辑 ============
+        var edit = new MenuItem { Header = "编辑(_E)" };
+        edit.Items.Add(MakeMenuItem("撤销(_Z)", "Ctrl+Z", owner.Undo));
+        edit.Items.Add(MakeMenuItem("重做(_Y)", "Ctrl+Y", owner.Redo));
+        edit.Items.Add(new Separator());
+        edit.Items.Add(MakeMenuItem("剪切(_X)", "Ctrl+X", owner.CutSelected));
+        edit.Items.Add(MakeMenuItem("复制(_C)", "Ctrl+C", owner.CopySelected));
+        edit.Items.Add(MakeMenuItem("粘贴(_V)", "Ctrl+V", owner.PasteElement));
+        edit.Items.Add(new Separator());
+        edit.Items.Add(MakeMenuItem("删除", "Delete", owner.DeleteSelected));
+        edit.Items.Add(MakeMenuItem("全选", "Ctrl+A", owner.SelectAll));
+        menu.Items.Add(edit);
+
+        // ============ 插入 ============
+        var insert = new MenuItem { Header = "插入(_I)" };
+        // 部件框子菜单
+        var ctrlMenu = new MenuItem { Header = "部件框(_C)" };
+        ctrlMenu.Items.Add(MakeMenuItem("静态框(_T)", null, () => owner.InsertElement(owner.NewText())));
+        ctrlMenu.Items.Add(MakeMenuItem("字段框(_F)", null, () => owner.InsertElement(owner.NewFieldBox())));
+        ctrlMenu.Items.Add(MakeMenuItem("统计框(_U)", null, () => owner.InsertElement(owner.NewSummaryBox())));
+        ctrlMenu.Items.Add(MakeMenuItem("系统变量框(_V)", null, () => owner.InsertElement(owner.NewSysVarBox())));
+        ctrlMenu.Items.Add(new Separator());
+        ctrlMenu.Items.Add(MakeMenuItem("线段(_L)", null, () => owner.InsertElement(owner.NewLine())));
+        ctrlMenu.Items.Add(MakeMenuItem("图形框(_S)", null, () => owner.InsertElement(owner.NewShape())));
+        ctrlMenu.Items.Add(MakeMenuItem("图象框(_P)", null, () => owner.InsertElement(owner.NewImage())));
+        ctrlMenu.Items.Add(MakeMenuItem("条形码&二维码(_B)", null, () => owner.InsertElement(owner.NewBarcode())));
+        ctrlMenu.Items.Add(MakeMenuItem("表格(_G)", null, () => owner.InsertElement(owner.NewTable())));
+        ctrlMenu.Items.Add(MakeMenuItem("交叉表", null, () => owner.InsertElement(owner.NewCrossTab())));
+        ctrlMenu.Items.Add(MakeMenuItem("图表(_H)", null, () => owner.InsertElement(owner.NewChart())));
+        ctrlMenu.Items.Add(MakeMenuItem("子报表(_E)", null, () => owner.InsertElement(owner.NewSubReport())));
+        insert.Items.Add(ctrlMenu);
+        // 报表节子菜单
+        var sectionMenu = new MenuItem { Header = "报表节(_S)" };
+        sectionMenu.Items.Add(MakeMenuItem("报表头", null, () => owner.AddBand(BandType.ReportHeader, 20)));
+        sectionMenu.Items.Add(MakeMenuItem("页眉", null, () => owner.AddBand(BandType.Header, 15)));
+        sectionMenu.Items.Add(MakeMenuItem("分组头", null, () => owner.AddBand(BandType.GroupHeader, 12)));
+        sectionMenu.Items.Add(MakeMenuItem("明细", null, () => owner.AddBand(BandType.Detail, 10)));
+        sectionMenu.Items.Add(MakeMenuItem("分组尾", null, () => owner.AddBand(BandType.GroupFooter, 10)));
+        sectionMenu.Items.Add(MakeMenuItem("页脚", null, () => owner.AddBand(BandType.Footer, 10)));
+        sectionMenu.Items.Add(MakeMenuItem("报表尾", null, () => owner.AddBand(BandType.ReportFooter, 10)));
+        insert.Items.Add(sectionMenu);
+        insert.Items.Add(new Separator());
+        insert.Items.Add(MakeMenuItem("页面设置(_P)...", null, owner.ShowPageSetupDialog));
+        menu.Items.Add(insert);
+
+        // ============ 视图 ============
+        var view = new MenuItem { Header = "视图(_V)" };
+        view.Items.Add(MakeMenuItem("放大", "Ctrl++", () => { owner.ZoomSliderValue = Math.Min(400, owner.ZoomSliderValue + 25); }));
+        view.Items.Add(MakeMenuItem("缩小", "Ctrl+-", () => { owner.ZoomSliderValue = Math.Max(25, owner.ZoomSliderValue - 25); }));
+        view.Items.Add(MakeMenuItem("100%", null, () => { owner.ZoomSliderValue = 100; }));
+        view.Items.Add(new Separator());
+        var gridItem = new MenuItem { Header = "显示网格线(_G)", IsCheckable = true, IsChecked = owner.ShowGrid };
+        gridItem.Click += (_, __) => owner.SetShowGrid(gridItem.IsChecked);
+        view.Items.Add(gridItem);
+        view.Items.Add(MakeMenuItem("网格设置...", null, owner.ShowGridSettingsDialog));
+        view.Items.Add(new Separator());
+        var miClearGuides = new MenuItem { Header = "清除所有参考线" };
+        miClearGuides.Click += (_, __) => owner.ClearAllGuides();
+        view.Items.Add(miClearGuides);
+        view.Items.Add(new Separator());
+        var snapItem = new MenuItem { Header = "吸附对齐(_S)", IsCheckable = true, IsChecked = owner.SnapEnabled };
+        snapItem.Click += (_, __) => { owner.SetSnapEnabled(snapItem.IsChecked); };
+        view.Items.Add(snapItem);
+        menu.Items.Add(view);
+
+        // ============ 格式 ============
+        var format = new MenuItem { Header = "格式(_O)" };
+        format.Items.Add(MakeMenuItem("左对齐", null, () => owner.AlignElements("left")));
+        format.Items.Add(MakeMenuItem("右对齐", null, () => owner.AlignElements("right")));
+        format.Items.Add(MakeMenuItem("顶端对齐", null, () => owner.AlignElements("top")));
+        format.Items.Add(MakeMenuItem("底端对齐", null, () => owner.AlignElements("bottom")));
+        format.Items.Add(new Separator());
+        format.Items.Add(MakeMenuItem("水平居中", null, () => owner.AlignElements("hcenter")));
+        format.Items.Add(MakeMenuItem("垂直居中", null, () => owner.AlignElements("vcenter")));
+        format.Items.Add(new Separator());
+        format.Items.Add(MakeMenuItem("等宽", null, () => owner.AlignElements("samewidth")));
+        format.Items.Add(MakeMenuItem("等高", null, () => owner.AlignElements("sameheight")));
+        format.Items.Add(new Separator());
+        format.Items.Add(MakeMenuItem("置于顶层", null, () => owner.MoveElementOrder("front")));
+        format.Items.Add(MakeMenuItem("置于底层", null, () => owner.MoveElementOrder("back")));
+        format.Items.Add(MakeMenuItem("上移一层", null, () => owner.MoveElementOrder("up")));
+        format.Items.Add(MakeMenuItem("下移一层", null, () => owner.MoveElementOrder("down")));
+        menu.Items.Add(format);
+
+        // ============ 帮助 ============
+        var help = new MenuItem { Header = "帮助(_H)" };
+        help.Items.Add(MakeMenuItem("快捷键...", "F1", () => ShortcutsDialog.Show(owner)));
+        help.Items.Add(MakeMenuItem("关于...", null, () => AboutDialog.Show(owner)));
+        menu.Items.Add(help);
+
+        return menu;
+    }
+}

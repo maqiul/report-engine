@@ -1,0 +1,20 @@
+using ReportEngine.Core;
+using static ReportEngine.Designer.Wpf.BandStyle;
+using static ReportEngine.Designer.Wpf.ElementIcons;
+
+namespace ReportEngine.Designer.Wpf;
+
+/// <summary>
+/// Band 树节点 label 构造 - "{Icon} {Name} ({Height}mm)"。
+/// 等价抽离自 MainWindow.UpdateBandTree() 内部 Band node Header 构造 (1 行算法 + 资源依赖)。
+/// </summary>
+public static class BandTreeLabelBuilder
+{
+    /// <summary>
+    /// 返回 Band 在树节点中的完整 label: "Icon Name (Heightmm)"。
+    /// </summary>
+    public static string BuildLabel(Band band)
+    {
+        return BandIcon(band.Type) + " " + Name(band.Type) + " (" + band.Height + "mm)";
+    }
+}

@@ -1,0 +1,23 @@
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  ReportEngine.Core -> D:\report-engine\ReportEngine.Core\bin\Release\netstandard2.0\ReportEngine.Core.dll
+  ReportEngine.Core -> D:\report-engine\ReportEngine.Core\bin\Release\net8.0\ReportEngine.Core.dll
+  ReportEngine.Core -> D:\report-engine\ReportEngine.Core\bin\Release\net462\ReportEngine.Core.dll
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  ReportEngine.Core -> D:\report-engine\ReportEngine.Core\bin\Release\net462\ReportEngine.Core.dll
+  ReportEngine.Core -> D:\report-engine\ReportEngine.Core\bin\Release\net8.0\ReportEngine.Core.dll
+  ReportEngine.Core -> D:\report-engine\ReportEngine.Core\bin\Release\netstandard2.0\ReportEngine.Core.dll
+  ReportEngine.Export.Excel -> D:\report-engine\ReportEngine.Export.Excel\bin\Release\net8.0\ReportEngine.Export.Excel.dll
+  ReportEngine.Export.Excel -> D:\report-engine\ReportEngine.Export.Excel\bin\Release\net462\ReportEngine.Export.Excel.dll
+  ReportEngine.Export.Excel -> D:\report-engine\ReportEngine.Export.Excel\bin\Release\netstandard2.0\ReportEngine.Export.Excel.dll
+  已成功创建包“D:\report-engine\ReportEngine.Export.Excel\bin\Release\ReportEngine.Export.Excel.0.3.0-alpha.nupkg”。
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  ReportEngine.Core -> D:\report-engine\ReportEngine.Core\bin\Release\netstandard2.0\ReportEngine.Core.dll
+  ReportEngine.Core -> D:\report-engine\ReportEngine.Core\bin\Release\net462\ReportEngine.Core.dll
+  ReportEngine.Core -> D:\report-engine\ReportEngine.Core\bin\Release\net8.0\ReportEngine.Core.dll
+  ReportEngine.Export.Pdf -> D:\report-engine\ReportEngine.Export.Pdf\bin\Release\netstandard2.0\ReportEngine.Export.Pdf.dll
+  ReportEngine.Export.Pdf -> D:\report-engine\ReportEngine.Export.Pdf\bin\Release\net8.0\ReportEngine.Export.Pdf.dll
+  ReportEngine.Export.Pdf -> D:\report-engine\ReportEngine.Export.Pdf\bin\Release\net462\ReportEngine.Export.Pdf.dll
+  已成功创建包“D:\report-engine\ReportEngine.Export.Pdf\bin\Release\ReportEngine.Export.Pdf.0.3.0-alpha.nupkg”。
