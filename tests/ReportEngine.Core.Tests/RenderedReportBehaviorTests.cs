@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using ReportEngine.Core;
 using ReportEngine.Core.Rendering;
 using Xunit;
@@ -8,200 +5,366 @@ using Xunit;
 namespace ReportEngine.Core.Tests;
 
 /// <summary>
-/// RenderedReport / RenderedPage / RenderedElement 行为测试：
-///   - FitToWidth: 内容宽 > 目标宽 → 缩放
-///   - FitToWidth: 内容宽 ≤ 目标宽 → 不变
-///   - FitToWidth: 零值保护（PageWidth=0, targetWidth=0）
-///   - Scale: 正常缩放
-///   - Scale: factor=1 跳过
-///   - Scale: factor<=0 跳过
-///   - AddPage 行为
-///   - Element X/Y/W/H 缩放正确
+/// RenderedReport 行为测试：
+///   - 默认值
+///   - 页面管理
+///   - FitToWidth 缩放
+///   - Scale 等比缩放
 /// </summary>
 public class RenderedReportBehaviorTests
 {
-    private static RenderedReport BuildReport(double w, double h, params (double x, double y, double ew, double eh)[] elements)
+    // ============== 默认值 ==============
+
+    [Fact]
+    public void Constructor_DefaultValues_AreCorrect()
     {
-        var r = new RenderedReport
+        var report = new RenderedReport();
+
+        Assert.NotNull(report.Template);
+        Assert.NotNull(report.Pages);
+        Assert.Empty(report.Pages);
+        Assert.Equal(0, report.PageWidth);
+        Assert.Equal(0, report.PageHeight);
+    }
+
+    // ============== Template ==============
+
+    [Fact]
+    public void Template_NotNull_ByDefault()
+    {
+        var report = new RenderedReport();
+        Assert.NotNull(report.Template);
+    }
+
+    [Fact]
+    public void Template_CanBeSet()
+    {
+        var template = new ReportTemplate();
+        var report = new RenderedReport { Template = template };
+        Assert.Same(template, report.Template);
+    }
+
+    // ============== Pages ==============
+
+    [Fact]
+    public void Pages_EmptyByDefault()
+    {
+        var report = new RenderedReport();
+        Assert.Empty(report.Pages);
+    }
+
+    [Fact]
+    public void Pages_Add_Works()
+    {
+        var report = new RenderedReport();
+        report.Pages.Add(new RenderedPage { PageNumber = 1, TotalPages = 1 });
+        Assert.Single(report.Pages);
+    }
+
+    [Fact]
+    public void Pages_AddMultiple_Works()
+    {
+        var report = new RenderedReport();
+        report.Pages.Add(new RenderedPage { PageNumber = 1, TotalPages = 3 });
+        report.Pages.Add(new RenderedPage { PageNumber = 2, TotalPages = 3 });
+        report.Pages.Add(new RenderedPage { PageNumber = 3, TotalPages = 3 });
+        Assert.Equal(3, report.Pages.Count);
+    }
+
+    // ============== PageWidth/PageHeight ==============
+
+    [Fact]
+    public void PageWidth_SetAndGet_Works()
+    {
+        var report = new RenderedReport { PageWidth = 210 };
+        Assert.Equal(210, report.PageWidth);
+    }
+
+    [Fact]
+    public void PageHeight_SetAndGet_Works()
+    {
+        var report = new RenderedReport { PageHeight = 297 };
+        Assert.Equal(297, report.PageHeight);
+    }
+
+    [Fact]
+    public void PageSize_A4_Works()
+    {
+        var report = new RenderedReport { PageWidth = 210, PageHeight = 297 };
+        Assert.Equal(210, report.PageWidth);
+        Assert.Equal(297, report.PageHeight);
+    }
+
+    // ============== FitToWidth ==============
+
+    [Fact]
+    public void FitToWidth_ScaleDown_Works()
+    {
+        var report = new RenderedReport
         {
-            PageWidth = w,
-            PageHeight = h,
+            PageWidth = 210,
+            PageHeight = 297
         };
-        var page = new RenderedPage { PageNumber = 1, TotalPages = 1 };
-        foreach (var (ex, ey, ew, eh) in elements)
+        report.Pages.Add(new RenderedPage());
+        report.Pages[0].Elements.Add(new TestRenderedElement { X = 100, Y = 100, Width = 50, Height = 50 });
+
+        report.FitToWidth(105); // 50% 缩放
+
+        Assert.Equal(105, report.PageWidth);
+        Assert.Equal(148.5, report.PageHeight, 1);
+        Assert.Equal(50, report.Pages[0].Elements[0].X, 1);
+        Assert.Equal(50, report.Pages[0].Elements[0].Y, 1);
+        Assert.Equal(25, report.Pages[0].Elements[0].Width, 1);
+        Assert.Equal(25, report.Pages[0].Elements[0].Height, 1);
+    }
+
+    [Fact]
+    public void FitToWidth_NoScale_WhenAlreadyFits()
+    {
+        var report = new RenderedReport
         {
-            page.Elements.Add(new RenderedTextElement
-            {
-                X = ex,
-                Y = ey,
-                Width = ew,
-                Height = eh,
-            });
-        }
-        r.Pages.Add(page);
-        return r;
+            PageWidth = 100,
+            PageHeight = 150
+        };
+        report.Pages.Add(new RenderedPage());
+        report.Pages[0].Elements.Add(new TestRenderedElement { X = 50, Y = 50, Width = 30, Height = 30 });
+
+        report.FitToWidth(200); // 目标更大，不缩放
+
+        Assert.Equal(100, report.PageWidth); // 不变
+        Assert.Equal(150, report.PageHeight); // 不变
+        Assert.Equal(50, report.Pages[0].Elements[0].X);
     }
 
     [Fact]
-    public void FitToWidth_ScalesContent()
+    public void FitToWidth_NoScale_WhenTargetZero()
     {
-        var r = BuildReport(200, 100, (10, 10, 50, 20));
-        r.FitToWidth(100);
-        Assert.Equal(100, r.PageWidth);
-        // 高度也按比例缩放
-        Assert.Equal(50, r.PageHeight, 2);
-        var el = r.Pages[0].Elements[0];
-        Assert.Equal(5, el.X, 2);
-        Assert.Equal(5, el.Y, 2);
-        Assert.Equal(25, el.Width, 2);
-        Assert.Equal(10, el.Height, 2);
+        var report = new RenderedReport
+        {
+            PageWidth = 210,
+            PageHeight = 297
+        };
+
+        report.FitToWidth(0); // 无效目标
+
+        Assert.Equal(210, report.PageWidth); // 不变
     }
 
     [Fact]
-    public void FitToWidth_AlreadyFits_NoScale()
+    public void FitToWidth_NoScale_WhenPageWidthZero()
     {
-        var r = BuildReport(100, 100, (10, 10, 20, 20));
-        r.FitToWidth(200);
-        Assert.Equal(100, r.PageWidth);
-        Assert.Equal(100, r.PageHeight);
-        var el = r.Pages[0].Elements[0];
-        Assert.Equal(10, el.X, 2);
+        var report = new RenderedReport
+        {
+            PageWidth = 0,
+            PageHeight = 297
+        };
+
+        report.FitToWidth(100); // 源宽度为 0
+
+        Assert.Equal(0, report.PageWidth); // 不变
     }
 
     [Fact]
-    public void FitToWidth_ZeroPageWidth_NoOp()
+    public void FitToWidth_MultiplePages_Works()
     {
-        var r = BuildReport(0, 0, (10, 10, 50, 20));
-        r.FitToWidth(100);
-        Assert.Equal(0, r.PageWidth);
+        var report = new RenderedReport
+        {
+            PageWidth = 200,
+            PageHeight = 300
+        };
+        report.Pages.Add(new RenderedPage());
+        report.Pages.Add(new RenderedPage());
+        report.Pages[0].Elements.Add(new TestRenderedElement { X = 100, Y = 100, Width = 50, Height = 50 });
+        report.Pages[1].Elements.Add(new TestRenderedElement { X = 80, Y = 80, Width = 40, Height = 40 });
+
+        report.FitToWidth(100); // 50% 缩放
+
+        Assert.Equal(50, report.Pages[0].Elements[0].X, 1);
+        Assert.Equal(40, report.Pages[1].Elements[0].X, 1);
+    }
+
+    // ============== Scale ==============
+
+    [Fact]
+    public void Scale_Up_Works()
+    {
+        var report = new RenderedReport
+        {
+            PageWidth = 100,
+            PageHeight = 150
+        };
+        report.Pages.Add(new RenderedPage());
+        report.Pages[0].Elements.Add(new TestRenderedElement { X = 50, Y = 50, Width = 30, Height = 30 });
+
+        report.Scale(2.0);
+
+        Assert.Equal(200, report.PageWidth);
+        Assert.Equal(300, report.PageHeight);
+        Assert.Equal(100, report.Pages[0].Elements[0].X);
+        Assert.Equal(100, report.Pages[0].Elements[0].Y);
+        Assert.Equal(60, report.Pages[0].Elements[0].Width);
+        Assert.Equal(60, report.Pages[0].Elements[0].Height);
     }
 
     [Fact]
-    public void FitToWidth_ZeroTargetWidth_NoOp()
+    public void Scale_Down_Works()
     {
-        var r = BuildReport(200, 100, (10, 10, 50, 20));
-        r.FitToWidth(0);
-        Assert.Equal(200, r.PageWidth);
+        var report = new RenderedReport
+        {
+            PageWidth = 200,
+            PageHeight = 300
+        };
+        report.Pages.Add(new RenderedPage());
+        report.Pages[0].Elements.Add(new TestRenderedElement { X = 100, Y = 100, Width = 60, Height = 60 });
+
+        report.Scale(0.5);
+
+        Assert.Equal(100, report.PageWidth);
+        Assert.Equal(150, report.PageHeight);
+        Assert.Equal(50, report.Pages[0].Elements[0].X);
+        Assert.Equal(50, report.Pages[0].Elements[0].Y);
+        Assert.Equal(30, report.Pages[0].Elements[0].Width);
+        Assert.Equal(30, report.Pages[0].Elements[0].Height);
     }
 
     [Fact]
-    public void FitToWidth_MultipleElements_AllScaled()
+    public void Scale_NoScale_WhenFactorOne()
     {
-        var r = BuildReport(200, 100, (10, 10, 50, 20), (20, 30, 30, 40));
-        r.FitToWidth(100);
-        Assert.Equal(2, r.Pages[0].Elements.Count);
-        Assert.Equal(5, r.Pages[0].Elements[0].X, 2);
-        Assert.Equal(10, r.Pages[0].Elements[1].X, 2);
+        var report = new RenderedReport
+        {
+            PageWidth = 100,
+            PageHeight = 150
+        };
+        report.Pages.Add(new RenderedPage());
+        report.Pages[0].Elements.Add(new TestRenderedElement { X = 50, Y = 50, Width = 30, Height = 30 });
+
+        report.Scale(1.0);
+
+        Assert.Equal(100, report.PageWidth); // 不变
+        Assert.Equal(50, report.Pages[0].Elements[0].X); // 不变
     }
 
     [Fact]
-    public void FitToWidth_PreservesPageCount()
+    public void Scale_NoScale_WhenFactorZero()
     {
-        var r = BuildReport(200, 100, (10, 10, 50, 20));
-        r.Pages.Add(new RenderedPage { PageNumber = 2, TotalPages = 2 });
-        r.FitToWidth(100);
-        Assert.Equal(2, r.Pages.Count);
+        var report = new RenderedReport
+        {
+            PageWidth = 100,
+            PageHeight = 150
+        };
+
+        report.Scale(0); // 无效因子
+
+        Assert.Equal(100, report.PageWidth); // 不变
     }
 
     [Fact]
-    public void Scale_NormalFactor_ScalesAll()
+    public void Scale_NoScale_WhenFactorNegative()
     {
-        var r = BuildReport(100, 100, (10, 10, 20, 20));
-        r.Scale(2.0);
-        Assert.Equal(200, r.PageWidth);
-        Assert.Equal(200, r.PageHeight);
-        var el = r.Pages[0].Elements[0];
-        Assert.Equal(20, el.X, 2);
-        Assert.Equal(40, el.Width, 2);
+        var report = new RenderedReport
+        {
+            PageWidth = 100,
+            PageHeight = 150
+        };
+
+        report.Scale(-1); // 无效因子
+
+        Assert.Equal(100, report.PageWidth); // 不变
     }
 
     [Fact]
-    public void Scale_FactorOne_NoOp()
+    public void Scale_MultiplePages_Works()
     {
-        var r = BuildReport(100, 100, (10, 10, 20, 20));
-        r.Scale(1.0);
-        Assert.Equal(100, r.PageWidth);
-        Assert.Equal(10, r.Pages[0].Elements[0].X, 2);
+        var report = new RenderedReport
+        {
+            PageWidth = 100,
+            PageHeight = 150
+        };
+        report.Pages.Add(new RenderedPage());
+        report.Pages.Add(new RenderedPage());
+        report.Pages[0].Elements.Add(new TestRenderedElement { X = 50, Y = 50, Width = 30, Height = 30 });
+        report.Pages[1].Elements.Add(new TestRenderedElement { X = 40, Y = 40, Width = 20, Height = 20 });
+
+        report.Scale(2.0);
+
+        Assert.Equal(100, report.Pages[0].Elements[0].X);
+        Assert.Equal(80, report.Pages[1].Elements[0].X);
+    }
+
+    // ============== RenderedPage ==============
+
+    [Fact]
+    public void RenderedPage_DefaultValues()
+    {
+        var page = new RenderedPage();
+
+        Assert.Equal(0, page.PageNumber);
+        Assert.Equal(0, page.TotalPages);
+        Assert.NotNull(page.Elements);
+        Assert.Empty(page.Elements);
     }
 
     [Fact]
-    public void Scale_FactorZero_NoOp()
+    public void RenderedPage_SetPageNumber_Works()
     {
-        var r = BuildReport(100, 100, (10, 10, 20, 20));
-        r.Scale(0);
-        Assert.Equal(100, r.PageWidth);
+        var page = new RenderedPage { PageNumber = 1, TotalPages = 5 };
+        Assert.Equal(1, page.PageNumber);
+        Assert.Equal(5, page.TotalPages);
     }
 
     [Fact]
-    public void Scale_FactorNegative_NoOp()
+    public void RenderedPage_AddElements_Works()
     {
-        var r = BuildReport(100, 100, (10, 10, 20, 20));
-        r.Scale(-1);
-        Assert.Equal(100, r.PageWidth);
+        var page = new RenderedPage();
+        page.Elements.Add(new TestRenderedElement { X = 10, Y = 20, Width = 100, Height = 50 });
+        page.Elements.Add(new TestRenderedElement { X = 10, Y = 80, Width = 100, Height = 50 });
+        Assert.Equal(2, page.Elements.Count);
+    }
+
+    // ============== RenderedElement ==============
+
+    [Fact]
+    public void RenderedElement_DefaultValues()
+    {
+        var el = new TestRenderedElement();
+
+        Assert.Equal("", el.Id);
+        Assert.Equal(0, el.X);
+        Assert.Equal(0, el.Y);
+        Assert.Equal(0, el.Width);
+        Assert.Equal(0, el.Height);
+        Assert.Null(el.BackgroundColor);
+        Assert.Null(el.Border);
     }
 
     [Fact]
-    public void Scale_SmallFactor_Shrinks()
+    public void RenderedElement_SetPosition_Works()
     {
-        var r = BuildReport(100, 100, (10, 10, 20, 20));
-        r.Scale(0.5);
-        Assert.Equal(50, r.PageWidth);
-        Assert.Equal(5, r.Pages[0].Elements[0].X, 2);
+        var el = new TestRenderedElement { X = 10, Y = 20, Width = 100, Height = 50 };
+        Assert.Equal(10, el.X);
+        Assert.Equal(20, el.Y);
+        Assert.Equal(100, el.Width);
+        Assert.Equal(50, el.Height);
     }
 
     [Fact]
-    public void RenderedPage_Defaults()
+    public void RenderedElement_SetBackgroundColor_Works()
     {
-        var p = new RenderedPage();
-        Assert.Equal(0, p.PageNumber);
-        Assert.Equal(0, p.TotalPages);
-        Assert.NotNull(p.Elements);
-        Assert.Empty(p.Elements);
+        var el = new TestRenderedElement { BackgroundColor = "#FF0000" };
+        Assert.Equal("#FF0000", el.BackgroundColor);
     }
 
     [Fact]
-    public void RenderedElement_Defaults()
+    public void RenderedElement_SetBorder_Works()
     {
-        var e = new RenderedTextElement();
-        Assert.Equal("", e.Id);
-        Assert.Equal(0, e.X);
-        Assert.Equal(0, e.Y);
-        Assert.Null(e.BackgroundColor);
-        Assert.Null(e.Border);
+        var border = new BorderDef { Width = 1, Color = "#000000" };
+        var el = new TestRenderedElement { Border = border };
+        Assert.Same(border, el.Border);
     }
 
-    [Fact]
-    public void RenderedReport_Defaults()
-    {
-        var r = new RenderedReport();
-        Assert.NotNull(r.Template);
-        Assert.NotNull(r.Pages);
-        Assert.Empty(r.Pages);
-        Assert.Equal(0, r.PageWidth);
-        Assert.Equal(0, r.PageHeight);
-    }
+    // ============== 辅助测试类 ==============
 
-    [Fact]
-    public void AddPage_GrowsList()
+    private class TestRenderedElement : RenderedElement
     {
-        var r = new RenderedReport();
-        r.Pages.Add(new RenderedPage { PageNumber = 1 });
-        r.Pages.Add(new RenderedPage { PageNumber = 2 });
-        Assert.Equal(2, r.Pages.Count);
-    }
-
-    [Fact]
-    public void RemovePage_ShrinksList()
-    {
-        var r = new RenderedReport();
-        r.Pages.Add(new RenderedPage { PageNumber = 1 });
-        r.Pages.Add(new RenderedPage { PageNumber = 2 });
-        r.Pages.RemoveAt(0);
-        Assert.Single(r.Pages);
-        Assert.Equal(2, r.Pages[0].PageNumber);
     }
 }
-
-/// <summary>
-/// 测试用 RenderedTextElement 删除（用真品）
-/// </summary>
