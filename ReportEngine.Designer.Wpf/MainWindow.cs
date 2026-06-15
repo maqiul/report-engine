@@ -1116,10 +1116,8 @@ namespace ReportEngine.Designer.Wpf
         private void DeleteSelected()
         {
             if (_template == null) return;
-            var targets = _selectedElements.Count > 0
-                ? (IList<ReportElement>)_selectedElements
-                : (_selectedElement != null ? new List<ReportElement> { _selectedElement } : null);
-            if (targets == null) return;
+            var targets = NudgeRunner.ResolveTargets(_selectedElements, _selectedElement);
+            if (targets.Count == 0) return;
             PushUndo();
             ElementDeleter.DeleteFromBands(_template.Bands, targets);
             _selectedElements.Clear();
