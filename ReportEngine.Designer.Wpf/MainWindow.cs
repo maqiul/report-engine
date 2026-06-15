@@ -1449,20 +1449,10 @@ namespace ReportEngine.Designer.Wpf
         {
             if (_bandTree.SelectedItem is TreeViewItem item)
             {
-                if (item.Tag is Band band)
-                {
-                    _selectedBand = band;
-                    _selectedElement = null;
-                }
-                else if (item.Tag is ReportElement el)
-                {
-                    _selectedElement = el;
-                    // 找到元素所在 Band
-                    if (_template != null)
-                        _selectedBand = _template.Bands.FirstOrDefault(b => b.Elements.Contains(el));
-                }
-                _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand);
-                UpdatePropertyList();
+                BandTreeSelectionCommitter.Commit(item.Tag, _template,
+                    ref _selectedBand, ref _selectedElement,
+                    onRender: () => _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand),
+                    onUpdateProps: UpdatePropertyList);
             }
         }
 
