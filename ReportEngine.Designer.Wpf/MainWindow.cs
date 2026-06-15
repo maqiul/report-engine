@@ -765,19 +765,10 @@ namespace ReportEngine.Designer.Wpf
             if (!_draggingGuide) return;
             // 如果拖到负数区域（标尺外）则删除
             if (_draggingHGuide)
-            {
                 GuideListEditor.RemoveIfNegative(_hGuides, _draggingGuideIndex);
-                _vRuler.ReleaseMouseCapture();
-                _vRuler.MouseMove -= OnRulerGuideMouseMove;
-                _vRuler.MouseLeftButtonUp -= OnRulerGuideMouseUp;
-            }
             else
-            {
                 GuideListEditor.RemoveIfNegative(_vGuides, _draggingGuideIndex);
-                _hRuler.ReleaseMouseCapture();
-                _hRuler.MouseMove -= OnRulerGuideMouseMove;
-                _hRuler.MouseLeftButtonUp -= OnRulerGuideMouseUp;
-            }
+            RulerGuideFinalizer.ReleaseAndUnsubscribe(_draggingHGuide, _hRuler, _vRuler, OnRulerGuideMouseMove, OnRulerGuideMouseUp);
             _draggingGuide = false;
             _draggingGuideIndex = -1;
             _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand);
