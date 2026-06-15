@@ -921,17 +921,9 @@ namespace ReportEngine.Designer.Wpf
                 // 框选结束：找出框内元素
                 var hits = MarqueeSelector.Select(
                     _dragStart, e.GetPosition(_canvas), _zoom, PixelsPerMm, CanvasPadding, _template);
-
-                _selectedElements.Clear();
-                foreach (var (el, band) in hits)
-                {
-                    _selectedElements.Add(el);
-                    _selectedBand = band;
-                }
-                if (_selectedElements.Count > 0)
-                    _selectedElement = _selectedElements[0];
-
-                if (_marqueeRect != null) { _canvas.Children.Remove(_marqueeRect); _marqueeRect = null; }
+                MarqueeCommitHelper.ApplyToSelection(hits, _selectedElements,
+                    ref _selectedElement, ref _selectedBand,
+                    ref _marqueeRect, _canvas);
                 _canvas.ReleaseMouseCapture();
                 _dragMode = DragMode.None;
                 RefreshUI();
