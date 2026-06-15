@@ -745,11 +745,9 @@ namespace ReportEngine.Designer.Wpf
             _resizeHandle = ResizeHandleDetector.Detect(_canvas, pos, _selectedElement);
             if (_resizeHandle != ResizeHandleDetector.NoHandle)
             {
-                _dragMode = DragMode.ResizeElement;
-                _dragStart = pos;
+                BeginDrag(DragMode.ResizeElement, pos);
                 _dragStartX = _selectedElement!.X; _dragStartY = _selectedElement.Y;
                 _dragStartW = _selectedElement.Width; _dragStartH = _selectedElement.Height;
-                _canvas.CaptureMouse();
                 PushUndo();
                 return;
             }
@@ -758,11 +756,9 @@ namespace ReportEngine.Designer.Wpf
             var hitEl = _canvas.InputHitTest(pos) as FrameworkElement;
             if (hitEl?.Tag is Band dragBand && hitEl.Cursor == Cursors.SizeNS)
             {
-                _dragMode = DragMode.ResizeBandHeight;
+                BeginDrag(DragMode.ResizeBandHeight, pos);
                 _selectedBand = dragBand;
-                _dragStart = pos;
                 _dragStartH = dragBand.Height;
-                _canvas.CaptureMouse();
                 PushUndo();
                 RefreshUI();
                 return;
@@ -783,25 +779,26 @@ namespace ReportEngine.Designer.Wpf
                 onStopPainter: StopFormatPainter,
                 onStartMove: el =>
                 {
-                    _dragMode = DragMode.MoveElement;
-                    _dragStart = pos;
+                    BeginDrag(DragMode.MoveElement, pos);
                     _dragStartX = el.X;
                     _dragStartY = el.Y;
-                    _canvas.CaptureMouse();
                     PushUndo();
                 },
-                onStartMarquee: () =>
-                {
-                    _dragMode = DragMode.MarqueeSelect;
-                    _dragStart = pos;
-                    _canvas.CaptureMouse();
-                },
+                onStartMarquee: () => BeginDrag(DragMode.MarqueeSelect, pos),
                 out hitBand,
                 out hitElement);
 
             _selectedElement = hitElement;
             _selectedBand = hitBand;
             RefreshUI();
+        }
+
+        /// <summary>开始 drag：设 _dragMode + _dragStart + CaptureMouse。OnCanvasMouseDown 4 个 start 模式共享。</summary>
+        private void BeginDrag(DragMode mode, Point pos)
+        {
+            _dragMode = mode;
+            _dragStart = pos;
+            _canvas.CaptureMouse();
         }
 
         private void OnCanvasDoubleClick(object sender, MouseButtonEventArgs e)
