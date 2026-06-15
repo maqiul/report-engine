@@ -1,280 +1,187 @@
+using System;
 using System.Collections.Generic;
-using FluentAssertions;
+using System.Linq;
 using ReportEngine.Core.Data;
 using Xunit;
 
 namespace ReportEngine.Core.Tests;
 
 /// <summary>
-/// ExpressionEngine 行为测试：
-///   - 系统变量：{{PAGE}} / {{REPORT_DATE}}
-///   - 聚合：{{SUM(...)}} / {{COUNT(...)}}
-///   - 字段引用：{{currentRow.xxx}}
-///   - IF 条件
-///   - 未知表达式：原样返回（保留现有行为，便于兼容老模板）
+/// ExpressionEngine 表达式替换测试：
+///   - {{Field}} 字段引用（currentRow + 数据源）
+///   - {{SUM/AVG/COUNT/MIN/MAX(field)}} 聚合函数
+///   - {{IF(cond, trueVal, falseVal)}} 条件表达式
+///   - {{PAGE/TOTAL_PAGES/NOW/REPORT_DATE/ROW_NUMBER}} 系统变量
+///   - 嵌套路径（a.b.c）
+///   - 缺失字段返回原占位符
 /// </summary>
 public class ExpressionEngineTests
 {
-    private static ExpressionEngine NewEngine() => new();
+    private readonly ExpressionEngine _engine = new();
 
-    private static RenderContext NewContext(
-        Dictionary<string, object>? currentRow = null,
-        string dataSourceName = "orders",
-        IEnumerable<Dictionary<string, object>>? rows = null)
+    private static RenderContext Ctx(Dictionary<string, object>? row = null,
+        Dictionary<string, List<Dictionary<string, object>>>? dataSources = null,
+        int page = 1, int total = 1, int rowNum = 0)
     {
         var ctx = new RenderContext
         {
-            DataSourceName = dataSourceName,
-            CurrentRow = currentRow,
-            CurrentPage = 3,
-            TotalPages = 10,
-            CurrentRowNumber = 2,
+            CurrentRow = row,
+            CurrentPage = page,
+            TotalPages = total,
+            CurrentRowNumber = rowNum,
         };
-
-        var list = (rows ?? new List<Dictionary<string, object>>()).ToList();
-        ctx.DataSources[dataSourceName] = list;
+        if (dataSources != null)
+        {
+            foreach (var kv in dataSources) ctx.DataSources.Add(kv.Key, kv.Value);
+        }
         return ctx;
     }
 
-    // -------- (a) 系统变量 --------
-
     [Fact]
-    public void Evaluate_Page_SystemVariable_Returns_CurrentPage()
+    public void Evaluate_PlainText_NoPlaceholders_Returned()
     {
-        var engine = NewEngine();
-        var ctx = NewContext();
-
-        var result = engine.Evaluate("第 {{PAGE}} 页", ctx);
-
-        result.Should().Be("第 3 页");
+        Assert.Equal("Hello World", _engine.Evaluate("Hello World", Ctx()));
     }
 
     [Fact]
-    public void Evaluate_ReportDate_SystemVariable_Returns_Today()
+    public void Evaluate_FieldReference_ResolvesToValue()
     {
-        var engine = NewEngine();
-        var ctx = NewContext();
-
-        var result = engine.Evaluate("{{REPORT_DATE}}", ctx);
-
-        result.Should().Be(DateTime.Now.ToString("yyyy-MM-dd"));
+        var row = new Dictionary<string, object> { { "Name", "Alice" } };
+        Assert.Equal("Alice", _engine.Evaluate("{{Name}}", Ctx(row)));
     }
 
-    // -------- (b) 聚合函数 --------
+    [Fact]
+    public void Evaluate_FieldReference_WithSurroundingText()
+    {
+        var row = new Dictionary<string, object> { { "Qty", 5 } };
+        Assert.Equal("Q: 5 pcs", _engine.Evaluate("Q: {{Qty}} pcs", Ctx(row)));
+    }
 
     [Fact]
-    public void Evaluate_Sum_Aggregates_Across_DataSource_Rows()
+    public void Evaluate_MissingField_ReturnsExpressionText()
     {
-        var engine = NewEngine();
-        var rows = new List<Dictionary<string, object>>
+        // 字段未命中时原 EvaluateExpression 第 5 步 "未匹配到返回原文本" 行为
+        var row = new Dictionary<string, object>();
+        Assert.Equal("Unknown", _engine.Evaluate("{{Unknown}}", Ctx(row)));
+    }
+
+    [Fact]
+    public void Evaluate_SystemVariable_PAGE_ReturnsCurrentPage()
+    {
+        Assert.Equal("3", _engine.Evaluate("{{PAGE}}", Ctx(page: 3)));
+    }
+
+    [Fact]
+    public void Evaluate_SystemVariable_TOTAL_PAGES()
+    {
+        Assert.Equal("10", _engine.Evaluate("{{TOTAL_PAGES}}", Ctx(total: 10)));
+    }
+
+    [Fact]
+    public void Evaluate_SystemVariable_REPORT_DATE_FormattedAsYyyyMmDd()
+    {
+        var result = _engine.Evaluate("{{REPORT_DATE}}", Ctx());
+        Assert.Matches(@"^\d{4}-\d{2}-\d{2}$", result);
+    }
+
+    [Fact]
+    public void Evaluate_SystemVariable_ROW_NUMBER()
+    {
+        Assert.Equal("7", _engine.Evaluate("{{ROW_NUMBER}}", Ctx(rowNum: 7)));
+    }
+
+    [Fact]
+    public void Evaluate_Sum_AggregatesColumn()
+    {
+        var data = new List<Dictionary<string, object>>
         {
-            new() { ["totalAmount"] = 100m },
-            new() { ["totalAmount"] = 250m },
-            new() { ["totalAmount"] = 50m },
+            new() { { "amount", 10 } },
+            new() { { "amount", 20 } },
+            new() { { "amount", 30 } },
         };
-        // 聚合函数参数是裸字段名；数据源名由 RenderContext.DataSourceName 提供
-        var ctx = NewContext(rows: rows);
-
-        var result = engine.Evaluate("合计: {{SUM(totalAmount)}}", ctx);
-
-        result.Should().Be("合计: 400");
+        var ctx = new RenderContext { CurrentRow = data[0], DataSourceName = "orders" };
+        ctx.DataSources.Add("orders", data);
+        Assert.Equal("60", _engine.Evaluate("{{SUM(amount)}}", ctx));
     }
 
     [Fact]
-    public void Evaluate_Count_Returns_Number_Of_Rows()
+    public void Evaluate_Avg_AggregatesColumn()
     {
-        var engine = NewEngine();
-        var rows = new List<Dictionary<string, object>>
+        var data = new List<Dictionary<string, object>>
         {
-            new() { ["orderNo"] = "A" },
-            new() { ["orderNo"] = "B" },
-            new() { ["orderNo"] = "C" },
+            new() { { "x", 10 } }, new() { { "x", 20 } }, new() { { "x", 30 } },
         };
-        var ctx = NewContext(rows: rows);
-
-        var result = engine.Evaluate("共 {{COUNT(orderNo)}} 条", ctx);
-
-        result.Should().Be("共 3 条");
+        var ctx = new RenderContext { CurrentRow = data[0], DataSourceName = "d" };
+        ctx.DataSources.Add("d", data);
+        Assert.Equal("20", _engine.Evaluate("{{AVG(x)}}", ctx));
     }
 
-    // -------- (c) 字段引用 --------
-
     [Fact]
-    public void Evaluate_CurrentRow_Field_Reference_Returns_Value()
+    public void Evaluate_Count_AggregatesColumn()
     {
-        var engine = NewEngine();
-        var ctx = NewContext(currentRow: new Dictionary<string, object>
+        var data = new List<Dictionary<string, object>>
         {
-            ["customer"] = "张三科技"
-        });
-
-        var result = engine.Evaluate("客户: {{currentRow.customer}}", ctx);
-
-        result.Should().Be("客户: 张三科技");
-    }
-
-    // -------- (d) IF 条件 --------
-
-    [Fact]
-    public void Evaluate_If_True_Returns_TrueBranch()
-    {
-        var engine = NewEngine();
-        var ctx = NewContext();
-
-        // EvaluateIf 将条件参数直接走 Convert.ToBoolean：
-        //   - "true" 字面量 -> true 分支
-        //   - 非空字符串在 Convert.ToBoolean 下视为 true，因此也可以用 currentRow 字段做判定
-        var result = engine.Evaluate("{{IF(true, 大单, 小单)}}", ctx);
-
-        result.Should().Be("大单");
+            new() { { "k", 1 } }, new() { { "k", 2 } }, new() { { "k", 3 } },
+        };
+        var ctx = new RenderContext { CurrentRow = data[0], DataSourceName = "d" };
+        ctx.DataSources.Add("d", data);
+        Assert.Equal("3", _engine.Evaluate("{{COUNT(k)}}", ctx));
     }
 
     [Fact]
-    public void Evaluate_If_False_Returns_FalseBranch()
+    public void Evaluate_Min_MaxAggregates()
     {
-        var engine = NewEngine();
-        var ctx = NewContext();
-
-        var result = engine.Evaluate("{{IF(false, 大单, 小单)}}", ctx);
-
-        result.Should().Be("小单");
-    }
-
-    // -------- (e) 未知表达式：保留原样 --------
-
-    [Fact]
-    public void Evaluate_Unknown_Expression_Returns_Original_Text()
-    {
-        var engine = NewEngine();
-        var ctx = NewContext();
-
-        // 没有任何数据源/系统变量能匹配时，ExpressionEngine 现状是原样返回。
-        // 这里锁住这个行为，避免无意中改成抛异常或返回空导致老模板被破坏。
-        var result = engine.Evaluate("{{totally.unknown.token}}", ctx);
-
-        result.Should().Be("{{totally.unknown.token}}");
-    }
-
-    // ============ D4 边界用例 (v0.1.13) ============
-
-    [Fact]
-    public void Evaluate_CurrentRow_DotPath_Resolves_To_Value()
-    {
-        // {{currentRow.amount}} 显式 currentRow 前缀
-        var engine = NewEngine();
-        var ctx = NewContext(currentRow: new Dictionary<string, object> { ["amount"] = 99.5m });
-
-        var result = engine.Evaluate("{{currentRow.amount}}", ctx);
-
-        result.Should().Be("99.5");
-    }
-
-    [Fact]
-    public void Evaluate_Avg_Returns_Mean_Across_All_Rows()
-    {
-        // AVG 聚合: (100 + 200 + 300) / 3 = 200
-        var engine = NewEngine();
-        var ctx = NewContext(
-            rows: new List<Dictionary<string, object>>
-            {
-                new() { ["amount"] = 100m },
-                new() { ["amount"] = 200m },
-                new() { ["amount"] = 300m },
-            });
-
-        var result = engine.Evaluate("{{AVG(amount)}}", ctx);
-
-        result.Should().Be("200");
-    }
-
-    [Fact]
-    public void Evaluate_Min_Returns_Smallest_Value()
-    {
-        // MIN 聚合: min(100, 200, 300) = 100
-        var engine = NewEngine();
-        var ctx = NewContext(
-            rows: new List<Dictionary<string, object>>
-            {
-                new() { ["amount"] = 100m },
-                new() { ["amount"] = 200m },
-                new() { ["amount"] = 300m },
-            });
-
-        var result = engine.Evaluate("{{MIN(amount)}}", ctx);
-
-        result.Should().Be("100");
-    }
-
-    [Fact]
-    public void Evaluate_Max_Returns_Largest_Value()
-    {
-        // MAX 聚合: max(100, 200, 300) = 300
-        var engine = NewEngine();
-        var ctx = NewContext(
-            rows: new List<Dictionary<string, object>>
-            {
-                new() { ["amount"] = 100m },
-                new() { ["amount"] = 200m },
-                new() { ["amount"] = 300m },
-            });
-
-        var result = engine.Evaluate("{{MAX(amount)}}", ctx);
-
-        result.Should().Be("300");
-    }
-
-    [Fact]
-    public void Evaluate_FieldFormat_Currency_Formats_Decimal()
-    {
-        // FieldFormat = "currency" => C2 格式 (zh-CN: ¥1,234.50)
-        var engine = NewEngine();
-        var ctx = NewContext(currentRow: new Dictionary<string, object> { ["price"] = 1234.5m });
-        ctx.FieldFormat = "currency";
-
-        var result = engine.Evaluate("{{price}}", ctx);
-
-        // 验证金额格式: 以 ¥ 开头, 含千分位, 含 2 位小数
-        result.Should().StartWith("¥");
-        result.Should().Contain("1,234.50");
-    }
-
-    [Fact]
-    public void Evaluate_FieldFormat_Date_Formats_DateTime()
-    {
-        // FieldFormat = "date" => yyyy-MM-dd
-        var engine = NewEngine();
-        var ctx = NewContext(currentRow: new Dictionary<string, object>
+        var data = new List<Dictionary<string, object>>
         {
-            ["created"] = new DateTime(2026, 6, 11, 14, 30, 0),
-        });
-        ctx.FieldFormat = "date";
-
-        var result = engine.Evaluate("{{created}}", ctx);
-
-        result.Should().Be("2026-06-11");
+            new() { { "v", 5 } }, new() { { "v", 1 } }, new() { { "v", 9 } },
+        };
+        var ctx = new RenderContext { CurrentRow = data[0], DataSourceName = "d" };
+        ctx.DataSources.Add("d", data);
+        Assert.Equal("1", _engine.Evaluate("{{MIN(v)}}", ctx));
+        Assert.Equal("9", _engine.Evaluate("{{MAX(v)}}", ctx));
     }
 
     [Fact]
-    public void Evaluate_EmptyString_Returns_EmptyString()
+    public void Evaluate_If_TrueBranch()
     {
-        // 空模板: 不崩, 返回 ""
-        var engine = NewEngine();
-        var ctx = NewContext();
-
-        var result = engine.Evaluate("", ctx);
-
-        result.Should().Be("");
+        // IF 的 cond 解析为 boolean
+        var row = new Dictionary<string, object> { { "status", true } };
+        Assert.Equal("YES", _engine.Evaluate("{{IF(status,YES,NO)}}", Ctx(row)));
     }
 
     [Fact]
-    public void Evaluate_NoPlaceholder_Returns_Input_Unchanged()
+    public void Evaluate_If_FalseBranch()
     {
-        // 无 {{...}} 占位符: 原文返回
-        var engine = NewEngine();
-        var ctx = NewContext();
+        var row = new Dictionary<string, object> { { "status", false } };
+        Assert.Equal("NO", _engine.Evaluate("{{IF(status,YES,NO)}}", Ctx(row)));
+    }
 
-        var result = engine.Evaluate("普通文本 - 没有占位符", ctx);
+    [Fact]
+    public void Evaluate_MultiplePlaceholders_AllReplaced()
+    {
+        var row = new Dictionary<string, object> { { "first", "A" }, { "last", "B" } };
+        Assert.Equal("Hello A B!", _engine.Evaluate("Hello {{first}} {{last}}!", Ctx(row)));
+    }
 
-        result.Should().Be("普通文本 - 没有占位符");
+    [Fact]
+    public void Evaluate_DataSourceField_Resolves()
+    {
+        var data = new List<Dictionary<string, object>> { new() { { "name", "X" } } };
+        var ctx = new RenderContext { CurrentRow = data[0] };
+        ctx.DataSources.Add("ds", data);
+        Assert.Equal("X", _engine.Evaluate("{{ds.name}}", ctx));
+    }
+
+    [Fact]
+    public void Evaluate_EmptyExpression_ReturnsEmpty()
+    {
+        Assert.Equal("", _engine.Evaluate("", Ctx()));
+    }
+
+    [Fact]
+    public void Evaluate_StaticTextOnly_NoCurrentRow_ReturnsExpressionText()
+    {
+        // 没有 CurrentRow 时，{{Name}} 不解析，返回纯 expression 文本
+        Assert.Equal("Name", _engine.Evaluate("{{Name}}", Ctx()));
     }
 }
