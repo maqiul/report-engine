@@ -1621,15 +1621,9 @@ namespace ReportEngine.Designer.Wpf
             DataBindingWizardDialog.Show(this, _template, _selectedElement,
                 (dsName, fieldName, propChoice, expression) =>
                 {
+                    if (_selectedElement == null) return;
                     PushUndo();
-                    if (propChoice == "文本内容 (Text)" && _selectedElement is TextElement txt)
-                    {
-                        txt.Text = expression;
-                    }
-                    else if (propChoice == "可见性表达式 (VisibleExpression)")
-                    {
-                        _selectedElement.VisibleExpression = expression;
-                    }
+                    DataBindingApplier.Apply(_selectedElement, propChoice, expression);
                     MarkDirty();
                     RefreshUI();
                     _statusText.Text = "已绑定: " + expression;
