@@ -657,8 +657,7 @@ namespace ReportEngine.Designer.Wpf
         private void NudgeSelected(double dx, double dy)
         {
             PushUndo();
-            var targets = _selectedElements.Count > 0 ? _selectedElements : (_selectedElement != null ? new List<ReportElement> { _selectedElement } : new List<ReportElement>());
-            ElementNudger.Nudge(targets, dx, dy);
+            ElementNudger.Nudge(NudgeRunner.ResolveTargets(_selectedElements, _selectedElement), dx, dy);
             MarkDirty();
             RefreshUI();
         }
