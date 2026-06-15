@@ -1041,15 +1041,12 @@ namespace ReportEngine.Designer.Wpf
 
         private void AddRecentFile(string path)
         {
-            _recentFiles.Remove(path);
-            _recentFiles.Insert(0, path);
-            if (_recentFiles.Count > 10) _recentFiles.RemoveAt(10);
-            try { File.WriteAllLines(RecentFilesPath, _recentFiles); } catch { }
+            RecentFileStore.Add(_recentFiles, path, RecentFilesPath);
         }
 
         private void LoadRecentFiles()
         {
-            RecentFileLoader.Load(_recentFiles, RecentFilesPath, 10);
+            RecentFileLoader.Load(_recentFiles, RecentFilesPath, RecentFileStore.MaxCount);
         }
 
         private void BuildRecentFilesMenu(MenuItem parent)
