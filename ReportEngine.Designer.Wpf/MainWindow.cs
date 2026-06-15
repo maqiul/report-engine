@@ -1197,17 +1197,10 @@ namespace ReportEngine.Designer.Wpf
         private void PasteElement()
         {
             if (_clipboardJson == null || _template == null) return;
-            try
-            {
-                var t = _parser.Parse(_clipboardJson);
-                var el = t.Bands.FirstOrDefault()?.Elements.FirstOrDefault();
-                if (el == null) return;
-                el.Id = Guid.NewGuid().ToString("N");
-                el.X += 2; el.Y += 2;
-                InsertElement(el);
-                _statusText.Text = "已粘贴元素";
-            }
-            catch { }
+            var el = ClipboardPasteHelper.ParseAndOffset(_clipboardJson, _parser);
+            if (el == null) return;
+            InsertElement(el);
+            _statusText.Text = "已粘贴元素";
         }
 
         /// <summary>Ctrl+D 复制并偏移</summary>

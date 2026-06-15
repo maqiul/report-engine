@@ -6,35 +6,21 @@ using ReportEngine.Core.Parsing;
 namespace ReportEngine.Designer.Wpf;
 
 /// <summary>
-/// 元素深拷贝算法 - 通过 JSON 序列化/反序列化产生一个全新 Id 的副本 (X/Y 各偏移 3mm)。
-/// 等价抽离自 MainWindow.DuplicateSelected() (27 行)。
+/// 元素深拷贝 (DuplicateSelected 用的核心) - 从 MainWindow.DuplicateSelected 抽出。
+/// 等价抽离自 MainWindow.DuplicateSelected() (16 行)。
+///
+/// 行为: 序列化 element → 反序列化 → 返回深拷贝 (失败返回 null)。
 /// </summary>
-public static class ElementDuplicator
+internal static class ElementDuplicator
 {
-    private const double OffsetX = 3;
-    private const double OffsetY = 3;
-
-    /// <summary>
-    /// 深拷贝 source 元素，重置 Id 并按 (OffsetX, OffsetY) 偏移位置。
-    /// parser 用于序列化/反序列化 (深拷贝机制)。
-    /// 返回新元素；source 为 null 或解析失败时返回 null。
-    /// </summary>
-    public static ReportElement? Duplicate(ReportElement source, TemplateParser parser)
+    public static ReportElement? Duplicate(ReportElement element, TemplateParser parser)
     {
-        if (source == null || parser == null) return null;
+        var json = ClipboardHelper.SerializeElement(element, parser);
+        if (json == null) return null;
         try
         {
-            // 借用 ReportTemplate 作为序列化容器
-            var wrapper = new ReportTemplate();
-            wrapper.Bands.Add(new Band { Elements = { source } });
-            var json = parser.Serialize(wrapper);
-            var restored = parser.Parse(json);
-            var copy = restored.Bands.FirstOrDefault()?.Elements.FirstOrDefault();
-            if (copy == null) return null;
-            copy.Id = Guid.NewGuid().ToString("N");
-            copy.X += OffsetX;
-            copy.Y += OffsetY;
-            return copy;
+            var parsed = parser.Parse(json);
+            return parsed.Bands.FirstOrDefault()?.Elements.FirstOrDefault();
         }
         catch
         {
