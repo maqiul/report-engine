@@ -446,20 +446,7 @@ namespace ReportEngine.Designer.Wpf
             var el = _selectedElement;
             if (el == null) { _statusText.Text = "请先选中一个元素"; return; }
             PushUndo();
-            el.BackgroundColor = null;
-            el.Border = null;
-            el.Rotation = 0;
-            el.Opacity = 1.0;
-            if (el is TextElement t)
-            {
-                t.Font.Family = "宋体";
-                t.Font.Size = 9;
-                t.Font.Bold = false;
-                t.Font.Italic = false;
-                t.Font.Color = null;
-                t.Alignment = ReportEngine.Core.TextAlignment.Left;
-                t.CanGrow = false;
-            }
+            PropertyResetter.Reset(el);
             MarkDirty();
             RefreshUI();
             _statusText.Text = "已重置属性为默认值";
