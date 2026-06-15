@@ -1211,9 +1211,7 @@ namespace ReportEngine.Designer.Wpf
             if (_template == null) return;
             PushUndo();
             _template.Bands.Remove(band);
-            _selectedBand = null;
-            _selectedElement = null;
-            _selectedElements.Clear();
+            BandDeleter.ClearSelection(ref _selectedBand, ref _selectedElement, _selectedElements);
             MarkDirty();
             RefreshUI();
         }
