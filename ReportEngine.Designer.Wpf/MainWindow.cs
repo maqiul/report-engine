@@ -334,8 +334,7 @@ namespace ReportEngine.Designer.Wpf
             var targets = _selectedElements.Count > 0 ? _selectedElements : (_selectedElement != null ? new List<ReportElement> { _selectedElement } : new List<ReportElement>());
             if (targets.Count == 0) { _statusText.Text = "请先选中元素"; return; }
             PushUndo();
-            bool newState = !targets[0].Locked;
-            foreach (var el in targets) el.Locked = newState;
+            bool newState = LockStateToggler.Toggle(targets);
             MarkDirty();
             RefreshUI();
             _statusText.Text = newState ? "已锁定 " + targets.Count + " 个元素" : "已解锁 " + targets.Count + " 个元素";
