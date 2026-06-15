@@ -626,32 +626,17 @@ namespace ReportEngine.Designer.Wpf
 
         private void OnPreviewKeyDown(object sender, KeyEventArgs e)
         {
-            // Tab键切换选中元素
-            if (e.Key == Key.Tab && _template != null)
-            {
-                var band = _selectedBand ?? _template.Bands.FirstOrDefault();
-                if (band != null && band.Elements.Count > 0)
+            KeyboardInputRouter.Route(
+                e, _template, _selectedBand, _selectedElement, _selectedElements,
+                onTabSelected: (band, next) =>
                 {
-                    bool reverse = Keyboard.Modifiers == ModifierKeys.Shift;
-                    var next = TabCycleSelector.SelectNext(band.Elements, _selectedElement, reverse);
-                    if (next != null)
-                    {
-                        _selectedElement = next;
-                        _selectedElements.Clear();
-                        _selectedElements.Add(_selectedElement);
-                        _selectedBand = band;
-                        RefreshUI();
-                    }
-                }
-                e.Handled = true;
-                return;
-            }
-
-            if (_selectedElements.Count == 0 && _selectedElement == null) return;
-            var delta = KeyNudgeCalculator.TryGetDelta(e.Key, Keyboard.Modifiers);
-            if (delta == null) return;
-            NudgeSelected(delta.Value.dx, delta.Value.dy);
-            e.Handled = true;
+                    _selectedElement = next;
+                    _selectedElements.Clear();
+                    _selectedElements.Add(_selectedElement);
+                    _selectedBand = band;
+                    RefreshUI();
+                },
+                onNudge: (dx, dy) => NudgeSelected(dx, dy));
         }
 
         private void NudgeSelected(double dx, double dy)
