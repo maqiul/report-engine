@@ -1429,20 +1429,8 @@ namespace ReportEngine.Designer.Wpf
             using var ctx = new PropertyRowContext(_propertyStack);
             if (_template == null) return;
 
-            // 更新选中对象标签
-            if (_selectedElement != null)
-                _selectedObjLabel.Text = ElementTypeName(_selectedElement);
-            else if (_selectedBand != null)
-                _selectedObjLabel.Text = Name(_selectedBand.Type);
-            else
-                _selectedObjLabel.Text = "页面";
-
-            // 同步字体工具栏
-            if (_selectedElement is TextElement syncT)
-            {
-                _fontFamilyCombo.Text = syncT.Font.Family;
-                _fontSizeCombo.Text = syncT.Font.Size.ToString();
-            }
+            // 更新选中对象标签 + 同步字体工具栏
+            SelectionStatusUpdater.Sync(_selectedObjLabel, _fontFamilyCombo, _fontSizeCombo, _selectedElement, _selectedBand);
 
             // 未选中任何 Band / 元素时显示页面级属性
             if (_selectedBand == null && _selectedElement == null)
