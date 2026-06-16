@@ -1,0 +1,135 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using ReportEngine.Core;
+using static ReportEngine.Designer.Wpf.BandStyle;
+using static ReportEngine.Designer.Wpf.ElementIcons;
+using static ReportEngine.Designer.Wpf.ElementFactory;
+
+namespace ReportEngine.Designer.Wpf
+{
+    public partial class MainWindow
+    {
+private void UpdateBandTree()
+{
+    _bandTree.Items.Clear();
+    if (_template == null) return;
+    foreach (var band in _template.Bands)
+    {
+        var node = new TreeViewItem
+        {
+            Header = BandIcon(band.Type) + " " + Name(band.Type) + " (" + band.Height + "mm)",
+            Tag = band,
+            Foreground = Brushes.Black,
+            IsExpanded = true,
+            HorizontalContentAlignment = HorizontalAlignment.Left,
+            VerticalContentAlignment = VerticalAlignment.Center,
+        };
+        // Band 右键菜单
+        node.ContextMenu = BuildBandTreeContextMenu(band);
+
+        foreach (var el in band.Elements)
+        {
+            string icon = ElementIcon(el);
+            string elLabel = ElementTreeLabelBuilder.BuildLabel(el);
+            string lockIcon = el.Locked ? " 🔒" : "";
+            var child = new TreeViewItem { Header = icon + " " + elLabel + lockIcon, Tag = el, Foreground = el.Locked ? Brushes.Gray : Brushes.DimGray, HorizontalContentAlignment = HorizontalAlignment.Left, VerticalContentAlignment = VerticalAlignment.Center };
+            // 元素右键菜单
+            child.ContextMenu = BuildElementTreeContextMenu(el, band);
+            node.Items.Add(child);
+        }
+        _bandTree.Items.Add(node);
+    }
+}
+
+private ContextMenu BuildBandTreeContextMenu(Band band)
+{
+    return BandTreeContextMenuBuilder.Build(
+        band,
+        onInsertText: () => { _selectedBand = band; InsertElement(NewText()); },
+        onInsertFieldBox: () => { _selectedBand = band; InsertElement(NewFieldBox()); },
+        onInsertSummaryBox: () => { _selectedBand = band; InsertElement(NewSummaryBox()); },
+        onInsertSysVarBox: () => { _selectedBand = band; InsertElement(NewSysVarBox()); },
+        onInsertLine: () => { _selectedBand = band; InsertElement(NewLine()); },
+        onInsertShape: () => { _selectedBand = band; InsertElement(NewShape()); },
+        onInsertImage: () => { _selectedBand = band; InsertElement(NewImage()); },
+        onDelete: () => DeleteBand(band));
+}
+
+private ContextMenu BuildElementTreeContextMenu(ReportElement el, Band band)
+{
+    return ElementTreeContextMenuBuilder.Build(
+        isLocked: el.Locked,
+        onSelect: () => { _selectedElement = el; _selectedBand = band; _selectedElements.Clear(); _selectedElements.Add(el); RefreshUI(); },
+        onCopy: () => { _selectedElement = el; _selectedBand = band; CopySelected(); },
+        onCut: () => { _selectedElement = el; _selectedBand = band; CutSelected(); },
+        onDelete: () => { _selectedElement = el; _selectedBand = band; DeleteSelected(); },
+        onRename: () => ShowRenameDialog(el),
+        onToggleLock: () => { PushUndo(); el.Locked = !el.Locked; MarkDirty(); RefreshUI(); },
+        onBringToFront: () => { _selectedElement = el; _selectedBand = band; MoveElementOrder("front"); },
+        onSendToBack: () => { _selectedElement = el; _selectedBand = band; MoveElementOrder("back"); });
+}
+
+private void ShowRenameDialog(ReportElement el)
+{
+    RenameDialog.Show(this, el, name => { PushUndo(); el.Name = string.IsNullOrEmpty(name) ? null : name; MarkDirty(); RefreshUI(); });
+}
+
+private void UpdatePropertyList()
+{
+    if (_updatingProps) return;
+    _updatingProps = true;
+    try
+    {
+        UpdatePropertyListCore();
+    }
+    finally { _updatingProps = false; }
+}
+
+private void UpdatePropertyListCore()
+{
+    _propertyStack.Children.Clear();
+    using var ctx = new PropertyRowContext(_propertyStack);
+    if (_template == null) return;
+
+    // 更新选中对象标签 + 同步字体工具栏
+    SelectionStatusUpdater.Sync(_selectedObjLabel, _fontFamilyCombo, _fontSizeCombo, _selectedElement, _selectedBand);
+
+    // 未选中任何 Band / 元素时显示页面级属性
+    if (_selectedBand == null && _selectedElement == null)
+    {
+        PagePropertySectionBuilder.Build(ctx, _template, this);
+        return;
+    }
+
+    // Band 属性（仅当没有选中元素时才显示）
+    if (_selectedBand != null && _selectedElement == null)
+    {
+        BandPropertySectionBuilder.Build(ctx, _selectedBand, this);
+    }
+
+    // 元素属性
+    if (_selectedElement != null)
+    {
+        // 多选批量编辑模式
+        if (_selectedElements.Count > 1)
+        {
+            UpdateMultiSelectProperties();
+            return;
+        }
+
+        PropertySectionBuilder.BuildElementProperties(ctx, _selectedElement, this);
+    }
+}
+
+private void UpdateMultiSelectProperties()
+{
+    using var ctx = new PropertyRowContext(_propertyStack);
+    MultiSelectPropertySectionBuilder.Build(ctx, this);
+}
+
+    }
+}

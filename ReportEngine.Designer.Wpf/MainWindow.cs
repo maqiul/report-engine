@@ -27,7 +27,7 @@ using static ReportEngine.Designer.Wpf.EnumCnMap;
 
 namespace ReportEngine.Designer.Wpf
 {
-    public class MainWindow : Window
+    public partial class MainWindow : Window
     {
         private readonly TemplateParser _parser = new TemplateParser();
         private ReportTemplate? _template;
@@ -489,120 +489,7 @@ namespace ReportEngine.Designer.Wpf
 
         private TextBlock _selectedObjLabel = null!;
 
-        private Menu BuildMenu()
-        {
-            var menu = new Menu();
-            var file = new MenuItem { Header = "文件(_F)" };
-            file.Items.Add(MakeMenuItem("新建(_N)", "Ctrl+N", NewTemplate));
-            file.Items.Add(MakeMenuItem("打开(_O)...", "Ctrl+O", OpenTemplate));
-            file.Items.Add(new Separator());
-            file.Items.Add(MakeMenuItem("保存(_S)", "Ctrl+S", () => SaveTemplate(false)));
-            file.Items.Add(MakeMenuItem("另存为(_A)...", null, () => SaveTemplate(true)));
-            file.Items.Add(new Separator());
-            file.Items.Add(MakeMenuItem("页面设置(_P)...", null, ShowPageSetupDialog));
-            file.Items.Add(new Separator());
-            file.Items.Add(MakeMenuItem("导出PDF(_D)...", null, ExportPdf));
-            file.Items.Add(MakeMenuItem("导出Excel(_E)...", null, ExportExcel));
-            file.Items.Add(MakeMenuItem("导出图片(_I)...", null, ExportPng));
-            file.Items.Add(MakeMenuItem("批量导出PDF+Excel(_B)...", null, ExportBatch));
-            file.Items.Add(new Separator());
-            file.Items.Add(MakeMenuItem("数据源(_S)...", null, OnShowDataSourceClicked));
-            file.Items.Add(MakeMenuItem("数据绑定向导(_B)...", null, OnShowDataBindingWizardClicked));
-            file.Items.Add(MakeMenuItem("模板参数(_P)...", null, OnShowTemplateParamsClicked));
-            file.Items.Add(MakeMenuItem("加载预览数据(_L)...", null, OnLoadPreviewDataClicked));
-            file.Items.Add(new Separator());
-            BuildRecentFilesMenu(file);
-            file.Items.Add(new Separator());
-            file.Items.Add(MakeMenuItem("退出(_X)", "Alt+F4", Close));
-            menu.Items.Add(file);
-
-            var edit = new MenuItem { Header = "编辑(_E)" };
-            edit.Items.Add(MakeMenuItem("撤销(_Z)", "Ctrl+Z", Undo));
-            edit.Items.Add(MakeMenuItem("重做(_Y)", "Ctrl+Y", Redo));
-            edit.Items.Add(new Separator());
-            edit.Items.Add(MakeMenuItem("剪切(_X)", "Ctrl+X", CutSelected));
-            edit.Items.Add(MakeMenuItem("复制(_C)", "Ctrl+C", CopySelected));
-            edit.Items.Add(MakeMenuItem("粘贴(_V)", "Ctrl+V", PasteElement));
-            edit.Items.Add(new Separator());
-            edit.Items.Add(MakeMenuItem("删除", "Delete", DeleteSelected));
-            edit.Items.Add(MakeMenuItem("全选", "Ctrl+A", SelectAll));
-            menu.Items.Add(edit);
-
-            var insert = new MenuItem { Header = "插入(_I)" };
-            // 部件框子菜单
-            var ctrlMenu = new MenuItem { Header = "部件框(_C)" };
-            ctrlMenu.Items.Add(MakeMenuItem("静态框(_T)", null, () => InsertElement(NewText())));
-            ctrlMenu.Items.Add(MakeMenuItem("字段框(_F)", null, () => InsertElement(NewFieldBox())));
-            ctrlMenu.Items.Add(MakeMenuItem("统计框(_U)", null, () => InsertElement(NewSummaryBox())));
-            ctrlMenu.Items.Add(MakeMenuItem("系统变量框(_V)", null, () => InsertElement(NewSysVarBox())));
-            ctrlMenu.Items.Add(new Separator());
-            ctrlMenu.Items.Add(MakeMenuItem("线段(_L)", null, () => InsertElement(NewLine())));
-            ctrlMenu.Items.Add(MakeMenuItem("图形框(_S)", null, () => InsertElement(NewShape())));
-            ctrlMenu.Items.Add(MakeMenuItem("图象框(_P)", null, () => InsertElement(NewImage())));
-            ctrlMenu.Items.Add(MakeMenuItem("条形码&二维码(_B)", null, () => InsertElement(NewBarcode())));
-            ctrlMenu.Items.Add(MakeMenuItem("表格(_G)", null, () => InsertElement(NewTable())));
-            ctrlMenu.Items.Add(MakeMenuItem("交叉表", null, () => InsertElement(NewCrossTab())));
-            ctrlMenu.Items.Add(MakeMenuItem("图表(_H)", null, () => InsertElement(NewChart())));
-            ctrlMenu.Items.Add(MakeMenuItem("子报表(_E)", null, () => InsertElement(NewSubReport())));
-            insert.Items.Add(ctrlMenu);
-            // 报表节子菜单
-            var sectionMenu = new MenuItem { Header = "报表节(_S)" };
-            sectionMenu.Items.Add(MakeMenuItem("报表头", null, () => AddBand(BandType.ReportHeader, 20)));
-            sectionMenu.Items.Add(MakeMenuItem("页眉", null, () => AddBand(BandType.Header, 15)));
-            sectionMenu.Items.Add(MakeMenuItem("分组头", null, () => AddBand(BandType.GroupHeader, 12)));
-            sectionMenu.Items.Add(MakeMenuItem("明细", null, () => AddBand(BandType.Detail, 10)));
-            sectionMenu.Items.Add(MakeMenuItem("分组尾", null, () => AddBand(BandType.GroupFooter, 10)));
-            sectionMenu.Items.Add(MakeMenuItem("页脚", null, () => AddBand(BandType.Footer, 10)));
-            sectionMenu.Items.Add(MakeMenuItem("报表尾", null, () => AddBand(BandType.ReportFooter, 10)));
-            insert.Items.Add(sectionMenu);
-            insert.Items.Add(new Separator());
-            insert.Items.Add(MakeMenuItem("页面设置(_P)...", null, ShowPageSetupDialog));
-            menu.Items.Add(insert);
-
-            var view = new MenuItem { Header = "视图(_V)" };
-            view.Items.Add(MakeMenuItem("放大", "Ctrl++", () => { _zoomSlider.Value = Math.Min(400, _zoomSlider.Value + 25); }));
-            view.Items.Add(MakeMenuItem("缩小", "Ctrl+-", () => { _zoomSlider.Value = Math.Max(25, _zoomSlider.Value - 25); }));
-            view.Items.Add(MakeMenuItem("100%", null, () => { _zoomSlider.Value = 100; }));
-            view.Items.Add(new Separator());
-            var gridItem = new MenuItem { Header = "显示网格线(_G)", IsCheckable = true, IsChecked = _showGrid };
-            gridItem.Click += (_, __) => { _showGrid = gridItem.IsChecked; _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand); };
-            view.Items.Add(gridItem);
-            view.Items.Add(MakeMenuItem("网格设置...", null, ShowGridSettingsDialog));
-            view.Items.Add(new Separator());
-            var miClearGuides = new MenuItem { Header = "清除所有参考线" };
-            miClearGuides.Click += (_, __) => { _hGuides.Clear(); _vGuides.Clear(); _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand); _statusText.Text = "已清除所有参考线"; };
-            view.Items.Add(miClearGuides);
-            view.Items.Add(new Separator());
-            var snapItem = new MenuItem { Header = "吸附对齐(_S)", IsCheckable = true, IsChecked = _snapEnabled };
-            snapItem.Click += (_, __) => { _snapEnabled = snapItem.IsChecked; };
-            view.Items.Add(snapItem);
-            menu.Items.Add(view);
-
-            var format = new MenuItem { Header = "格式(_O)" };
-            format.Items.Add(MakeMenuItem("左对齐", null, () => AlignElements("left")));
-            format.Items.Add(MakeMenuItem("右对齐", null, () => AlignElements("right")));
-            format.Items.Add(MakeMenuItem("顶端对齐", null, () => AlignElements("top")));
-            format.Items.Add(MakeMenuItem("底端对齐", null, () => AlignElements("bottom")));
-            format.Items.Add(new Separator());
-            format.Items.Add(MakeMenuItem("水平居中", null, () => AlignElements("hcenter")));
-            format.Items.Add(MakeMenuItem("垂直居中", null, () => AlignElements("vcenter")));
-            format.Items.Add(new Separator());
-            format.Items.Add(MakeMenuItem("等宽", null, () => AlignElements("samewidth")));
-            format.Items.Add(MakeMenuItem("等高", null, () => AlignElements("sameheight")));
-            format.Items.Add(new Separator());
-            format.Items.Add(MakeMenuItem("置于顶层", null, () => MoveElementOrder("front")));
-            format.Items.Add(MakeMenuItem("置于底层", null, () => MoveElementOrder("back")));
-            format.Items.Add(MakeMenuItem("上移一层", null, () => MoveElementOrder("up")));
-            format.Items.Add(MakeMenuItem("下移一层", null, () => MoveElementOrder("down")));
-            menu.Items.Add(format);
-
-            var help = new MenuItem { Header = "帮助(_H)" };
-            help.Items.Add(MakeMenuItem("快捷键...", "F1", () => ShortcutsDialog.Show(this)));
-            help.Items.Add(MakeMenuItem("关于...", null, () => AboutDialog.Show(this)));
-            menu.Items.Add(help);
-
-            return menu;
-        }
+        // MenuAndDialogs: methods moved to MainWindow.MenuAndDialogs.cs
 
         private void SetupKeyBindings()
         {
@@ -919,97 +806,21 @@ namespace ReportEngine.Designer.Wpf
 
         // ============================== 文件操作 ==============================
 
-        private void NewTemplate()
-        {
-            if (!ConfirmDiscard()) return;
-            _template = new ReportTemplate();
-            _currentFilePath = null;
-            _dirty = false;
-            _undoStack.Clear();
-            _redoStack.Clear();
-            _selectedElement = null;
-            _selectedBand = null;
-            RefreshUI();
-        }
+        // FileOperations: methods moved to MainWindow.FileOperations.cs
 
-        private void OpenTemplate()
-        {
-            TemplateFileOpener.Open(_parser, ConfirmDiscard, (path, template) =>
-            {
-                _template = template;
-                _currentFilePath = path;
-                _dirty = false;
-                _undoStack.Clear();
-                _redoStack.Clear();
-                _selectedElement = null;
-                _selectedBand = null;
-                RefreshUI();
-                _statusText.Text = "已打开: " + System.IO.Path.GetFileName(path);
-                AddRecentFile(path);
-            });
-        }
+        // FileOperations: methods moved to MainWindow.FileOperations.cs
 
-        private void SaveTemplate(bool saveAs)
-        {
-            TemplateFileSaver.Save(_template, _parser, _currentFilePath, saveAs, path =>
-            {
-                _currentFilePath = path;
-                _dirty = false;
-                UpdateTitle();
-                ClearAutoSave();
-                _statusText.Text = "已保存: " + System.IO.Path.GetFileName(path);
-            });
-        }
+        // FileOperations: methods moved to MainWindow.FileOperations.cs
 
-        private async void ExportPdf()
-        {
-            _statusText.Text = "正在导出PDF...";
-            await ReportFileExporter.ExportPdfAsync(_template, _previewData, _currentFilePath, path =>
-            {
-                _statusText.Text = "PDF已导出: " + System.IO.Path.GetFileName(path);
-            });
-        }
+        // FileOperations: methods moved to MainWindow.FileOperations.cs
 
-        private async void ExportExcel()
-        {
-            _statusText.Text = "正在导出Excel...";
-            await ReportFileExporter.ExportExcelAsync(_template, _previewData, _currentFilePath, path =>
-            {
-                _statusText.Text = "Excel已导出: " + System.IO.Path.GetFileName(path);
-            });
-        }
+        // FileOperations: methods moved to MainWindow.FileOperations.cs
 
         /// <summary>导出当前画布为PNG图片</summary>
-        private void ExportPng()
-        {
-            _statusText.Text = "正在导出PNG...";
-            double oldZoom = _zoom;
-            CanvasImageExporter.Export(
-                template: _template,
-                pixelsPerMm: PixelsPerMm,
-                canvasPadding: CanvasPadding,
-                canvas: _canvas,
-                currentFilePath: _currentFilePath,
-                renderAt100: () =>
-                {
-                    _zoom = 1.0;
-                    _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand);
-                },
-                renderAtCurrent: () =>
-                {
-                    _zoom = oldZoom;
-                    _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand);
-                },
-                onSuccess: path => _statusText.Text = "PNG已导出: " + System.IO.Path.GetFileName(path));
-        }
+        // FileOperations: methods moved to MainWindow.FileOperations.cs
 
         /// <summary>批量导出PDF+Excel到同一目录</summary>
-        private async void ExportBatch()
-        {
-            _statusText.Text = "正在批量导出...";
-            await ReportFileExporter.ExportBatchAsync(_template, _previewData, _currentFilePath,
-                (pdfPath, excelPath) => { _statusText.Text = "批量导出完成"; });
-        }
+        // FileOperations: methods moved to MainWindow.FileOperations.cs
 
         private bool ConfirmDiscard()
         {
@@ -1095,75 +906,18 @@ namespace ReportEngine.Designer.Wpf
                 _statusText.Text = "已拖入元素: " + insertedType;
         }
 
-        private void DeleteSelected()
-        {
-            if (_template == null) return;
-            var targets = NudgeRunner.ResolveTargets(_selectedElements, _selectedElement);
-            if (targets.Count == 0) return;
-            PushUndo();
-            ElementDeleter.DeleteFromBands(_template.Bands, targets);
-            _selectedElements.Clear();
-            _selectedElement = null;
-            MarkDirty();
-            RefreshUI();
-        }
+        // ClipboardAndUndo: methods moved to MainWindow.ClipboardAndUndo.cs
 
-        private void CutSelected()
-        {
-            if (_selectedElement == null) return;
-            CopySelected();
-            DeleteSelected();
-        }
+        // ClipboardAndUndo: methods moved to MainWindow.ClipboardAndUndo.cs
 
-        private void CopySelected()
-        {
-            if (_selectedElement == null) return;
-            _clipboardJson = ClipboardHelper.SerializeElement(_selectedElement, _parser);
-            _statusText.Text = "已复制元素";
-        }
+        // ClipboardAndUndo: methods moved to MainWindow.ClipboardAndUndo.cs
 
-        private void PasteElement()
-        {
-            if (_clipboardJson == null || _template == null) return;
-            var el = ClipboardPasteHelper.ParseAndOffset(_clipboardJson, _parser);
-            if (el == null) return;
-            InsertElement(el);
-            _statusText.Text = "已粘贴元素";
-        }
+        // ClipboardAndUndo: methods moved to MainWindow.ClipboardAndUndo.cs
 
         /// <summary>Ctrl+D 复制并偏移</summary>
-        private void DuplicateSelected()
-        {
-            if (_selectedElement == null || _template == null) return;
-            var band = _selectedBand ?? _template.Bands.FirstOrDefault();
-            if (band == null) return;
-            var newEl = ElementDuplicator.Duplicate(_selectedElement, _parser);
-            if (newEl == null) return;
-            PushUndo();
-            band.Elements.Add(newEl);
-            _selectedElement = newEl;
-            _selectedElements.Clear();
-            _selectedElements.Add(newEl);
-            MarkDirty();
-            RefreshUI();
-            _statusText.Text = "已复制元素 (Ctrl+D)";
-        }
+        // ClipboardAndUndo: methods moved to MainWindow.ClipboardAndUndo.cs
 
-        private void SelectAll()
-        {
-            if (_template == null) return;
-            _selectedElements.Clear();
-            var band = _selectedBand ?? _template.Bands.FirstOrDefault();
-            if (band != null)
-            {
-                foreach (var el in band.Elements)
-                    _selectedElements.Add(el);
-                if (_selectedElements.Count > 0)
-                    _selectedElement = _selectedElements[0];
-                _selectedBand = band;
-            }
-            RefreshUI();
-        }
+        // ClipboardAndUndo: methods moved to MainWindow.ClipboardAndUndo.cs
 
         private void DeleteBand(Band band)
         {
@@ -1206,54 +960,11 @@ namespace ReportEngine.Designer.Wpf
             RefreshUI();
         }
 
-        internal void PushUndo()
-        {
-            if (_template == null) return;
-            try
-            {
-                var json = _parser.Serialize(_template);
-                _undoStack.Add(json);
-                if (_undoStack.Count > MaxUndo) _undoStack.RemoveAt(0);
-                _redoStack.Clear();
-            }
-            catch { }
-        }
+        // ClipboardAndUndo: methods moved to MainWindow.ClipboardAndUndo.cs
 
-        private void Undo()
-        {
-            if (_undoStack.Count == 0 || _template == null) return;
-            try
-            {
-                _redoStack.Add(_parser.Serialize(_template));
-                var json = _undoStack[_undoStack.Count - 1];
-                _undoStack.RemoveAt(_undoStack.Count - 1);
-                _template = _parser.Parse(json);
-                _selectedElement = null;
-                _selectedBand = null;
-                _dirty = true;
-                RefreshUI();
-                _statusText.Text = "已撤销";
-            }
-            catch { }
-        }
+        // ClipboardAndUndo: methods moved to MainWindow.ClipboardAndUndo.cs
 
-        private void Redo()
-        {
-            if (_redoStack.Count == 0 || _template == null) return;
-            try
-            {
-                _undoStack.Add(_parser.Serialize(_template));
-                var json = _redoStack[_redoStack.Count - 1];
-                _redoStack.RemoveAt(_redoStack.Count - 1);
-                _template = _parser.Parse(json);
-                _selectedElement = null;
-                _selectedBand = null;
-                _dirty = true;
-                RefreshUI();
-                _statusText.Text = "已重做";
-            }
-            catch { }
-        }
+        // ClipboardAndUndo: methods moved to MainWindow.ClipboardAndUndo.cs
 
         // ============================== 元素工厂 ==============================
 
@@ -1271,26 +982,7 @@ namespace ReportEngine.Designer.Wpf
         }
 
         /// <summary>更新撤销/重做按钮的启用状态</summary>
-        private void UpdateUndoRedoButtons()
-        {
-            if (_undoBtn != null)
-                _undoBtn.IsEnabled = _undoStack.Count > 0;
-            if (_redoBtn != null)
-                _redoBtn.IsEnabled = _redoStack.Count > 0;
-            
-            // 剪切/复制/删除：需要选中元素
-            bool hasSelection = _selectedElement != null;
-            if (_cutBtn != null)
-                _cutBtn.IsEnabled = hasSelection;
-            if (_copyBtn != null)
-                _copyBtn.IsEnabled = hasSelection;
-            if (_deleteBtn != null)
-                _deleteBtn.IsEnabled = hasSelection;
-            
-            // 粘贴：需要剪贴板有内容
-            if (_pasteBtn != null)
-                _pasteBtn.IsEnabled = _clipboardJson != null;
-        }
+        // ClipboardAndUndo: methods moved to MainWindow.ClipboardAndUndo.cs
 
         private void UpdateStatusInfo()
         {
@@ -1304,129 +996,25 @@ namespace ReportEngine.Designer.Wpf
             if (parts.Count > 0) _statusText.Text = string.Join(" | ", parts);
         }
 
-        private void UpdateBandTree()
-        {
-            _bandTree.Items.Clear();
-            if (_template == null) return;
-            foreach (var band in _template.Bands)
-            {
-                var node = new TreeViewItem
-                {
-                    Header = BandIcon(band.Type) + " " + Name(band.Type) + " (" + band.Height + "mm)",
-                    Tag = band,
-                    Foreground = Brushes.Black,
-                    IsExpanded = true,
-                    HorizontalContentAlignment = HorizontalAlignment.Left,
-                    VerticalContentAlignment = VerticalAlignment.Center,
-                };
-                // Band 右键菜单
-                node.ContextMenu = BuildBandTreeContextMenu(band);
+        // BandTreeAndProperties: methods moved to MainWindow.BandTreeAndProperties.cs
 
-                foreach (var el in band.Elements)
-                {
-                    string icon = ElementIcon(el);
-                    string elLabel = ElementTreeLabelBuilder.BuildLabel(el);
-                    string lockIcon = el.Locked ? " 🔒" : "";
-                    var child = new TreeViewItem { Header = icon + " " + elLabel + lockIcon, Tag = el, Foreground = el.Locked ? Brushes.Gray : Brushes.DimGray, HorizontalContentAlignment = HorizontalAlignment.Left, VerticalContentAlignment = VerticalAlignment.Center };
-                    // 元素右键菜单
-                    child.ContextMenu = BuildElementTreeContextMenu(el, band);
-                    node.Items.Add(child);
-                }
-                _bandTree.Items.Add(node);
-            }
-        }
+        // BandTreeAndProperties: methods moved to MainWindow.BandTreeAndProperties.cs
 
-        private ContextMenu BuildBandTreeContextMenu(Band band)
-        {
-            return BandTreeContextMenuBuilder.Build(
-                band,
-                onInsertText: () => { _selectedBand = band; InsertElement(NewText()); },
-                onInsertFieldBox: () => { _selectedBand = band; InsertElement(NewFieldBox()); },
-                onInsertSummaryBox: () => { _selectedBand = band; InsertElement(NewSummaryBox()); },
-                onInsertSysVarBox: () => { _selectedBand = band; InsertElement(NewSysVarBox()); },
-                onInsertLine: () => { _selectedBand = band; InsertElement(NewLine()); },
-                onInsertShape: () => { _selectedBand = band; InsertElement(NewShape()); },
-                onInsertImage: () => { _selectedBand = band; InsertElement(NewImage()); },
-                onDelete: () => DeleteBand(band));
-        }
-
-        private ContextMenu BuildElementTreeContextMenu(ReportElement el, Band band)
-        {
-            return ElementTreeContextMenuBuilder.Build(
-                isLocked: el.Locked,
-                onSelect: () => { _selectedElement = el; _selectedBand = band; _selectedElements.Clear(); _selectedElements.Add(el); RefreshUI(); },
-                onCopy: () => { _selectedElement = el; _selectedBand = band; CopySelected(); },
-                onCut: () => { _selectedElement = el; _selectedBand = band; CutSelected(); },
-                onDelete: () => { _selectedElement = el; _selectedBand = band; DeleteSelected(); },
-                onRename: () => ShowRenameDialog(el),
-                onToggleLock: () => { PushUndo(); el.Locked = !el.Locked; MarkDirty(); RefreshUI(); },
-                onBringToFront: () => { _selectedElement = el; _selectedBand = band; MoveElementOrder("front"); },
-                onSendToBack: () => { _selectedElement = el; _selectedBand = band; MoveElementOrder("back"); });
-        }
+        // BandTreeAndProperties: methods moved to MainWindow.BandTreeAndProperties.cs
 
         /// <summary>弹出重命名对话框</summary>
-        private void ShowRenameDialog(ReportElement el)
-        {
-            RenameDialog.Show(this, el, name => { PushUndo(); el.Name = string.IsNullOrEmpty(name) ? null : name; MarkDirty(); RefreshUI(); });
-        }
+        // BandTreeAndProperties: methods moved to MainWindow.BandTreeAndProperties.cs
 
         private bool _updatingProps;
 
-        private void UpdatePropertyList()
-        {
-            if (_updatingProps) return;
-            _updatingProps = true;
-            try
-            {
-                UpdatePropertyListCore();
-            }
-            finally { _updatingProps = false; }
-        }
+        // BandTreeAndProperties: methods moved to MainWindow.BandTreeAndProperties.cs
 
-        private void UpdatePropertyListCore()
-        {
-            _propertyStack.Children.Clear();
-            using var ctx = new PropertyRowContext(_propertyStack);
-            if (_template == null) return;
-
-            // 更新选中对象标签 + 同步字体工具栏
-            SelectionStatusUpdater.Sync(_selectedObjLabel, _fontFamilyCombo, _fontSizeCombo, _selectedElement, _selectedBand);
-
-            // 未选中任何 Band / 元素时显示页面级属性
-            if (_selectedBand == null && _selectedElement == null)
-            {
-                PagePropertySectionBuilder.Build(ctx, _template, this);
-                return;
-            }
-
-            // Band 属性（仅当没有选中元素时才显示）
-            if (_selectedBand != null && _selectedElement == null)
-            {
-                BandPropertySectionBuilder.Build(ctx, _selectedBand, this);
-            }
-
-            // 元素属性
-            if (_selectedElement != null)
-            {
-                // 多选批量编辑模式
-                if (_selectedElements.Count > 1)
-                {
-                    UpdateMultiSelectProperties();
-                    return;
-                }
-
-                PropertySectionBuilder.BuildElementProperties(ctx, _selectedElement, this);
-            }
-        }
+        // BandTreeAndProperties: methods moved to MainWindow.BandTreeAndProperties.cs
 
         // ============================== 属性面板辅助 ==============================
 
         /// <summary>多选批量编辑属性面板</summary>
-        private void UpdateMultiSelectProperties()
-        {
-            using var ctx = new PropertyRowContext(_propertyStack);
-            MultiSelectPropertySectionBuilder.Build(ctx, this);
-        }
+        // BandTreeAndProperties: methods moved to MainWindow.BandTreeAndProperties.cs
 
         // ============================== 其他 ==============================
 
@@ -1502,83 +1090,26 @@ namespace ReportEngine.Designer.Wpf
 
         // ============================== 页面设置弹窗 ==============================
 
-        internal void ShowPageSetupDialog()
-        {
-            if (_template == null) return;
-            PageSetupDialog.Show(this, _template, () => {
-                PushUndo(); MarkDirty(); RefreshUI();
-            });
-        }
+        // MenuAndDialogs: methods moved to MainWindow.MenuAndDialogs.cs
 
         // ============================== 数据源管理 ==============================
 
         /// <summary>"加载预览数据" 菜单回调: 调用 LoadPreviewDataDialog 弹窗 + 应用副作用。</summary>
-        private void OnLoadPreviewDataClicked()
-        {
-            LoadPreviewDataDialog.Show(this,
-                onLoaded: (parsed, fileName) =>
-                {
-                    _previewData = parsed;
-                    _statusText.Text = "已加载预览数据: " + fileName + " (" + (_previewData?.Count ?? 0) + " 个字段)";
-                    if (_viewMode == "preview") _previewRenderer.Render(_template!, _zoom, _previewData);
-                });
-        }
+        // MenuAndDialogs: methods moved to MainWindow.MenuAndDialogs.cs
 
         /// <summary>搜索元素对话框</summary>
-        private void SearchElement()
-        {
-            SearchElementDialog.Show(this, _template,
-                onFound: (found, foundBand) =>
-                {
-                    _selectedElement = found;
-                    _selectedBand = foundBand;
-                    _selectedElements.Clear();
-                    _selectedElements.Add(found);
-                    RefreshUI();
-                    _statusText.Text = "已找到: " + (found.Name ?? found.GetType().Name);
-                },
-                onNotFound: () => _statusText.Text = "未找到匹配的元素");
-        }
+        // MenuAndDialogs: methods moved to MainWindow.MenuAndDialogs.cs
 
         /// <summary>构建导出数据：如果有预览数据则使用，否则返回空</summary>
 
-        private void ShowGridSettingsDialog()
-        {
-            GridSettingsDialog.Show(this, _gridSpacingMm,
-                newSpacing =>
-                {
-                    _gridSpacingMm = newSpacing;
-                    _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand);
-                });
-        }
+        // MenuAndDialogs: methods moved to MainWindow.MenuAndDialogs.cs
 
-        private void OnShowDataSourceClicked()
-        {
-            DataSourceDialog.Show(this, _template, () => { PushUndo(); MarkDirty(); });
-        }
+        // MenuAndDialogs: methods moved to MainWindow.MenuAndDialogs.cs
 
         /// <summary>数据绑定向导 — 引导用户选择数据源并绑定字段到元素</summary>
-        private void OnShowDataBindingWizardClicked()
-        {
-            DataBindingWizardLauncher.Launch(this, _template, _selectedElement,
-                setStatus: s => _statusText.Text = s,
-                onCommit: (propChoice, expression) =>
-                {
-                    if (_selectedElement == null) return;
-                    PushUndo();
-                    DataBindingApplier.Apply(_selectedElement, propChoice, expression);
-                    MarkDirty();
-                    RefreshUI();
-                    _statusText.Text = "已绑定: " + expression;
-                });
-        }
+        // MenuAndDialogs: methods moved to MainWindow.MenuAndDialogs.cs
 
-        private void OnShowTemplateParamsClicked()
-        {
-            if (_template == null) return;
-            TemplateParamsDialog.Show(this, _template,
-                () => { PushUndo(); MarkDirty(); });
-        }
+        // MenuAndDialogs: methods moved to MainWindow.MenuAndDialogs.cs
 
         // ============================== RelayCmd ==============================
 
