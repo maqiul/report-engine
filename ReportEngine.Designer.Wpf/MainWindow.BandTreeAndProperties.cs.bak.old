@@ -1,0 +1,138 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using ReportEngine.Core;
+using static ReportEngine.Designer.Wpf.EnumCnMap;
+
+namespace ReportEngine.Designer.Wpf
+{
+    public partial class MainWindow
+    {
+        // ============================== 带树 ==============================
+
+        private void UpdateBandTree()
+        {
+            _bandTree.Items.Clear();
+            if (_template == null) return;
+            foreach (var band in _template.Bands)
+            {
+                var node = new TreeViewItem
+                {
+                    Header = BandIcon(band.Type) + " " + Name(band.Type) + " (" + band.Height + "mm)",
+                    Tag = band,
+                    Foreground = Brushes.Black,
+                    IsExpanded = true,
+                    HorizontalContentAlignment = HorizontalAlignment.Left,
+                    VerticalContentAlignment = VerticalAlignment.Center,
+                };
+                // Band 右键菜单
+                node.ContextMenu = BuildBandTreeContextMenu(band);
+
+                foreach (var el in band.Elements)
+                {
+                    string icon = ElementIcon(el);
+                    string elLabel = ElementTreeLabelBuilder.BuildLabel(el);
+                    string lockIcon = el.Locked ? " 🔒" : "";
+                    var child = new TreeViewItem { Header = icon + " " + elLabel + lockIcon, Tag = el, Foreground = el.Locked ? Brushes.Gray : Brushes.DimGray, HorizontalContentAlignment = HorizontalAlignment.Left, VerticalContentAlignment = VerticalAlignment.Center };
+                    // 元素右键菜单
+                    child.ContextMenu = BuildElementTreeContextMenu(el, band);
+                    node.Items.Add(child);
+                }
+                _bandTree.Items.Add(node);
+            }
+        }
+
+        private ContextMenu BuildBandTreeContextMenu(Band band)
+        {
+            return BandTreeContextMenuBuilder.Build(
+                band,
+                onInsertText: () => { _selectedBand = band; InsertElement(NewText()); },
+                onInsertFieldBox: () => { _selectedBand = band; InsertElement(NewFieldBox()); },
+                onInsertSummaryBox: () => { _selectedBand = band; InsertElement(NewSummaryBox()); },
+                onInsertSysVarBox: () => { _selectedBand = band; InsertElement(NewSysVarBox()); },
+                onInsertLine: () => { _selectedBand = band; InsertElement(NewLine()); },
+                onInsertShape: () => { _selectedBand = band; InsertElement(NewShape()); },
+                onInsertImage: () => { _selectedBand = band; InsertElement(NewImage()); },
+                onInsertTable: () => { _selectedBand = band; InsertElement(NewTable()); },
+                onInsertChart: () => { _selectedBand = band; InsertElement(NewChart()); },
+                onInsertBarcode: () => { _selectedBand = band; InsertElement(NewBarcode()); },
+                onInsertCrossTab: () => { _selectedBand = band; InsertElement(NewCrossTab()); },
+                onInsertSubReport: () => { _selectedBand = band; InsertElement(NewSubReport()); },
+                onDeleteBand: () => BandDeleter.Delete(_template!, band, () => { _selectedBand = null; _selectedElement = null; MarkDirty(); RefreshUI(); }),
+                onAddBandBelow: () => { InsertBandAfter(band); RefreshUI(); });
+        }
+
+        private ContextMenu BuildElementTreeContextMenu(ReportElement el, Band band)
+        {
+            return ElementTreeContextMenuBuilder.Build(
+                el, band,
+                onDelete: () => { DeleteSelected(); },
+                onDuplicate: () => { DuplicateSelected(); },
+                onBringToFront: () => MoveElementOrder("front"),
+                onSendToBack: () => MoveElementOrder("back"),
+                onEditExpression: () =>
+                {
+                    if (el is TextElement textEl)
+                    {
+                        PushUndo();
+                        ExpressionEditorDialog.Show(this, textEl, () => { MarkDirty(); RefreshUI(); });
+                    }
+                },
+                onRename: () => ShowRenameDialog(el));
+        }
+
+        private void ShowRenameDialog(ReportElement el)
+        {
+            RenameDialog.Show(this, el, () => { MarkDirty(); RefreshUI(); });
+        }
+
+        // ============================== 属性列表 ==============================
+
+        private void UpdatePropertyList()
+        {
+            _propertyStack.Children.Clear();
+            if (_template == null) return;
+
+            if (_selectedElements.Count > 1)
+            {
+                UpdateMultiSelectProperties();
+                return;
+            }
+
+            if (_selectedElement == null && _selectedBand == null)
+            {
+                // 页面属性
+                PropertySectionBuilder.AddPageSection(_propertyStack, _template.Page, () => { MarkDirty(); RefreshUI(); });
+                return;
+            }
+
+            if (_selectedBand != null && _selectedElement == null)
+            {
+                PropertySectionBuilder.AddBandSection(_propertyStack, _selectedBand, () => { MarkDirty(); RefreshUI(); });
+                return;
+            }
+
+            if (_selectedElement != null)
+            {
+                UpdatePropertyListCore();
+            }
+        }
+
+        private void UpdatePropertyListCore()
+        {
+            if (_selectedElement == null) return;
+            PropertySectionBuilder.AddElementSection(_propertyStack, _selectedElement, _template!, () => { MarkDirty(); RefreshUI(); });
+        }
+
+        private void UpdateMultiSelectProperties()
+        {
+            MultiSelectPropertySectionBuilder.Build(
+                _propertyStack,
+                _selectedElements,
+                onApply: () => { PushUndo(); MarkDirty(); RefreshUI(); });
+        }
+    }
+}

@@ -1,0 +1,168 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using ReportEngine.Core;
+
+namespace ReportEngine.Designer.Wpf
+{
+    public partial class MainWindow
+    {
+        // ============================== 菜单栏 ==============================
+
+        private Menu BuildMenu()
+        {
+            var menu = new Menu { Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(240, 240, 240)) };
+
+            // 文件
+            var file = new MenuItem { Header = "文件(_F)" };
+            file.Items.Add(MakeMenuItem("新建", "Ctrl+N", NewTemplate));
+            file.Items.Add(MakeMenuItem("打开...", "Ctrl+O", OpenTemplate));
+            file.Items.Add(MakeMenuItem("保存", "Ctrl+S", () => SaveTemplate(false)));
+            file.Items.Add(MakeMenuItem("另存为...", null, () => SaveTemplate(true)));
+            file.Items.Add(new Separator());
+            // 最近文件
+            var recent = new MenuItem { Header = "最近文件" };
+            _recentFilesMenu = recent;
+            RefreshRecentFiles();
+            file.Items.Add(recent);
+            file.Items.Add(new Separator());
+            file.Items.Add(MakeMenuItem("页面设置...", null, ShowPageSetupDialog));
+            file.Items.Add(new Separator());
+            file.Items.Add(MakeMenuItem("导出PDF...", null, ExportPdf));
+            file.Items.Add(MakeMenuItem("导出Excel...", null, ExportExcel));
+            file.Items.Add(MakeMenuItem("导出PNG...", null, ExportPng));
+            file.Items.Add(MakeMenuItem("批量导出(PDF+Excel+PNG)...", null, ExportBatch));
+            file.Items.Add(new Separator());
+            file.Items.Add(MakeMenuItem("退出", null, () => Close()));
+            menu.Items.Add(file);
+
+            // 编辑
+            var edit = new MenuItem { Header = "编辑(_E)" };
+            edit.Items.Add(MakeMenuItem("撤销", "Ctrl+Z", Undo));
+            edit.Items.Add(MakeMenuItem("重做", "Ctrl+Y", Redo));
+            edit.Items.Add(new Separator());
+            edit.Items.Add(MakeMenuItem("剪切", "Ctrl+X", CutSelected));
+            edit.Items.Add(MakeMenuItem("复制", "Ctrl+C", CopySelected));
+            edit.Items.Add(MakeMenuItem("粘贴", "Ctrl+V", PasteElement));
+            edit.Items.Add(MakeMenuItem("复制元素", "Ctrl+D", DuplicateSelected));
+            edit.Items.Add(MakeMenuItem("删除", "Del", DeleteSelected));
+            edit.Items.Add(new Separator());
+            edit.Items.Add(MakeMenuItem("全选", "Ctrl+A", SelectAll));
+            edit.Items.Add(MakeMenuItem("查找元素...", "Ctrl+F", SearchElement));
+            menu.Items.Add(edit);
+
+            // 视图
+            var view = new MenuItem { Header = "视图(_V)" };
+            var showGrid = new MenuItem { Header = "显示网格", IsChecked = _showGrid, IsCheckable = true };
+            showGrid.Click += (s, e) => { _showGrid = showGrid.IsChecked == true; RefreshUI(); };
+            view.Items.Add(showGrid);
+            view.Items.Add(MakeMenuItem("网格设置...", null, ShowGridSettingsDialog));
+            view.Items.Add(new Separator());
+            var showRuler = new MenuItem { Header = "显示标尺", IsChecked = true, IsCheckable = true };
+            showRuler.Click += (s, e) =>
+            {
+                bool show = showRuler.IsChecked == true;
+                if (_hRulerParent != null) _hRulerParent.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+                if (_vRulerParent != null) _vRulerParent.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+            };
+            view.Items.Add(showRuler);
+            var showProperty = new MenuItem { Header = "显示属性面板", IsChecked = true, IsCheckable = true };
+            showProperty.Click += (s, e) =>
+            {
+                bool show = showProperty.IsChecked == true;
+                if (_rightPanel != null) _rightPanel.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+            };
+            view.Items.Add(showProperty);
+            view.Items.Add(new Separator());
+            view.Items.Add(MakeMenuItem("参考线管理...", null, () => GuideListEditor.Show(this, _hGuides, _vGuides, () => RefreshUI())));
+            menu.Items.Add(view);
+
+            // 数据
+            var data = new MenuItem { Header = "数据(_D)" };
+            data.Items.Add(MakeMenuItem("数据源管理...", null, OnShowDataSourceClicked));
+            data.Items.Add(MakeMenuItem("数据绑定向导...", null, OnShowDataBindingWizardClicked));
+            data.Items.Add(MakeMenuItem("模板参数...", null, OnShowTemplateParamsClicked));
+            data.Items.Add(MakeMenuItem("加载预览数据...", null, OnLoadPreviewDataClicked));
+            menu.Items.Add(data);
+
+            // 帮助
+            var help = new MenuItem { Header = "帮助(_H)" };
+            help.Items.Add(MakeMenuItem("快捷键...", "F1", () => ShortcutsDialog.Show(this)));
+            help.Items.Add(MakeMenuItem("关于...", null, () => AboutDialog.Show(this)));
+            menu.Items.Add(help);
+
+            return menu;
+        }
+
+        // ============================== 对话框启动器 ==============================
+
+        private void ShowPageSetupDialog()
+        {
+            if (_template == null) return;
+            PushUndo();
+            PageSetupDialog.Show(this, _template.Page, () => { MarkDirty(); RefreshUI(); });
+        }
+
+        private void OnLoadPreviewDataClicked()
+        {
+            LoadPreviewDataDialog.Show(this, data =>
+            {
+                _previewData = data;
+                _statusText.Text = "预览数据已加载 (" + data.Count + " 行)";
+            });
+        }
+
+        private void SearchElement()
+        {
+            if (_template == null) return;
+            SearchElementDialog.Show(this, _template, (band, el) =>
+            {
+                _selectedBand = band;
+                _selectedElement = el;
+                _selectedElements.Clear();
+                _selectedElements.Add(el);
+                RefreshUI();
+            });
+        }
+
+        private void ShowGridSettingsDialog()
+        {
+            GridSettingsDialog.Show(this, _gridSpacingMm, _gridColor, _snapEnabled,
+                (spacing, color, snap) =>
+                {
+                    _gridSpacingMm = spacing;
+                    _gridColor = color;
+                    _snapEnabled = snap;
+                    RefreshUI();
+                });
+        }
+
+        private void OnShowDataSourceClicked()
+        {
+            if (_template == null) return;
+            PushUndo();
+            DataSourceDialog.Show(this, _template, () => { MarkDirty(); RefreshUI(); });
+        }
+
+        private void OnShowDataBindingWizardClicked()
+        {
+            if (_template == null || _selectedElement == null)
+            {
+                _statusText.Text = "请先选中一个元素";
+                return;
+            }
+            PushUndo();
+            DataBindingWizardLauncher.Launch(this, _template, _selectedElement, () => { MarkDirty(); RefreshUI(); });
+        }
+
+        private void OnShowTemplateParamsClicked()
+        {
+            if (_template == null) return;
+            PushUndo();
+            TemplateParamsDialog.Show(this, _template, () => { MarkDirty(); RefreshUI(); });
+        }
+    }
+}

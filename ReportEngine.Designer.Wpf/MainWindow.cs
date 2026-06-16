@@ -187,56 +187,20 @@ namespace ReportEngine.Designer.Wpf
             CheckAutoSaveRecovery();
         }
 
-        // LayoutBuilders: methods moved to MainWindow.LayoutBuilders.cs
-
         // ============================== 布局 ==============================
 
         // 字体工具栏组件
         private ComboBox _fontFamilyCombo = null!;
         private ComboBox _fontSizeCombo = null!;
 
-        // LayoutBuilders: methods moved to MainWindow.LayoutBuilders.cs
-
-        // LayoutBuilders: methods moved to MainWindow.LayoutBuilders.cs
-
-        // LayoutBuilders: methods moved to MainWindow.LayoutBuilders.cs
-
         private Border _tabDesign = null!;
         private Border _tabPreview = null!;
 
-        // FontAndAlignToolBar: methods moved to MainWindow.FontAndAlignToolBar.cs
-
-        // FontAndAlignToolBar: methods moved to MainWindow.FontAndAlignToolBar.cs
-
-        // FontAndAlignToolBar: methods moved to MainWindow.FontAndAlignToolBar.cs
-
-        // FontAndAlignToolBar: methods moved to MainWindow.FontAndAlignToolBar.cs
-
-        // FontAndAlignToolBar: methods moved to MainWindow.FontAndAlignToolBar.cs
-
-        // FontAndAlignToolBar: methods moved to MainWindow.FontAndAlignToolBar.cs
-
-        // FontAndAlignToolBar: methods moved to MainWindow.FontAndAlignToolBar.cs
-
-        // FontAndAlignToolBar: methods moved to MainWindow.FontAndAlignToolBar.cs
-
-        // FontAndAlignToolBar: methods moved to MainWindow.FontAndAlignToolBar.cs
-
         /// <summary>组合选中的元素为一组</summary>
-        // FontAndAlignToolBar: methods moved to MainWindow.FontAndAlignToolBar.cs
-
         /// <summary>取消选中元素的分组</summary>
-        // FontAndAlignToolBar: methods moved to MainWindow.FontAndAlignToolBar.cs
-
         /// <summary>启动格式刷：复制当前选中元素的样式</summary>
-        // FontAndAlignToolBar: methods moved to MainWindow.FontAndAlignToolBar.cs
-
         /// <summary>应用格式刷到目标元素</summary>
-        // FontAndAlignToolBar: methods moved to MainWindow.FontAndAlignToolBar.cs
-
         /// <summary>关闭格式刷</summary>
-        // FontAndAlignToolBar: methods moved to MainWindow.FontAndAlignToolBar.cs
-
         /// <summary>设置自动保存定时器：每60秒自动保存一次草稿</summary>
         private void SetupAutoSave()
         {
@@ -277,157 +241,35 @@ namespace ReportEngine.Designer.Wpf
         }
 
         /// <summary>重置选中元素的属性为默认值</summary>
-        // StatusAndRefresh: methods moved to MainWindow.StatusAndRefresh.cs
-
-        // LayoutBuilders: methods moved to MainWindow.LayoutBuilders.cs
-
-        // LayoutBuilders: methods moved to MainWindow.LayoutBuilders.cs
-
-        // LayoutBuilders: methods moved to MainWindow.LayoutBuilders.cs
-
         private TextBlock _selectedObjLabel = null!;
 
-        // MenuAndDialogs: methods moved to MainWindow.MenuAndDialogs.cs
-
-        // KeyboardAndView: methods moved to MainWindow.KeyboardAndView.cs
-
-        // KeyboardAndView: methods moved to MainWindow.KeyboardAndView.cs
-
-        // KeyboardAndView: methods moved to MainWindow.KeyboardAndView.cs
-
         // ============================== 画布渲染 ==============================
-
-        // KeyboardAndView: methods moved to MainWindow.KeyboardAndView.cs
 
         // ============================== 标尺 ==============================
 
         // ============================== 标尺参考线拖拽 ==============================
 
-        // RulerAndGuideHandlers: methods moved to MainWindow.RulerAndGuideHandlers.cs
-
-        // RulerAndGuideHandlers: methods moved to MainWindow.RulerAndGuideHandlers.cs
-
-        // RulerAndGuideHandlers: methods moved to MainWindow.RulerAndGuideHandlers.cs
-
-        // RulerAndGuideHandlers: methods moved to MainWindow.RulerAndGuideHandlers.cs
-
-        // CanvasMouseHandlers: methods moved to MainWindow.CanvasMouseHandlers.cs
-
         /// <summary>开始 drag：设 _dragMode + _dragStart + CaptureMouse。OnCanvasMouseDown 4 个 start 模式共享。</summary>
-        // CanvasMouseHandlers: methods moved to MainWindow.CanvasMouseHandlers.cs
-
-        // CanvasMouseHandlers: methods moved to MainWindow.CanvasMouseHandlers.cs
-
-        // CanvasMouseHandlers: methods moved to MainWindow.CanvasMouseHandlers.cs
-
-        // CanvasMouseHandlers: methods moved to MainWindow.CanvasMouseHandlers.cs
-
-        // CanvasMouseHandlers: methods moved to MainWindow.CanvasMouseHandlers.cs
-
 
         // ============================== 文件操作 ==============================
 
-        // FileOperations: methods moved to MainWindow.FileOperations.cs
-
-        // FileOperations: methods moved to MainWindow.FileOperations.cs
-
-        // FileOperations: methods moved to MainWindow.FileOperations.cs
-
-        // FileOperations: methods moved to MainWindow.FileOperations.cs
-
-        // FileOperations: methods moved to MainWindow.FileOperations.cs
-
         /// <summary>导出当前画布为PNG图片</summary>
-        // FileOperations: methods moved to MainWindow.FileOperations.cs
-
         /// <summary>批量导出PDF+Excel到同一目录</summary>
-        // FileOperations: methods moved to MainWindow.FileOperations.cs
-
-        // RecentFilesAndMisc: methods moved to MainWindow.RecentFilesAndMisc.cs
-
-        // RecentFilesAndMisc: methods moved to MainWindow.RecentFilesAndMisc.cs
-
-        // RecentFilesAndMisc: methods moved to MainWindow.RecentFilesAndMisc.cs
-
-        // RecentFilesAndMisc: methods moved to MainWindow.RecentFilesAndMisc.cs
-
-        // RecentFilesAndMisc: methods moved to MainWindow.RecentFilesAndMisc.cs
-
         // ============================== 元素操作 ==============================
 
-        // BandOperations: methods moved to MainWindow.BandOperations.cs
-
-        // BandOperations: methods moved to MainWindow.BandOperations.cs
-
-        // CanvasMouseHandlers: methods moved to MainWindow.CanvasMouseHandlers.cs
-
-        // ClipboardAndUndo: methods moved to MainWindow.ClipboardAndUndo.cs
-
-        // ClipboardAndUndo: methods moved to MainWindow.ClipboardAndUndo.cs
-
-        // ClipboardAndUndo: methods moved to MainWindow.ClipboardAndUndo.cs
-
-        // ClipboardAndUndo: methods moved to MainWindow.ClipboardAndUndo.cs
-
         /// <summary>Ctrl+D 复制并偏移</summary>
-        // ClipboardAndUndo: methods moved to MainWindow.ClipboardAndUndo.cs
-
-        // ClipboardAndUndo: methods moved to MainWindow.ClipboardAndUndo.cs
-
-        // BandOperations: methods moved to MainWindow.BandOperations.cs
-
-        // BandOperations: methods moved to MainWindow.BandOperations.cs
-
-        // BandOperations: methods moved to MainWindow.BandOperations.cs
-
-        // BandOperations: methods moved to MainWindow.BandOperations.cs
-
-        // ClipboardAndUndo: methods moved to MainWindow.ClipboardAndUndo.cs
-
-        // ClipboardAndUndo: methods moved to MainWindow.ClipboardAndUndo.cs
-
-        // ClipboardAndUndo: methods moved to MainWindow.ClipboardAndUndo.cs
-
         // ============================== 元素工厂 ==============================
 
         // ============================== 刷新 ==============================
 
-        // StatusAndRefresh: methods moved to MainWindow.StatusAndRefresh.cs
-
         /// <summary>更新撤销/重做按钮的启用状态</summary>
-        // ClipboardAndUndo: methods moved to MainWindow.ClipboardAndUndo.cs
-
-        // StatusAndRefresh: methods moved to MainWindow.StatusAndRefresh.cs
-
-        // BandTreeAndProperties: methods moved to MainWindow.BandTreeAndProperties.cs
-
-        // BandTreeAndProperties: methods moved to MainWindow.BandTreeAndProperties.cs
-
-        // BandTreeAndProperties: methods moved to MainWindow.BandTreeAndProperties.cs
-
         /// <summary>弹出重命名对话框</summary>
-        // BandTreeAndProperties: methods moved to MainWindow.BandTreeAndProperties.cs
-
         private bool _updatingProps;
-
-        // BandTreeAndProperties: methods moved to MainWindow.BandTreeAndProperties.cs
-
-        // BandTreeAndProperties: methods moved to MainWindow.BandTreeAndProperties.cs
 
         // ============================== 属性面板辅助 ==============================
 
         /// <summary>多选批量编辑属性面板</summary>
-        // BandTreeAndProperties: methods moved to MainWindow.BandTreeAndProperties.cs
-
         // ============================== 其他 ==============================
-
-        // StatusAndRefresh: methods moved to MainWindow.StatusAndRefresh.cs
-
-        // StatusAndRefresh: methods moved to MainWindow.StatusAndRefresh.cs
-
-        // StatusAndRefresh: methods moved to MainWindow.StatusAndRefresh.cs
-
-        // StatusAndRefresh: methods moved to MainWindow.StatusAndRefresh.cs
 
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
         {
@@ -439,27 +281,13 @@ namespace ReportEngine.Designer.Wpf
 
         // ============================== 页面设置弹窗 ==============================
 
-        // MenuAndDialogs: methods moved to MainWindow.MenuAndDialogs.cs
-
         // ============================== 数据源管理 ==============================
 
         /// <summary>"加载预览数据" 菜单回调: 调用 LoadPreviewDataDialog 弹窗 + 应用副作用。</summary>
-        // MenuAndDialogs: methods moved to MainWindow.MenuAndDialogs.cs
-
         /// <summary>搜索元素对话框</summary>
-        // MenuAndDialogs: methods moved to MainWindow.MenuAndDialogs.cs
-
         /// <summary>构建导出数据：如果有预览数据则使用，否则返回空</summary>
 
-        // MenuAndDialogs: methods moved to MainWindow.MenuAndDialogs.cs
-
-        // MenuAndDialogs: methods moved to MainWindow.MenuAndDialogs.cs
-
         /// <summary>数据绑定向导 — 引导用户选择数据源并绑定字段到元素</summary>
-        // MenuAndDialogs: methods moved to MainWindow.MenuAndDialogs.cs
-
-        // MenuAndDialogs: methods moved to MainWindow.MenuAndDialogs.cs
-
         // ============================== RelayCmd ==============================
 
         private class RelayCmd : ICommand
