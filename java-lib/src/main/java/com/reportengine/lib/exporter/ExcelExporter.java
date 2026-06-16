@@ -258,8 +258,10 @@ public class ExcelExporter {
                 }
             }
             if (lastRow >= 0 && lastCol >= 0) {
-                // setPrintArea(sheetIndex, startColumn, startRow, endColumn, endRow)
-                workbook.setPrintArea(i, 0, 0, lastCol, lastRow);
+                // 用字符串方式设置打印区域，避免参数顺序问题
+                String colLetter = org.apache.poi.ss.util.CellReference.convertNumToColString(lastCol);
+                String printArea = "$A$1:$" + colLetter + "$" + (lastRow + 1);
+                workbook.setPrintArea(i, printArea);
             }
         }
     }
