@@ -2,35 +2,63 @@
 
 Web 版本的报表引擎，支持在线预览、打印、导出 PDF/Excel。
 
+##  Java 库 (可复用)
+
+核心渲染逻辑已抽成独立库 `java-lib`，其他项目可直接依赖：
+
+```groovy
+// Gradle
+implementation 'com.reportengine:java-lib:0.2.0'
+```
+
+```xml
+<!-- Maven -->
+<dependency>
+    <groupId>com.reportengine</groupId>
+    <artifactId>java-lib</artifactId>
+    <version>0.2.0</version>
+</dependency>
+```
+
+### 使用示例
+
+```java
+// 渲染报表
+ReportRenderer renderer = new ReportRenderer();
+RenderResponse response = renderer.render(request);
+
+// 导出 PDF
+PdfExporter pdfExporter = new PdfExporter();
+byte[] pdfBytes = pdfExporter.export(request);
+
+// 导出 Excel
+ExcelExporter excelExporter = new ExcelExporter();
+byte[] excelBytes = excelExporter.export(request);
+```
+
+### 发布到本地
+
+```bash
+cd java-lib
+../web/backend/gradlew.bat publishToMavenLocal
+```
+
 ## 📁 项目结构
 
 ```
-web/
-├── ReportEngine.WebApi/    # .NET 后端 (ASP.NET Core)
-│   ├── Controllers/
-│   │   ├── RenderController.cs   # 渲染预览 API
-│   │   └── ExportController.cs   # 导出 PDF/Excel API
-│   └── Models/
-│       └── RenderModels.cs       # 请求/响应模型
-├── backend/                # Java 后端 (Spring Boot)
-│   ├── build.gradle
-│   └── src/main/java/com/reportengine/
-│       ├── BackendApplication.java
-│       └── web/
-│           ├── controller/
-│           │   ├── RenderController.java   # 渲染预览 API
-│           │   └── ExportController.java   # 导出 PDF/Excel API
-│           └── model/
-│               ├── RenderRequest.java
-│               └── RenderResponse.java
-└── frontend/               # Vue 3 + TypeScript 前端
-    └── src/
-        ├── api/report.ts         # API 调用封装
-        └── components/
-            └── ReportViewer.vue  # 报表预览组件
+report-engine/
+├── java-lib/               # Java 核心库 (可复用)
+│   └── src/main/java/com/reportengine/lib/
+│       ├── renderer/ReportRenderer.java
+│       ├── exporter/{Pdf,Excel}Exporter.java
+│       └── model/{RenderRequest,RenderResponse}.java
+├── web/
+│   ├── ReportEngine.WebApi/    # .NET 后端
+│   ├── backend/                # Java 后端 (依赖 java-lib)
+│   └── frontend/               # Vue 3 前端
 ```
 
-## 🚀 快速开始
+##  快速开始
 
 ### 选择后端
 
@@ -200,7 +228,7 @@ viewerRef.value?.exportExcel()
 }
 ```
 
-## 🔧 开发
+##  开发
 
 ### .NET 后端开发
 
@@ -221,8 +249,7 @@ cd web/backend
 
 **Java 后端依赖：**
 - Spring Boot 4.1.0
-- iText 7（PDF 生成）
-- Apache POI（Excel 生成）
+- com.reportengine:java-lib:0.2.0
 
 ### 前端开发
 
@@ -234,7 +261,7 @@ npm run type-check   # 类型检查
 npm run lint         # 代码检查
 ```
 
-## 📦 部署
+##  部署
 
 ### .NET 后端
 
@@ -273,6 +300,7 @@ npm run build
 - [x] Excel 导出
 - [x] 浏览器打印
 - [x] Java Spring Boot 后端
+- [x] Java 核心库 (java-lib)
 - [ ] 模板在线编辑
 - [ ] 数据源配置界面
 - [ ] 模板管理（上传/下载/列表）
