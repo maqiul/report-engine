@@ -146,15 +146,10 @@ namespace ReportEngine.Designer.Wpf
 
         // ============================== 标尺参考线拖拽 ==============================
 
-        /// <summary>开始 drag：设 _dragMode + _dragStart + CaptureMouse。OnCanvasMouseDown 4 个 start 模式共享。</summary>
-
         // ============================== 文件操作 ==============================
 
-        /// <summary>导出当前画布为PNG图片</summary>
-        /// <summary>批量导出PDF+Excel到同一目录</summary>
         // ============================== 元素操作 ==============================
 
-        /// <summary>Ctrl+D 复制并偏移</summary>
         // ============================== 元素工厂 ==============================
 
         // ============================== 刷新 ==============================
@@ -165,7 +160,6 @@ namespace ReportEngine.Designer.Wpf
 
         // ============================== 属性面板辅助 ==============================
 
-        /// <summary>多选批量编辑属性面板</summary>
         // ============================== 其他 ==============================
 
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
@@ -180,11 +174,6 @@ namespace ReportEngine.Designer.Wpf
 
         // ============================== 数据源管理 ==============================
 
-        /// <summary>"加载预览数据" 菜单回调: 调用 LoadPreviewDataDialog 弹窗 + 应用副作用。</summary>
-        /// <summary>搜索元素对话框</summary>
-        /// <summary>构建导出数据：如果有预览数据则使用，否则返回空</summary>
-
-        /// <summary>数据绑定向导 — 引导用户选择数据源并绑定字段到元素</summary>
         // ============================== RelayCmd ==============================
 
     }
