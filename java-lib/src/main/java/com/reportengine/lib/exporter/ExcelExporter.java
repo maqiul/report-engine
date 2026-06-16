@@ -17,16 +17,18 @@ import java.io.ByteArrayOutputStream;
 import java.util.*;
 
 /**
- * Excel 导出器 - 按模板精确坐标布局
+ * Excel 导出器 - 按模板布局生成表格
  * 
- * 根据模板中每个元素的 x、y、width、height（mm）精确设置 Excel 的列宽和行高，
- * 最大程度还原模板的视觉效果。
+ * 策略：
+ * 1. 收集所有元素的 x 坐标 → 去重排序 → 作为列
+ * 2. 每个 band（或数据行）→ 作为一行
+ * 3. 元素按 x 坐标匹配到对应列
  */
 public class ExcelExporter {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     
-    // mm 转 Excel 列宽单位（1 字符宽度 ≈ 1.85mm，基于默认字体）
+    // mm 转 Excel 列宽单位（1 字符宽度 ≈ 1.85mm）
     private static final double MM_TO_COL_WIDTH = 1.0 / 1.85;
     // mm 转 Excel 行高单位（1pt = 0.353mm）
     private static final double MM_TO_ROW_HEIGHT = 1.0 / 0.353;
@@ -39,7 +41,7 @@ public class ExcelExporter {
         XSSFWorkbook workbook = new XSSFWorkbook();
         XSSFSheet sheet = workbook.createSheet("Report");
         
-        // 获取页面尺寸和边距
+        // 页面设置
         double pageWidth = 210, pageHeight = 297;
         double marginTop = 0, marginBottom = 0, marginLeft = 0, marginRight = 0;
         if (template.has("page")) {
@@ -55,195 +57,139 @@ public class ExcelExporter {
             }
         }
         
-        // 收集所有元素（包括数据展开后的）
-        List<ElementInfo> allElements = new ArrayList<>();
-        List<Double> xBoundaries = new ArrayList<>();
-        List<Double> yBoundaries = new ArrayList<>();
+        // 第一步：收集所有唯一的 x 坐标作为列边界
+        TreeSet<Double> xSet = new TreeSet<>();
+        xSet.add(marginLeft);
+        xSet.add(pageWidth - marginRight);
         
-        // 添加左边距和上边距作为起始边界
-        xBoundaries.add(marginLeft);
-        yBoundaries.add(marginTop);
+        if (template.has("bands")) {
+            for (JsonNode band : template.get("bands")) {
+                if (band.has("elements")) {
+                    for (JsonNode el : band.get("elements")) {
+                        double x = el.has("x") ? el.get("x").asDouble() : 0;
+                        double w = el.has("width") ? el.get("width").asDouble() : 0;
+                        xSet.add(marginLeft + x);
+                        xSet.add(marginLeft + x + w);
+                    }
+                }
+            }
+        }
         
+        List<Double> xBoundaries = new ArrayList<>(xSet);
+        int numCols = xBoundaries.size() - 1;
+        
+        // 设置列宽
+        for (int i = 0; i < numCols; i++) {
+            double widthMm = xBoundaries.get(i + 1) - xBoundaries.get(i);
+            int excelWidth = (int)(widthMm * MM_TO_COL_WIDTH * 256);
+            if (excelWidth < 256) excelWidth = 256;
+            sheet.setColumnWidth(i, excelWidth);
+        }
+        
+        // 第二步：逐行输出
+        int currentRow = 0;
         double currentY = marginTop;
         
         if (template.has("bands")) {
             for (JsonNode band : template.get("bands")) {
                 String bandType = band.get("type").asText();
-                double bandHeight = band.has("height") ? band.get("height").asDouble() : 0;
+                double bandHeight = band.has("height") ? band.get("height").asDouble() : 8;
                 
-                // detail band 不直接输出元素，而是按数据行展开
-                if (!"detail".equals(bandType) && band.has("elements")) {
-                    for (JsonNode el : band.get("elements")) {
-                        double x = el.has("x") ? el.get("x").asDouble() : 0;
-                        double y = el.has("y") ? el.get("y").asDouble() : 0;
-                        double w = el.has("width") ? el.get("width").asDouble() : 0;
-                        double h = el.has("height") ? el.get("height").asDouble() : 0;
-                        
-                        // 绝对坐标
-                        double absX = marginLeft + x;
-                        double absY = currentY + y;
-                        
-                        ElementInfo info = new ElementInfo();
-                        info.type = el.has("type") ? el.get("type").asText() : "text";
-                        info.text = el.has("text") ? el.get("text").asText() : "";
-                        info.absX = absX;
-                        info.absY = absY;
-                        info.width = w;
-                        info.height = h;
-                        info.alignment = el.has("alignment") ? el.get("alignment").asText() : "left";
-                        info.font = el.has("font") ? el.get("font") : null;
-                        
-                        allElements.add(info);
-                        
-                        // 收集边界
-                        xBoundaries.add(absX);
-                        xBoundaries.add(absX + w);
-                        yBoundaries.add(absY);
-                        yBoundaries.add(absY + h);
+                // 非 detail band：先创建行，输出元素
+                if (!"detail".equals(bandType)) {
+                    XSSFRow row = sheet.createRow(currentRow);
+                    row.setHeightInPoints((float)(bandHeight * MM_TO_ROW_HEIGHT));
+                    
+                    if (band.has("elements")) {
+                        for (JsonNode el : band.get("elements")) {
+                            double x = el.has("x") ? el.get("x").asDouble() : 0;
+                            double w = el.has("width") ? el.get("width").asDouble() : 0;
+                            double h = el.has("height") ? el.get("height").asDouble() : 0;
+                            
+                            double absX = marginLeft + x;
+                            
+                            int col = findColumnIndex(xBoundaries, absX);
+                            int endCol = findColumnIndex(xBoundaries, absX + w) - 1;
+                            
+                            if (col >= 0 && col < numCols) {
+                                XSSFCell cell = row.createCell(col);
+                                String text = el.has("text") ? el.get("text").asText() : "";
+                                cell.setCellValue(text);
+                                
+                                // 设置样式
+                                XSSFCellStyle style = workbook.createCellStyle();
+                                String align = el.has("alignment") ? el.get("alignment").asText() : "left";
+                                style.setAlignment(parseAlignment(align));
+                                style.setVerticalAlignment(VerticalAlignment.CENTER);
+                                
+                                // 字体
+                                if (el.has("font")) {
+                                    JsonNode font = el.get("font");
+                                    XSSFFont poiFont = workbook.createFont();
+                                    if (font.has("family")) poiFont.setFontName(font.get("family").asText());
+                                    if (font.has("size")) poiFont.setFontHeightInPoints((short) font.get("size").asInt());
+                                    if (font.has("bold") && font.get("bold").asBoolean()) poiFont.setBold(true);
+                                    if (font.has("italic") && font.get("italic").asBoolean()) poiFont.setItalic(true);
+                                    style.setFont(poiFont);
+                                }
+                                
+                                cell.setCellStyle(style);
+                                
+                                // 合并单元格
+                                if (endCol > col) {
+                                    sheet.addMergedRegion(new CellRangeAddress(currentRow, currentRow, col, endCol));
+                                }
+                            }
+                        }
                     }
+                    
+                    currentRow++;
+                    currentY += bandHeight;
                 }
                 
-                currentY += bandHeight;
-                
-                // detail band 按数据行展开
+                // detail band 展开数据行
                 if ("detail".equals(bandType) && band.has("dataSource")) {
                     String dsName = band.get("dataSource").asText();
                     List<Map<String, Object>> rows = data.getOrDefault(dsName, new ArrayList<>());
                     
                     for (Map<String, Object> rowData : rows) {
+                        XSSFRow dataRow = sheet.createRow(currentRow);
+                        dataRow.setHeightInPoints((float)(bandHeight * MM_TO_ROW_HEIGHT));
+                        
                         if (band.has("elements")) {
                             for (JsonNode el : band.get("elements")) {
                                 double x = el.has("x") ? el.get("x").asDouble() : 0;
-                                double y = el.has("y") ? el.get("y").asDouble() : 0;
                                 double w = el.has("width") ? el.get("width").asDouble() : 0;
-                                double h = el.has("height") ? el.get("height").asDouble() : 0;
                                 
                                 double absX = marginLeft + x;
-                                double absY = currentY + y;
+                                int col = findColumnIndex(xBoundaries, absX);
+                                int endCol = findColumnIndex(xBoundaries, absX + w) - 1;
                                 
-                                ElementInfo info = new ElementInfo();
-                                info.type = el.has("type") ? el.get("type").asText() : "text";
-                                info.text = replaceExpressions(el.has("text") ? el.get("text").asText() : "", rowData);
-                                info.absX = absX;
-                                info.absY = absY;
-                                info.width = w;
-                                info.height = h;
-                                info.alignment = el.has("alignment") ? el.get("alignment").asText() : "left";
-                                info.font = el.has("font") ? el.get("font") : null;
-                                
-                                allElements.add(info);
-                                
-                                xBoundaries.add(absX);
-                                xBoundaries.add(absX + w);
-                                yBoundaries.add(absY);
-                                yBoundaries.add(absY + h);
+                                if (col >= 0 && col < numCols) {
+                                    XSSFCell cell = dataRow.createCell(col);
+                                    String text = el.has("text") ? el.get("text").asText() : "";
+                                    text = replaceExpressions(text, rowData);
+                                    cell.setCellValue(text);
+                                    
+                                    XSSFCellStyle style = workbook.createCellStyle();
+                                    String align = el.has("alignment") ? el.get("alignment").asText() : "left";
+                                    style.setAlignment(parseAlignment(align));
+                                    style.setVerticalAlignment(VerticalAlignment.CENTER);
+                                    cell.setCellStyle(style);
+                                    
+                                    if (endCol > col) {
+                                        sheet.addMergedRegion(new CellRangeAddress(currentRow, currentRow, col, endCol));
+                                    }
+                                }
                             }
                         }
-                        currentY += bandHeight;
+                        currentRow++;
                     }
                 }
             }
         }
         
-        // 排序去重边界
-        Collections.sort(xBoundaries);
-        Collections.sort(yBoundaries);
-        xBoundaries = removeDuplicates(xBoundaries);
-        yBoundaries = removeDuplicates(yBoundaries);
-        
-        // 添加右边距和下边距
-        if (xBoundaries.isEmpty() || xBoundaries.get(xBoundaries.size() - 1) < pageWidth - marginRight) {
-            xBoundaries.add(pageWidth - marginRight);
-        }
-        if (yBoundaries.isEmpty() || yBoundaries.get(yBoundaries.size() - 1) < pageHeight - marginBottom) {
-            yBoundaries.add(pageHeight - marginBottom);
-        }
-        
-        // 设置列宽
-        for (int i = 0; i < xBoundaries.size() - 1; i++) {
-            double widthMm = xBoundaries.get(i + 1) - xBoundaries.get(i);
-            int excelWidth = (int)(widthMm * MM_TO_COL_WIDTH * 256);
-            if (excelWidth < 256) excelWidth = 256; // 最小 1 字符
-            sheet.setColumnWidth(i, excelWidth);
-        }
-        
-        // 设置行高
-        for (int i = 0; i < yBoundaries.size() - 1; i++) {
-            double heightMm = yBoundaries.get(i + 1) - yBoundaries.get(i);
-            float excelHeight = (float)(heightMm * MM_TO_ROW_HEIGHT);
-            XSSFRow row = sheet.getRow(i);
-            if (row == null) row = sheet.createRow(i);
-            row.setHeightInPoints(excelHeight);
-        }
-        
-        // 创建样式缓存
-        Map<String, XSSFCellStyle> styleCache = new HashMap<>();
-        
-        // 填充元素到单元格
-        for (ElementInfo el : allElements) {
-            // 找到元素对应的行列范围
-            int startCol = findBoundaryIndex(xBoundaries, el.absX);
-            int endCol = findBoundaryIndex(xBoundaries, el.absX + el.width) - 1;
-            int startRow = findBoundaryIndex(yBoundaries, el.absY);
-            int endRow = findBoundaryIndex(yBoundaries, el.absY + el.height) - 1;
-            
-            if (startCol < 0 || startRow < 0) continue;
-            if (endCol >= xBoundaries.size() - 1) endCol = xBoundaries.size() - 2;
-            if (endRow >= yBoundaries.size() - 1) endRow = yBoundaries.size() - 2;
-            
-            XSSFRow row = sheet.getRow(startRow);
-            if (row == null) row = sheet.createRow(startRow);
-            XSSFCell cell = row.getCell(startCol);
-            if (cell == null) cell = row.createCell(startCol);
-            
-            // 设置值
-            if ("text".equals(el.type)) {
-                cell.setCellValue(el.text);
-            }
-            
-            // 设置样式
-            String styleKey = el.alignment + "_" + (el.font != null ? el.font.toString() : "default");
-            XSSFCellStyle style = styleCache.get(styleKey);
-            if (style == null) {
-                style = workbook.createCellStyle();
-                
-                // 对齐
-                style.setAlignment(parseAlignment(el.alignment));
-                style.setVerticalAlignment(VerticalAlignment.CENTER);
-                
-                // 字体
-                if (el.font != null) {
-                    XSSFFont font = workbook.createFont();
-                    if (el.font.has("family")) font.setFontName(el.font.get("family").asText());
-                    if (el.font.has("size")) font.setFontHeightInPoints((short) el.font.get("size").asInt());
-                    if (el.font.has("bold") && el.font.get("bold").asBoolean()) font.setBold(true);
-                    if (el.font.has("italic") && el.font.get("italic").asBoolean()) font.setItalic(true);
-                    if (el.font.has("underline") && el.font.get("underline").asBoolean()) font.setUnderline(org.apache.poi.ss.usermodel.Font.U_SINGLE);
-                    if (el.font.has("color")) {
-                        String color = el.font.get("color").asText();
-                        if (color.startsWith("#") && color.length() == 7) {
-                            short r = Short.parseShort(color.substring(1, 3), 16);
-                            short g = Short.parseShort(color.substring(3, 5), 16);
-                            short b = Short.parseShort(color.substring(5, 7), 16);
-                            // 简化：使用黑色
-                            font.setColor(org.apache.poi.ss.usermodel.IndexedColors.BLACK.getIndex());
-                        }
-                    }
-                    style.setFont(font);
-                }
-                
-                styleCache.put(styleKey, style);
-            }
-            cell.setCellStyle(style);
-            
-            // 合并单元格（如果跨越多列/多行）
-            if (endCol > startCol || endRow > startRow) {
-                CellRangeAddress range = new CellRangeAddress(startRow, endRow, startCol, endCol);
-                sheet.addMergedRegion(range);
-            }
-        }
-        
-        // 设置打印参数
+        // 打印设置
         applyPrintSettings(workbook, template);
         
         workbook.write(baos);
@@ -251,9 +197,9 @@ public class ExcelExporter {
         return baos.toByteArray();
     }
     
-    private int findBoundaryIndex(List<Double> boundaries, double value) {
+    private int findColumnIndex(List<Double> boundaries, double value) {
         for (int i = 0; i < boundaries.size(); i++) {
-            if (Math.abs(boundaries.get(i) - value) < 0.1) {
+            if (Math.abs(boundaries.get(i) - value) < 0.5) {
                 return i;
             }
         }
@@ -268,16 +214,6 @@ public class ExcelExporter {
             }
         }
         return closest;
-    }
-    
-    private List<Double> removeDuplicates(List<Double> list) {
-        List<Double> result = new ArrayList<>();
-        for (int i = 0; i < list.size(); i++) {
-            if (i == 0 || Math.abs(list.get(i) - list.get(i - 1)) > 0.1) {
-                result.add(list.get(i));
-            }
-        }
-        return result;
     }
     
     private void applyPrintSettings(XSSFWorkbook workbook, JsonNode template) {
@@ -329,10 +265,10 @@ public class ExcelExporter {
     }
     
     private short getPaperSize(double widthMm, double heightMm) {
-        if (Math.abs(widthMm - 210) < 5 && Math.abs(heightMm - 297) < 5) return 9;
-        if (Math.abs(widthMm - 297) < 5 && Math.abs(heightMm - 210) < 5) return 9;
-        if (Math.abs(widthMm - 216) < 5 && Math.abs(heightMm - 279) < 5) return 1;
-        if (Math.abs(widthMm - 297) < 10 && Math.abs(heightMm - 420) < 10) return 8;
+        if (Math.abs(widthMm - 210) < 5 && Math.abs(heightMm - 297) < 5) return 9; // A4
+        if (Math.abs(widthMm - 297) < 5 && Math.abs(heightMm - 210) < 5) return 9; // A4 landscape
+        if (Math.abs(widthMm - 216) < 5 && Math.abs(heightMm - 279) < 5) return 1; // Letter
+        if (Math.abs(widthMm - 297) < 10 && Math.abs(heightMm - 420) < 10) return 8; // A3
         return 9;
     }
     
@@ -353,16 +289,5 @@ public class ExcelExporter {
             result = result.replace(placeholder, value);
         }
         return result;
-    }
-    
-    private static class ElementInfo {
-        String type;
-        String text;
-        double absX;
-        double absY;
-        double width;
-        double height;
-        String alignment;
-        JsonNode font;
     }
 }
