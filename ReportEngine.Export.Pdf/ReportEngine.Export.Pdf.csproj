@@ -5,7 +5,7 @@
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <PackageId>ReportEngine.Export.Pdf</PackageId>
-    <Version>0.3.0-alpha</Version>
+    <Version>0.2.0-alpha</Version>
     <Authors>maqiul</Authors>
     <Description>基于 PDFsharp 的多目标 PDF 导出器（net462/netstandard2.0/net8）</Description>
     <PackageTags>report-engine;pdf;export</PackageTags>
