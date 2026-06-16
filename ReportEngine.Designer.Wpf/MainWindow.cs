@@ -187,24 +187,7 @@ namespace ReportEngine.Designer.Wpf
             CheckAutoSaveRecovery();
         }
 
-        private void ApplyScrollBarStyle()
-        {
-            // 让滚动条滑块更明显：通过覆盖 SystemColors 资源
-            Resources[SystemColors.ScrollBarColorKey] = Color.FromRgb(220, 220, 220);
-            // 滑块颜色（Thumb）
-            var thumbBrush = new SolidColorBrush(Color.FromRgb(140, 140, 140));
-            thumbBrush.Freeze();
-            Resources[SystemColors.ControlDarkColorKey] = Color.FromRgb(140, 140, 140);
-
-            // 给 ScrollBar 设置固定宽度/高度让其更粗一些
-            var vScrollStyle = new Style(typeof(System.Windows.Controls.Primitives.ScrollBar));
-            vScrollStyle.Setters.Add(new Setter(WidthProperty, 15.0));
-            var trigger = new Trigger { Property = System.Windows.Controls.Primitives.ScrollBar.OrientationProperty, Value = System.Windows.Controls.Orientation.Horizontal };
-            trigger.Setters.Add(new Setter(WidthProperty, double.NaN));
-            trigger.Setters.Add(new Setter(HeightProperty, 15.0));
-            vScrollStyle.Triggers.Add(trigger);
-            Resources[typeof(System.Windows.Controls.Primitives.ScrollBar)] = vScrollStyle;
-        }
+        // LayoutBuilders: methods moved to MainWindow.LayoutBuilders.cs
 
         // ============================== 布局 ==============================
 
@@ -212,184 +195,47 @@ namespace ReportEngine.Designer.Wpf
         private ComboBox _fontFamilyCombo = null!;
         private ComboBox _fontSizeCombo = null!;
 
-        private void BuildLayout()
-        {
-            Content = RootLayoutBuilder.Build(
-                menu: BuildMenu(),
-                toolbar: BuildToolBar(),
-                fontBar: BuildFontToolBar(),
-                alignBar: BuildAlignToolBar(),
-                statusBar: BuildStatusBar(),
-                leftPanel: BuildLeftPanel(),
-                centerPanel: BuildCenterPanel(),
-                rightPanel: BuildRightPanel());
-        }
+        // LayoutBuilders: methods moved to MainWindow.LayoutBuilders.cs
 
-        private ToolBar BuildToolBar()
-        {
-            return ToolBarBuilder.Build(
-                onNew: NewTemplate,
-                onOpen: OpenTemplate,
-                onSave: () => SaveTemplate(false),
-                onUndo: Undo,
-                onRedo: Redo,
-                onCut: CutSelected,
-                onCopy: CopySelected,
-                onPaste: PasteElement,
-                onDelete: DeleteSelected,
-                onPageSetup: ShowPageSetupDialog,
-                onExportPdf: ExportPdf,
-                onExportExcel: ExportExcel,
-                onZoomIn: () => { _zoomSlider.Value = Math.Min(400, _zoomSlider.Value + 25); },
-                onZoomOut: () => { _zoomSlider.Value = Math.Max(25, _zoomSlider.Value - 25); },
-                onZoomFit: () => { _zoomSlider.Value = 100; },
-                out _undoBtn, out _redoBtn, out _cutBtn, out _copyBtn, out _pasteBtn, out _deleteBtn);
-        }
+        // LayoutBuilders: methods moved to MainWindow.LayoutBuilders.cs
 
-        private Border BuildStatusBar()
-        {
-            return StatusBarBuilder.Build(
-                statusText: _statusText,
-                posLabel: _posLabel,
-                zoomSlider: _zoomSlider,
-                zoomLabel: _zoomLabel,
-                onSwitchDesign: (d, p) => SwitchView("design", d, p),
-                onSwitchPreview: (d, p) => SwitchView("preview", d, p),
-                onShowPageSetup: ShowPageSetupDialog,
-                out _tabDesign,
-                out _tabPreview);
-        }
+        // LayoutBuilders: methods moved to MainWindow.LayoutBuilders.cs
 
         private Border _tabDesign = null!;
         private Border _tabPreview = null!;
 
-        private ToolBarTray BuildFontToolBar()
-        {
-            return FontToolBarBuilder.Build(
-                onFontFamilyChanged: ApplyFontFamily,
-                onFontSizeChanged: ApplyFontSize,
-                onToggleBold: ToggleFontBold,
-                onToggleItalic: ToggleFontItalic,
-                onToggleUnderline: ToggleFontUnderline,
-                onAlignLeft: () => SetAlignment(ReportEngine.Core.TextAlignment.Left),
-                onAlignCenter: () => SetAlignment(ReportEngine.Core.TextAlignment.Center),
-                onAlignRight: () => SetAlignment(ReportEngine.Core.TextAlignment.Right),
-                out _fontFamilyCombo,
-                out _fontSizeCombo);
-        }
+        // FontAndAlignToolBar: methods moved to MainWindow.FontAndAlignToolBar.cs
 
-        private void ApplyFontFamily()
-        {
-            if (_selectedElement is TextElement t && !string.IsNullOrEmpty(_fontFamilyCombo.Text))
-            { PushUndo(); t.Font.Family = _fontFamilyCombo.Text; MarkDirty(); RefreshUI(); }
-        }
+        // FontAndAlignToolBar: methods moved to MainWindow.FontAndAlignToolBar.cs
 
-        private void ApplyFontSize()
-        {
-            if (_selectedElement is TextElement t && double.TryParse(_fontSizeCombo.Text, out var sz) && sz > 0)
-            { PushUndo(); t.Font.Size = sz; MarkDirty(); RefreshUI(); }
-        }
+        // FontAndAlignToolBar: methods moved to MainWindow.FontAndAlignToolBar.cs
 
-        private void ToggleFontBold()
-        {
-            if (_selectedElement is TextElement t) { PushUndo(); t.Font.Bold = !t.Font.Bold; MarkDirty(); RefreshUI(); }
-        }
+        // FontAndAlignToolBar: methods moved to MainWindow.FontAndAlignToolBar.cs
 
-        private void ToggleFontItalic()
-        {
-            if (_selectedElement is TextElement t) { PushUndo(); t.Font.Italic = !t.Font.Italic; MarkDirty(); RefreshUI(); }
-        }
+        // FontAndAlignToolBar: methods moved to MainWindow.FontAndAlignToolBar.cs
 
-        private void ToggleFontUnderline()
-        {
-            if (_selectedElement is TextElement t) { PushUndo(); t.Font.Underline = !t.Font.Underline; MarkDirty(); RefreshUI(); }
-        }
+        // FontAndAlignToolBar: methods moved to MainWindow.FontAndAlignToolBar.cs
 
-        private void SetAlignment(ReportEngine.Core.TextAlignment a)
-        {
-            if (_selectedElement is TextElement t) { PushUndo(); t.Alignment = a; MarkDirty(); RefreshUI(); }
-        }
+        // FontAndAlignToolBar: methods moved to MainWindow.FontAndAlignToolBar.cs
 
-        private ToolBarTray BuildAlignToolBar()
-        {
-            return AlignToolBarBuilder.Build(
-                onAlignLeft: () => AlignElements("left"),
-                onAlignRight: () => AlignElements("right"),
-                onAlignTop: () => AlignElements("top"),
-                onAlignBottom: () => AlignElements("bottom"),
-                onAlignHCenter: () => AlignElements("hcenter"),
-                onAlignVCenter: () => AlignElements("vcenter"),
-                onSameWidth: () => AlignElements("samewidth"),
-                onSameHeight: () => AlignElements("sameheight"),
-                onBringToFront: () => MoveElementOrder("front"),
-                onSendToBack: () => MoveElementOrder("back"),
-                onFormatPainter: StartFormatPainter,
-                onToggleLock: ToggleLockSelected,
-                onGroup: GroupSelected,
-                onUngroup: UngroupSelected);
-        }
+        // FontAndAlignToolBar: methods moved to MainWindow.FontAndAlignToolBar.cs
 
-        private void ToggleLockSelected()
-        {
-            var targets = _selectedElements.Count > 0 ? _selectedElements : (_selectedElement != null ? new List<ReportElement> { _selectedElement } : new List<ReportElement>());
-            if (targets.Count == 0) { _statusText.Text = "请先选中元素"; return; }
-            PushUndo();
-            bool newState = LockStateToggler.Toggle(targets);
-            MarkDirty();
-            RefreshUI();
-            _statusText.Text = newState ? "已锁定 " + targets.Count + " 个元素" : "已解锁 " + targets.Count + " 个元素";
-        }
+        // FontAndAlignToolBar: methods moved to MainWindow.FontAndAlignToolBar.cs
 
         /// <summary>组合选中的元素为一组</summary>
-        private void GroupSelected()
-        {
-            var targets = _selectedElements.Count > 1 ? _selectedElements : (_selectedElements.Count == 0 && _selectedElement != null ? new List<ReportElement> { _selectedElement } : _selectedElements);
-            if (targets.Count < 2) { _statusText.Text = "请选中2个以上元素再组合"; return; }
-            PushUndo();
-            ElementGrouper.Group(targets);
-            MarkDirty();
-            RefreshUI();
-            _statusText.Text = "已组合 " + targets.Count + " 个元素";
-        }
+        // FontAndAlignToolBar: methods moved to MainWindow.FontAndAlignToolBar.cs
 
         /// <summary>取消选中元素的分组</summary>
-        private void UngroupSelected()
-        {
-            var targets = _selectedElements.Count > 0 ? _selectedElements : (_selectedElement != null ? new List<ReportElement> { _selectedElement } : new List<ReportElement>());
-            if (targets.Count == 0 || targets.All(e => e.GroupId == null)) { _statusText.Text = "选中的元素未分组"; return; }
-            PushUndo();
-            ElementGrouper.Ungroup(targets);
-            MarkDirty();
-            RefreshUI();
-            _statusText.Text = "已取消组合";
-        }
+        // FontAndAlignToolBar: methods moved to MainWindow.FontAndAlignToolBar.cs
 
         /// <summary>启动格式刷：复制当前选中元素的样式</summary>
-        private void StartFormatPainter()
-        {
-            var src = _selectedElement;
-            if (src == null) { _statusText.Text = "请先选中一个元素作为样式源"; return; }
-            _formatPainterSource = src;
-            _formatPainterActive = true;
-            _statusText.Text = "格式刷已激活，请点击目标元素应用样式";
-        }
+        // FontAndAlignToolBar: methods moved to MainWindow.FontAndAlignToolBar.cs
 
         /// <summary>应用格式刷到目标元素</summary>
-        private void ApplyFormatToTarget(ReportElement target)
-        {
-            if (_formatPainterSource == null || !_formatPainterActive) return;
-            PushUndo();
-            FormatPainterApplier.Apply(_formatPainterSource, target);
-            MarkDirty();
-            RefreshUI();
-            _statusText.Text = "已应用格式刷";
-        }
+        // FontAndAlignToolBar: methods moved to MainWindow.FontAndAlignToolBar.cs
 
         /// <summary>关闭格式刷</summary>
-        private void StopFormatPainter()
-        {
-            FormatPainterState.Reset(ref _formatPainterActive, ref _formatPainterSource);
-        }
+        // FontAndAlignToolBar: methods moved to MainWindow.FontAndAlignToolBar.cs
 
         /// <summary>设置自动保存定时器：每60秒自动保存一次草稿</summary>
         private void SetupAutoSave()
@@ -431,377 +277,52 @@ namespace ReportEngine.Designer.Wpf
         }
 
         /// <summary>重置选中元素的属性为默认值</summary>
-        private void ResetSelectedProperties()
-        {
-            var el = _selectedElement;
-            if (el == null) { _statusText.Text = "请先选中一个元素"; return; }
-            PushUndo();
-            PropertyResetter.Reset(el);
-            MarkDirty();
-            RefreshUI();
-            _statusText.Text = "已重置属性为默认值";
-        }
+        // StatusAndRefresh: methods moved to MainWindow.StatusAndRefresh.cs
 
-        private DockPanel BuildLeftPanel()
-        {
-            return LeftToolBoxBuilder.Build(
-                onInsertText: () => InsertElement(NewText()),
-                onInsertFieldBox: () => InsertElement(NewFieldBox()),
-                onInsertSummaryBox: () => InsertElement(NewSummaryBox()),
-                onInsertSysVarBox: () => InsertElement(NewSysVarBox()),
-                onInsertLine: () => InsertElement(NewLine()),
-                onInsertShape: () => InsertElement(NewShape()),
-                onInsertImage: () => InsertElement(NewImage()),
-                onInsertBarcode: () => InsertElement(NewBarcode()),
-                onInsertTable: () => InsertElement(NewTable()),
-                onInsertCrossTab: () => InsertElement(NewCrossTab()),
-                onInsertChart: () => InsertElement(NewChart()),
-                onInsertSubReport: () => InsertElement(NewSubReport()),
-                onAddHeader: () => AddBand(BandType.Header, 15),
-                onAddDetail: () => AddBand(BandType.Detail, 10),
-                onAddFooter: () => AddBand(BandType.Footer, 10),
-                onAddGroupHeader: () => AddBand(BandType.GroupHeader, 12),
-                onAddGroupFooter: () => AddBand(BandType.GroupFooter, 10),
-                onAddReportHeader: () => AddBand(BandType.ReportHeader, 20),
-                onAddReportFooter: () => AddBand(BandType.ReportFooter, 10));
-        }
+        // LayoutBuilders: methods moved to MainWindow.LayoutBuilders.cs
 
-        private Grid BuildCenterPanel()
-        {
-            return CenterPanelBuilder.Build(
-                rulerSize: RulerSize,
-                hRuler: _hRuler,
-                vRuler: _vRuler,
-                scrollViewer: _scrollViewer,
-                previewScrollViewer: _previewScrollViewer,
-                onScrollChanged: () => _canvasRenderer.RenderRulers(_template!, _zoom),
-                onPreviewMouseWheel: OnCanvasWheel);
-        }
+        // LayoutBuilders: methods moved to MainWindow.LayoutBuilders.cs
 
-        private Grid BuildRightPanel()
-        {
-            return RightPanelBuilder.Build(
-                bandTree: _bandTree,
-                propertyPanel: _propertyPanel,
-                onResetSelected: ResetSelectedProperties,
-                out _selectedObjLabel);
-        }
+        // LayoutBuilders: methods moved to MainWindow.LayoutBuilders.cs
 
         private TextBlock _selectedObjLabel = null!;
 
         // MenuAndDialogs: methods moved to MainWindow.MenuAndDialogs.cs
 
-        private void SetupKeyBindings()
-        {
-            InputBindings.Add(new KeyBinding(new RelayCmd(NewTemplate), Key.N, ModifierKeys.Control));
-            InputBindings.Add(new KeyBinding(new RelayCmd(OpenTemplate), Key.O, ModifierKeys.Control));
-            InputBindings.Add(new KeyBinding(new RelayCmd(() => SaveTemplate(false)), Key.S, ModifierKeys.Control));
-            InputBindings.Add(new KeyBinding(new RelayCmd(Undo), Key.Z, ModifierKeys.Control));
-            InputBindings.Add(new KeyBinding(new RelayCmd(Redo), Key.Y, ModifierKeys.Control));
-            InputBindings.Add(new KeyBinding(new RelayCmd(CutSelected), Key.X, ModifierKeys.Control));
-            InputBindings.Add(new KeyBinding(new RelayCmd(CopySelected), Key.C, ModifierKeys.Control));
-            InputBindings.Add(new KeyBinding(new RelayCmd(PasteElement), Key.V, ModifierKeys.Control));
-            InputBindings.Add(new KeyBinding(new RelayCmd(DeleteSelected), Key.Delete, ModifierKeys.None));
-            InputBindings.Add(new KeyBinding(new RelayCmd(SelectAll), Key.A, ModifierKeys.Control));
-            InputBindings.Add(new KeyBinding(new RelayCmd(DuplicateSelected), Key.D, ModifierKeys.Control));
-            InputBindings.Add(new KeyBinding(new RelayCmd(() => ShortcutsDialog.Show(this)), Key.F1, ModifierKeys.None));
-            InputBindings.Add(new KeyBinding(new RelayCmd(SearchElement), Key.F, ModifierKeys.Control));
+        // KeyboardAndView: methods moved to MainWindow.KeyboardAndView.cs
 
-            // 方向键微调
-            PreviewKeyDown += OnPreviewKeyDown;
-        }
+        // KeyboardAndView: methods moved to MainWindow.KeyboardAndView.cs
 
-        private void OnPreviewKeyDown(object sender, KeyEventArgs e)
-        {
-            KeyboardInputRouter.Route(
-                e, _template, _selectedBand, _selectedElement, _selectedElements,
-                onTabSelected: (band, next) =>
-                {
-                    _selectedElement = next;
-                    _selectedElements.Clear();
-                    _selectedElements.Add(_selectedElement);
-                    _selectedBand = band;
-                    RefreshUI();
-                },
-                onNudge: (dx, dy) => NudgeSelected(dx, dy));
-        }
-
-        private void NudgeSelected(double dx, double dy)
-        {
-            PushUndo();
-            ElementNudger.Nudge(NudgeRunner.ResolveTargets(_selectedElements, _selectedElement), dx, dy);
-            MarkDirty();
-            RefreshUI();
-        }
+        // KeyboardAndView: methods moved to MainWindow.KeyboardAndView.cs
 
         // ============================== 画布渲染 ==============================
 
-        private void SwitchView(string mode, Border tabDesign, Border tabPreview)
-        {
-            _viewMode = mode;
-            ViewSwitcher.Switch(
-                mode: mode,
-                tabDesign: tabDesign,
-                tabPreview: tabPreview,
-                scrollViewer: _scrollViewer,
-                hRuler: _hRuler,
-                vRuler: _vRuler,
-                previewScrollViewer: _previewScrollViewer,
-                onPreviewRender: () => _previewRenderer.Render(_template!, _zoom, _previewData));
-        }
+        // KeyboardAndView: methods moved to MainWindow.KeyboardAndView.cs
 
         // ============================== 标尺 ==============================
 
         // ============================== 标尺参考线拖拽 ==============================
 
-        private void OnHRulerMouseDown(object sender, MouseButtonEventArgs e)
-        {
-            // 从水平标尺拖出垂直参考线
-            if (_template == null) return;
-            double px = e.GetPosition(_hRuler).X;
-            double mmPx = PixelsPerMm * _zoom;
-            double offsetX = -_scrollViewer.HorizontalOffset + CanvasPadding;
-            double mm = Math.Round((px - offsetX) / mmPx, 1);
-            if (mm < 0 || mm > _template.Page.Width) return;
-            _vGuides.Add(mm);
-            _draggingGuide = true;
-            _draggingHGuide = false;
-            _draggingGuideIndex = _vGuides.Count - 1;
-            _hRuler.CaptureMouse();
-            _hRuler.MouseMove += OnRulerGuideMouseMove;
-            _hRuler.MouseLeftButtonUp += OnRulerGuideMouseUp;
-            _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand);
-            _statusText.Text = "垂直参考线: " + mm + "mm (拖出标尺外删除)";
-        }
+        // RulerAndGuideHandlers: methods moved to MainWindow.RulerAndGuideHandlers.cs
 
-        private void OnVRulerMouseDown(object sender, MouseButtonEventArgs e)
-        {
-            // 从垂直标尺拖出水平参考线
-            if (_template == null) return;
-            double py = e.GetPosition(_vRuler).Y;
-            double mmPx = PixelsPerMm * _zoom;
-            double offsetY = -_scrollViewer.VerticalOffset + CanvasPadding;
-            double mm = Math.Round((py - offsetY) / mmPx, 1);
-            if (mm < 0 || mm > _template.Page.Height) return;
-            _hGuides.Add(mm);
-            _draggingGuide = true;
-            _draggingHGuide = true;
-            _draggingGuideIndex = _hGuides.Count - 1;
-            _vRuler.CaptureMouse();
-            _vRuler.MouseMove += OnRulerGuideMouseMove;
-            _vRuler.MouseLeftButtonUp += OnRulerGuideMouseUp;
-            _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand);
-            _statusText.Text = "水平参考线: " + mm + "mm (拖出标尺外删除)";
-        }
+        // RulerAndGuideHandlers: methods moved to MainWindow.RulerAndGuideHandlers.cs
 
-        private void OnRulerGuideMouseMove(object sender, MouseEventArgs e)
-        {
-            if (!_draggingGuide || _template == null) return;
-            if (RulerGuideMover.Update(
-                _draggingHGuide, _draggingGuideIndex,
-                e.GetPosition(_hRuler), e.GetPosition(_vRuler),
-                _zoom, PixelsPerMm, CanvasPadding,
-                _scrollViewer.HorizontalOffset, _scrollViewer.VerticalOffset,
-                _hGuides, _vGuides))
-            {
-                _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand);
-            }
-        }
+        // RulerAndGuideHandlers: methods moved to MainWindow.RulerAndGuideHandlers.cs
 
-        private void OnRulerGuideMouseUp(object sender, MouseButtonEventArgs e)
-        {
-            if (!_draggingGuide) return;
-            // 如果拖到负数区域（标尺外）则删除
-            if (_draggingHGuide)
-                GuideListEditor.RemoveIfNegative(_hGuides, _draggingGuideIndex);
-            else
-                GuideListEditor.RemoveIfNegative(_vGuides, _draggingGuideIndex);
-            RulerGuideFinalizer.ReleaseAndUnsubscribe(_draggingHGuide, _hRuler, _vRuler, OnRulerGuideMouseMove, OnRulerGuideMouseUp);
-            _draggingGuide = false;
-            _draggingGuideIndex = -1;
-            _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand);
-            _statusText.Text = "参考线: 水平" + _hGuides.Count + "条 垂直" + _vGuides.Count + "条";
-        }
+        // RulerAndGuideHandlers: methods moved to MainWindow.RulerAndGuideHandlers.cs
 
-        private void OnCanvasMouseDown(object sender, MouseButtonEventArgs e)
-        {
-            if (_template == null) return;
-            var pos = e.GetPosition(_canvas);
-
-            // 检查 resize 手柄
-            _resizeHandle = ResizeHandleDetector.Detect(_canvas, pos, _selectedElement);
-            if (_resizeHandle != ResizeHandleDetector.NoHandle)
-            {
-                BeginDrag(DragMode.ResizeElement, pos);
-                _dragStartX = _selectedElement!.X; _dragStartY = _selectedElement.Y;
-                _dragStartW = _selectedElement.Width; _dragStartH = _selectedElement.Height;
-                PushUndo();
-                return;
-            }
-
-            // 检查 Band 调整
-            var hitEl = _canvas.InputHitTest(pos) as FrameworkElement;
-            if (hitEl?.Tag is Band dragBand && hitEl.Cursor == Cursors.SizeNS)
-            {
-                BeginDrag(DragMode.ResizeBandHeight, pos);
-                _selectedBand = dragBand;
-                _dragStartH = dragBand.Height;
-                PushUndo();
-                RefreshUI();
-                return;
-            }
-
-            Band? hitBand;
-            ReportElement? hitElement;
-            CanvasMouseDownHandler.Handle(
-                canvas: _canvas,
-                pos: pos,
-                template: _template,
-                zoom: _zoom,
-                canvasPadding: CanvasPadding,
-                pixelsPerMm: PixelsPerMm,
-                selectedElements: _selectedElements,
-                formatPainterActive: _formatPainterActive,
-                onApplyFormat: () => ApplyFormatToTarget(_selectedElement!),
-                onStopPainter: StopFormatPainter,
-                onStartMove: el =>
-                {
-                    BeginDrag(DragMode.MoveElement, pos);
-                    _dragStartX = el.X;
-                    _dragStartY = el.Y;
-                    PushUndo();
-                },
-                onStartMarquee: () => BeginDrag(DragMode.MarqueeSelect, pos),
-                out hitBand,
-                out hitElement);
-
-            _selectedElement = hitElement;
-            _selectedBand = hitBand;
-            RefreshUI();
-        }
+        // CanvasMouseHandlers: methods moved to MainWindow.CanvasMouseHandlers.cs
 
         /// <summary>开始 drag：设 _dragMode + _dragStart + CaptureMouse。OnCanvasMouseDown 4 个 start 模式共享。</summary>
-        private void BeginDrag(DragMode mode, Point pos)
-        {
-            _dragMode = mode;
-            _dragStart = pos;
-            _canvas.CaptureMouse();
-        }
+        // CanvasMouseHandlers: methods moved to MainWindow.CanvasMouseHandlers.cs
 
-        private void OnCanvasDoubleClick(object sender, MouseButtonEventArgs e)
-        {
-            if (_template == null) return;
-            var pos = e.GetPosition(_canvas);
-            var (_, element) = HitTester.Hit(pos, _template, _zoom, CanvasPadding, PixelsPerMm);
-            if (element is TextElement txt)
-            {
-                TextEditDialog.Show(this, txt, newText =>
-                {
-                    PushUndo();
-                    txt.Text = newText;
-                    MarkDirty();
-                    RefreshUI();
-                });
-            }
-        }
+        // CanvasMouseHandlers: methods moved to MainWindow.CanvasMouseHandlers.cs
 
-        private void OnCanvasMouseMove(object sender, MouseEventArgs e)
-        {
-            if (_template == null) return;
-            var pos = e.GetPosition(_canvas);
+        // CanvasMouseHandlers: methods moved to MainWindow.CanvasMouseHandlers.cs
 
-            // 状态栏坐标
-            CanvasCoordinateLabel.Update(_posLabel, pos, _zoom, PixelsPerMm, CanvasPadding);
-            double z = _zoom;
-            double mmPx = PixelsPerMm * z;
+        // CanvasMouseHandlers: methods moved to MainWindow.CanvasMouseHandlers.cs
 
-            if (_dragMode == DragMode.MoveElement && _selectedElement != null)
-            {
-                double dx = (pos.X - _dragStart.X) / mmPx;
-                double dy = (pos.Y - _dragStart.Y) / mmPx;
-                _snapLinesX.Clear(); _snapLinesY.Clear();
-                // 多选时批量移动
-                if (_selectedElements.Count > 1)
-                {
-                    ElementMover.MoveMultiple(_selectedElements, dx, dy);
-                    _dragStart = pos;
-                }
-                else
-                {
-                    ElementMover.MoveSingle(
-                        element: _selectedElement,
-                        band: _selectedBand,
-                        startX: _dragStartX, startY: _dragStartY,
-                        dx: dx, dy: dy,
-                        snapEnabled: _snapEnabled,
-                        excludedElements: _selectedElements,
-                        vGuides: _vGuides, hGuides: _hGuides,
-                        snapThresholdMm: SnapThresholdMm,
-                        snapLinesX: _snapLinesX, snapLinesY: _snapLinesY);
-                }
-                _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand);
-            }
-            else if (_dragMode == DragMode.ResizeElement && _selectedElement != null)
-            {
-                double dx = (pos.X - _dragStart.X) / mmPx;
-                double dy = (pos.Y - _dragStart.Y) / mmPx;
-                var (newX, newY, newW, newH) = ResizeCalculator.Compute(
-                    _resizeHandle, dx, dy, _dragStartX, _dragStartY, _dragStartW, _dragStartH);
-                _selectedElement.X = Math.Max(0, Math.Round(newX * 2) / 2);
-                _selectedElement.Y = Math.Max(0, Math.Round(newY * 2) / 2);
-                _selectedElement.Width = Math.Max(2, Math.Round(newW * 2) / 2);
-                _selectedElement.Height = Math.Max(2, Math.Round(newH * 2) / 2);
-                _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand);
-            }
-            else if (_dragMode == DragMode.ResizeBandHeight && _selectedBand != null)
-            {
-                double dy = (pos.Y - _dragStart.Y) / mmPx;
-                _selectedBand.Height = Math.Max(3, Math.Round((_dragStartH + dy) * 2) / 2);
-                _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand);
-            }
-            else if (_dragMode == DragMode.MarqueeSelect)
-            {
-                // 绘制框选矩形
-                if (_marqueeRect != null) _canvas.Children.Remove(_marqueeRect);
-                _marqueeRect = MarqueeRenderer.Create(pos, _dragStart);
-                Canvas.SetLeft(_marqueeRect, Math.Min(pos.X, _dragStart.X));
-                Canvas.SetTop(_marqueeRect, Math.Min(pos.Y, _dragStart.Y));
-                _canvas.Children.Add(_marqueeRect);
-            }
-        }
-
-        private void OnCanvasMouseUp(object sender, MouseButtonEventArgs e)
-        {
-            if (_dragMode == DragMode.MarqueeSelect)
-            {
-                // 框选结束：找出框内元素
-                var hits = MarqueeSelector.Select(
-                    _dragStart, e.GetPosition(_canvas), _zoom, PixelsPerMm, CanvasPadding, _template);
-                MarqueeCommitHelper.ApplyToSelection(hits, _selectedElements,
-                    ref _selectedElement, ref _selectedBand,
-                    ref _marqueeRect, _canvas);
-                _canvas.ReleaseMouseCapture();
-                _dragMode = DragMode.None;
-                RefreshUI();
-            }
-            else if (_dragMode != DragMode.None)
-            {
-                _snapLinesX.Clear(); _snapLinesY.Clear();
-                _canvas.ReleaseMouseCapture();
-                _dragMode = DragMode.None;
-                MarkDirty();
-                RefreshUI();
-            }
-        }
-
-        private void OnCanvasWheel(object sender, MouseWheelEventArgs e)
-        {
-            if (Keyboard.Modifiers == ModifierKeys.Control)
-            {
-                e.Handled = true;
-                _zoomSlider.Value = Math.Max(25, Math.Min(400, _zoomSlider.Value + (e.Delta > 0 ? 15 : -15)));
-            }
-        }
+        // CanvasMouseHandlers: methods moved to MainWindow.CanvasMouseHandlers.cs
 
 
         // ============================== 文件操作 ==============================
@@ -822,89 +343,23 @@ namespace ReportEngine.Designer.Wpf
         /// <summary>批量导出PDF+Excel到同一目录</summary>
         // FileOperations: methods moved to MainWindow.FileOperations.cs
 
-        private bool ConfirmDiscard()
-        {
-            if (!_dirty) return true;
-            var r = MessageBox.Show("模板已修改，是否保存？", "确认", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
-            if (r == MessageBoxResult.Cancel) return false;
-            if (r == MessageBoxResult.Yes) SaveTemplate(false);
-            return true;
-        }
+        // RecentFilesAndMisc: methods moved to MainWindow.RecentFilesAndMisc.cs
 
-        private void AddRecentFile(string path)
-        {
-            RecentFileStore.Add(_recentFiles, path, RecentFilesPath);
-        }
+        // RecentFilesAndMisc: methods moved to MainWindow.RecentFilesAndMisc.cs
 
-        private void LoadRecentFiles()
-        {
-            RecentFileLoader.Load(_recentFiles, RecentFilesPath, RecentFileStore.MaxCount);
-        }
+        // RecentFilesAndMisc: methods moved to MainWindow.RecentFilesAndMisc.cs
 
-        private void BuildRecentFilesMenu(MenuItem parent)
-        {
-            RecentFilesMenuBuilder.Build(parent, _recentFiles, OpenFileDirect);
-        }
+        // RecentFilesAndMisc: methods moved to MainWindow.RecentFilesAndMisc.cs
 
-        private void OpenFileDirect(string path)
-        {
-            if (!ConfirmDiscard()) return;
-            try
-            {
-                var json = File.ReadAllText(path);
-                _template = _parser.Parse(json);
-                _currentFilePath = path;
-                _dirty = false;
-                _undoStack.Clear(); _redoStack.Clear();
-                _selectedElement = null; _selectedBand = null;
-                RefreshUI();
-                _statusText.Text = "已打开: " + System.IO.Path.GetFileName(path);
-                AddRecentFile(path);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("打开失败: " + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
-                _recentFiles.Remove(path);
-            }
-        }
+        // RecentFilesAndMisc: methods moved to MainWindow.RecentFilesAndMisc.cs
 
         // ============================== 元素操作 ==============================
 
-        private void InsertElement(ReportElement el)
-        {
-            if (_template == null) return;
-            var band = _selectedBand ?? _template.Bands.FirstOrDefault(b => b.Type == BandType.Detail) ?? _template.Bands.FirstOrDefault();
-            if (band == null) return;
-            PushUndo();
-            band.Elements.Add(el);
-            _selectedElement = el;
-            _selectedBand = band;
-            MarkDirty();
-            RefreshUI();
-        }
+        // BandOperations: methods moved to MainWindow.BandOperations.cs
 
-        private void InsertElementAt(ReportElement el, Band band, double mmX, double mmY)
-        {
-            el.X = Math.Max(0, Math.Round(mmX * 2) / 2);
-            el.Y = Math.Max(0, Math.Round(mmY * 2) / 2);
-            PushUndo();
-            band.Elements.Add(el);
-            _selectedElement = el;
-            _selectedBand = band;
-            _selectedElements.Clear();
-            _selectedElements.Add(el);
-            MarkDirty();
-            RefreshUI();
-        }
+        // BandOperations: methods moved to MainWindow.BandOperations.cs
 
-        private void OnCanvasDrop(object sender, DragEventArgs e)
-        {
-            var insertedType = CanvasDropProcessor.Process(
-                e, _template, _canvas, _zoom, CanvasPadding, PixelsPerMm,
-                (el, band, x, y) => InsertElementAt(el, band, x, y));
-            if (insertedType != null)
-                _statusText.Text = "已拖入元素: " + insertedType;
-        }
+        // CanvasMouseHandlers: methods moved to MainWindow.CanvasMouseHandlers.cs
 
         // ClipboardAndUndo: methods moved to MainWindow.ClipboardAndUndo.cs
 
@@ -919,46 +374,13 @@ namespace ReportEngine.Designer.Wpf
 
         // ClipboardAndUndo: methods moved to MainWindow.ClipboardAndUndo.cs
 
-        private void DeleteBand(Band band)
-        {
-            if (_template == null) return;
-            PushUndo();
-            _template.Bands.Remove(band);
-            BandDeleter.ClearSelection(ref _selectedBand, ref _selectedElement, _selectedElements);
-            MarkDirty();
-            RefreshUI();
-        }
+        // BandOperations: methods moved to MainWindow.BandOperations.cs
 
-        private void AddBand(BandType type, double height)
-        {
-            if (_template == null) return;
-            PushUndo();
-            _template.Bands.Add(new Band { Type = type, Height = height });
-            MarkDirty();
-            RefreshUI();
-        }
+        // BandOperations: methods moved to MainWindow.BandOperations.cs
 
-        private void AlignElements(string mode)
-        {
-            var targets = _selectedElements.Count > 1 ? _selectedElements : new List<ReportElement>();
-            if (!ElementAligner.Align(targets, mode))
-            {
-                _statusText.Text = "请选中多个元素后再对齐";
-                return;
-            }
-            PushUndo();
-            MarkDirty();
-            RefreshUI();
-        }
+        // BandOperations: methods moved to MainWindow.BandOperations.cs
 
-        private void MoveElementOrder(string direction)
-        {
-            if (_selectedElement == null || _selectedBand == null) return;
-            if (!ZOrderHelper.Move(_selectedBand.Elements, _selectedElement, direction)) return;
-            PushUndo();
-            MarkDirty();
-            RefreshUI();
-        }
+        // BandOperations: methods moved to MainWindow.BandOperations.cs
 
         // ClipboardAndUndo: methods moved to MainWindow.ClipboardAndUndo.cs
 
@@ -970,31 +392,12 @@ namespace ReportEngine.Designer.Wpf
 
         // ============================== 刷新 ==============================
 
-        internal void RefreshUI()
-        {
-            _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand);
-            _canvasRenderer.RenderRulers(_template!, _zoom);
-            UpdateBandTree();
-            UpdatePropertyList();
-            UpdateTitle();
-            UpdateStatusInfo();
-            UpdateUndoRedoButtons();
-        }
+        // StatusAndRefresh: methods moved to MainWindow.StatusAndRefresh.cs
 
         /// <summary>更新撤销/重做按钮的启用状态</summary>
         // ClipboardAndUndo: methods moved to MainWindow.ClipboardAndUndo.cs
 
-        private void UpdateStatusInfo()
-        {
-            if (_template == null) { _statusText.Text = "就绪"; return; }
-            var parts = new List<string>();
-            if (_selectedBand != null) parts.Add(Name(_selectedBand.Type));
-            if (_selectedElements.Count > 1)
-                parts.Add("选中 " + _selectedElements.Count + " 个元素");
-            else if (_selectedElement != null)
-                parts.Add(_selectedElement.GetType().Name.Replace("Element", "") + " [" + Math.Round(_selectedElement.X, 1) + "," + Math.Round(_selectedElement.Y, 1) + " " + Math.Round(_selectedElement.Width, 1) + "×" + Math.Round(_selectedElement.Height, 1) + "mm]");
-            if (parts.Count > 0) _statusText.Text = string.Join(" | ", parts);
-        }
+        // StatusAndRefresh: methods moved to MainWindow.StatusAndRefresh.cs
 
         // BandTreeAndProperties: methods moved to MainWindow.BandTreeAndProperties.cs
 
@@ -1018,67 +421,13 @@ namespace ReportEngine.Designer.Wpf
 
         // ============================== 其他 ==============================
 
-        private void UpdateTitle()
-        {
-            var name = _currentFilePath != null ? System.IO.Path.GetFileName(_currentFilePath) : "新模板";
-            Title = (_dirty ? "* " : "") + name + " - 报表设计器";
-        }
+        // StatusAndRefresh: methods moved to MainWindow.StatusAndRefresh.cs
 
-        internal void MarkDirty()
-        {
-            _dirty = true;
-            UpdateTitle();
-        }
+        // StatusAndRefresh: methods moved to MainWindow.StatusAndRefresh.cs
 
-        private void OnBandTreeSelectionChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
-        {
-            if (_bandTree.SelectedItem is TreeViewItem item)
-            {
-                BandTreeSelectionCommitter.Commit(item.Tag, _template,
-                    ref _selectedBand, ref _selectedElement,
-                    onRender: () => _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand),
-                    onUpdateProps: UpdatePropertyList);
-            }
-        }
+        // StatusAndRefresh: methods moved to MainWindow.StatusAndRefresh.cs
 
-        private void OnCanvasRightClick(object sender, MouseButtonEventArgs e)
-        {
-            if (_template == null) return;
-            var pos = e.GetPosition(_canvas);
-            var (band, element) = HitTester.Hit(pos, _template, _zoom, CanvasPadding, PixelsPerMm);
-
-            if (element != null) { _selectedElement = element; _selectedBand = band; RefreshUI(); }
-            else if (band != null) { _selectedElement = null; _selectedBand = band; RefreshUI(); }
-
-            var menu = RightClickMenuBuilder.Build(
-                selectedElement: _selectedElement,
-                hasClipboard: _clipboardJson != null,
-                selectedBand: _selectedBand,
-                bandName: _selectedBand != null ? Name(_selectedBand.Type) : null,
-                onCut: CutSelected,
-                onCopy: CopySelected,
-                onDelete: DeleteSelected,
-                onPaste: PasteElement,
-                onInsert: InsertElement,
-                staticText: NewText,
-                field: NewFieldBox,
-                summary: NewSummaryBox,
-                sysVar: NewSysVarBox,
-                line: NewLine,
-                shape: NewShape,
-                image: NewImage,
-                barcode: NewBarcode,
-                table: NewTable,
-                crossTab: NewCrossTab,
-                chart: NewChart,
-                subReport: NewSubReport,
-                onAddBand: AddBand,
-                onDeleteBand: DeleteBand,
-                onPageSetup: ShowPageSetupDialog);
-
-            _canvas.ContextMenu = menu;
-            menu.IsOpen = true;
-        }
+        // StatusAndRefresh: methods moved to MainWindow.StatusAndRefresh.cs
 
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
         {
