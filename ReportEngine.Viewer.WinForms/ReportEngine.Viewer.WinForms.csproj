@@ -3,12 +3,9 @@
   <PropertyGroup>
     <TargetFrameworks>net462;net8.0-windows</TargetFrameworks>
     <RootNamespace>ReportEngine.Viewer.WinForms</RootNamespace>
-    <Nullable>enable</Nullable>
-    <LangVersion>latest</LangVersion>
-    <UseWindowsForms Condition="'$(TargetFramework)' == 'net8.0-windows'">true</UseWindowsForms>
     <PackageId>ReportEngine.Viewer.WinForms</PackageId>
-    <Version>0.1.0-alpha</Version>
     <Description>WinForms 报表运行时预览控件：分页显示、缩放、打印支持</Description>
+    <UseWindowsForms Condition="'$(TargetFramework)' == 'net8.0-windows'">true</UseWindowsForms>
   </PropertyGroup>
 
   <ItemGroup>

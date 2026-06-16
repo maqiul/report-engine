@@ -3,12 +3,9 @@
   <PropertyGroup>
     <TargetFrameworks>net462;net8.0-windows</TargetFrameworks>
     <RootNamespace>ReportEngine.Viewer.Wpf</RootNamespace>
-    <Nullable>enable</Nullable>
-    <LangVersion>latest</LangVersion>
-    <UseWPF Condition="'$(TargetFramework)' == 'net8.0-windows'">true</UseWPF>
     <PackageId>ReportEngine.Viewer.Wpf</PackageId>
-    <Version>0.1.0-alpha</Version>
     <Description>WPF 报表运行时预览控件：分页显示、缩放、打印支持</Description>
+    <UseWPF Condition="'$(TargetFramework)' == 'net8.0-windows'">true</UseWPF>
   </PropertyGroup>
 
   <ItemGroup>

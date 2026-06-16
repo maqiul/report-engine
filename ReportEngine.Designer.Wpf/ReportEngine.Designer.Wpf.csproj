@@ -5,8 +5,6 @@
     <TargetFrameworks>net462;net8.0-windows</TargetFrameworks>
     <RootNamespace>ReportEngine.Designer.Wpf</RootNamespace>
     <AssemblyName>ReportDesignerWpf</AssemblyName>
-    <Nullable>enable</Nullable>
-    <LangVersion>latest</LangVersion>
     <UseWPF Condition="'$(TargetFramework)' == 'net8.0-windows'">true</UseWPF>
   </PropertyGroup>
 

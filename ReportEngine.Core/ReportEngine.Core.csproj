@@ -2,23 +2,10 @@
 
   <PropertyGroup>
     <TargetFrameworks>net462;netstandard2.0;net8.0</TargetFrameworks>
-    <Nullable>enable</Nullable>
-    <LangVersion>latest</LangVersion>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
-  </PropertyGroup>
-
-  <!-- 将来导出到 NuGet 时的包信息 -->
-  <PropertyGroup>
     <PackageId>ReportEngine.Core</PackageId>
-    <Version>0.2.0-alpha</Version>
-    <Authors>maqiul</Authors>
     <Description>跨平台报表渲染引擎核心库（多目标：net462/netstandard2.0/net8）</Description>
     <PackageTags>report-engine;pdf;excel;barcode;rendering</PackageTags>
-    <PackageProjectUrl>https://github.com/maqiul/report-engine</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/maqiul/report-engine</RepositoryUrl>
-    <RepositoryType>git</RepositoryType>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>
@@ -35,8 +22,5 @@
   <ItemGroup Condition="'$(TargetFramework)' == 'net462'">
     <PackageReference Include="System.ValueTuple" Version="4.5.0" />
   </ItemGroup>
-
-  <!-- net462 / netstandard2.0 上 record 与 init 需要 IsExternalInit polyfill；
-       这里直接全部使用普通 class，无需 polyfill。 -->
 
 </Project>

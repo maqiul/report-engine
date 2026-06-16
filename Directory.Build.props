@@ -1,0 +1,16 @@
+<Project>
+  <PropertyGroup>
+    <!-- 编译选项 -->
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+
+    <!-- NuGet 包公共信息 -->
+    <Version>0.2.0-alpha</Version>
+    <Authors>maqiul</Authors>
+    <RepositoryUrl>https://github.com/maqiul/report-engine</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/maqiul/report-engine</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+</Project>

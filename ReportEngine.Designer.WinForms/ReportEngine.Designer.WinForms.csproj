@@ -5,8 +5,6 @@
     <TargetFrameworks>net462;net8.0-windows</TargetFrameworks>
     <RootNamespace>ReportEngine.Designer.WinForms</RootNamespace>
     <AssemblyName>ReportDesigner</AssemblyName>
-    <Nullable>enable</Nullable>
-    <LangVersion>latest</LangVersion>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
     <ApplicationIcon />
     <UseWindowsForms Condition="'$(TargetFramework)' == 'net8.0-windows'">true</UseWindowsForms>
