@@ -6,12 +6,23 @@ Web 版本的报表引擎，支持在线预览、打印、导出 PDF/Excel。
 
 ```
 web/
-├── ReportEngine.WebApi/    # ASP.NET Core Web API 后端
+├── ReportEngine.WebApi/    # .NET 后端 (ASP.NET Core)
 │   ├── Controllers/
 │   │   ├── RenderController.cs   # 渲染预览 API
 │   │   └── ExportController.cs   # 导出 PDF/Excel API
 │   └── Models/
 │       └── RenderModels.cs       # 请求/响应模型
+├── backend/                # Java 后端 (Spring Boot)
+│   ├── build.gradle
+│   └── src/main/java/com/reportengine/
+│       ├── BackendApplication.java
+│       └── web/
+│           ├── controller/
+│           │   ├── RenderController.java   # 渲染预览 API
+│           │   └── ExportController.java   # 导出 PDF/Excel API
+│           └── model/
+│               ├── RenderRequest.java
+│               └── RenderResponse.java
 └── frontend/               # Vue 3 + TypeScript 前端
     └── src/
         ├── api/report.ts         # API 调用封装
@@ -21,14 +32,34 @@ web/
 
 ## 🚀 快速开始
 
+### 选择后端
+
+项目提供两种后端实现，任选其一：
+
+| 后端 | 技术栈 | 启动命令 |
+|------|--------|----------|
+| .NET | ASP.NET Core 8.0 | `dotnet run` |
+| Java | Spring Boot 4.1 | `./gradlew bootRun` |
+
 ### 1. 启动后端 API
+
+#### 选项 A：.NET 后端
 
 ```bash
 cd web/ReportEngine.WebApi
 dotnet run
 ```
 
-后端将在 `http://localhost:5000` 启动，Swagger 文档：`http://localhost:5000/swagger`
+#### 选项 B：Java 后端
+
+```bash
+cd web/backend
+./gradlew bootRun
+# 或
+gradlew.bat bootRun  # Windows
+```
+
+后端将在 `http://localhost:5000` 启动。
 
 ### 2. 启动前端
 
@@ -171,13 +202,27 @@ viewerRef.value?.exportExcel()
 
 ## 🔧 开发
 
-### 后端开发
+### .NET 后端开发
 
 ```bash
 cd web/ReportEngine.WebApi
 dotnet build
 dotnet test
 ```
+
+### Java 后端开发
+
+```bash
+cd web/backend
+./gradlew build -x test    # 构建（跳过测试）
+./gradlew bootRun          # 运行
+./gradlew clean            # 清理
+```
+
+**Java 后端依赖：**
+- Spring Boot 4.1.0
+- iText 7（PDF 生成）
+- Apache POI（Excel 生成）
 
 ### 前端开发
 
@@ -191,11 +236,20 @@ npm run lint         # 代码检查
 
 ## 📦 部署
 
-### 后端
+### .NET 后端
 
 ```bash
 cd web/ReportEngine.WebApi
 dotnet publish -c Release -o ./publish
+```
+
+### Java 后端
+
+```bash
+cd web/backend
+./gradlew bootJar
+# 生成 build/libs/backend-0.2.0.jar
+java -jar build/libs/backend-0.2.0.jar
 ```
 
 ### 前端
@@ -218,6 +272,7 @@ npm run build
 - [x] PDF 导出
 - [x] Excel 导出
 - [x] 浏览器打印
+- [x] Java Spring Boot 后端
 - [ ] 模板在线编辑
 - [ ] 数据源配置界面
 - [ ] 模板管理（上传/下载/列表）
