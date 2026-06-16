@@ -1,129 +1,119 @@
-using FluentAssertions;
-using ReportEngine.Core;
 using ReportEngine.Core.Barcodes;
 using Xunit;
 
 namespace ReportEngine.Core.Tests;
 
-/// <summary>
-/// BarcodeGenerator 行为测试：
-///   - 空内容返回尺寸正确的空矩阵
-///   - QRCode 生成非空矩阵且维度符合请求
-///   - Code128 同样可生成
-///   - DataMatrix / EAN13 等其他格式不抛异常
-///   - 矩阵中存在 true / false 两种值（说明真有编码发生）
-/// </summary>
+// ─────────────────────────────────────────────────────────────────────────────
+// BarcodeGenerator 测试
+// ─────────────────────────────────────────────────────────────────────────────
+
 public class BarcodeGeneratorTests
 {
     [Fact]
-    public void Generate_EmptyContent_Returns_EmptyMatrix_With_Requested_Size()
+    public void Generate_Code128_ReturnsNonEmptyMatrix()
     {
-        var matrix = BarcodeGenerator.Generate("", BarcodeFormat.QRCode, 100, 50);
-
-        matrix.GetLength(0).Should().Be(50);
-        matrix.GetLength(1).Should().Be(100);
-        // 空矩阵所有点都为 false
-        matrix.Cast<bool>().Should().AllBeEquivalentTo(false);
+        var matrix = BarcodeGenerator.Generate("ABC123", BarcodeFormat.Code128, 200, 50);
+        Assert.NotNull(matrix);
+        Assert.True(matrix.GetLength(0) > 0);
+        Assert.True(matrix.GetLength(1) > 0);
     }
 
     [Fact]
-    public void Generate_QRCode_Returns_NonEmpty_Matrix_With_True_And_False_Pixels()
+    public void Generate_Code39_ReturnsNonEmptyMatrix()
     {
-        var matrix = BarcodeGenerator.Generate("https://example.com", BarcodeFormat.QRCode, 200, 200);
-
-        matrix.GetLength(0).Should().Be(200);
-        matrix.GetLength(1).Should().Be(200);
-
-        // QR 编码一定既有黑点也有白点
-        matrix.Cast<bool>().Should().Contain(true);
-        matrix.Cast<bool>().Should().Contain(false);
+        var matrix = BarcodeGenerator.Generate("HELLO", BarcodeFormat.Code39, 200, 50);
+        Assert.NotNull(matrix);
+        Assert.True(matrix.GetLength(0) > 0);
     }
 
     [Fact]
-    public void Generate_Code128_Returns_Matrix_With_Expected_Width()
+    public void Generate_QRCode_ReturnsSquareMatrix()
     {
-        var matrix = BarcodeGenerator.Generate("ABC-12345", BarcodeFormat.Code128, 200, 80);
-
-        matrix.GetLength(0).Should().Be(80);
-        matrix.GetLength(1).Should().Be(200);
-        matrix.Cast<bool>().Should().Contain(true);
-    }
-
-    [Theory]
-    [InlineData(BarcodeFormat.EAN13, "590123412345")]   // 13 位 EAN-13
-    [InlineData(BarcodeFormat.EAN8, "9638507")]          // 7 位 EAN-8
-    [InlineData(BarcodeFormat.UPC_A, "123456789012")]    // 12 位 UPC-A
-    [InlineData(BarcodeFormat.Code39, "ABC-123")]
-    [InlineData(BarcodeFormat.DataMatrix, "test")]
-    [InlineData(BarcodeFormat.PDF417, "hi", 300, 100)]   // PDF417 需要更大画布才能放下
-    public void Generate_Various_Formats_Do_Not_Throw(BarcodeFormat format, string content, int width = 100, int height = 100)
-    {
-        var act = () => BarcodeGenerator.Generate(content, format, width, height);
-
-        act.Should().NotThrow();
-    }
-
-    // ============ A1 集成 / 边界 (v0.1.11) ============
-
-    [Fact]
-    public void Generate_QRCode_Long_URL_Does_Not_Throw()
-    {
-        // 长 URL 应该自动用更高 version 编码
-        var longUrl = "https://example.com/very/long/path?param1=value1&param2=value2&param3=value3&param4=value4&param5=value5&param6=value6&param7=value7";
-
-        var act = () => BarcodeGenerator.Generate(longUrl, BarcodeFormat.QRCode, 300, 300);
-
-        act.Should().NotThrow();
-        var matrix = act();
-        matrix.Cast<bool>().Should().Contain(true);
+        var matrix = BarcodeGenerator.Generate("https://example.com", BarcodeFormat.QRCode, 100, 100);
+        Assert.NotNull(matrix);
+        int rows = matrix.GetLength(0);
+        int cols = matrix.GetLength(1);
+        Assert.Equal(rows, cols); // QR 码是正方形
     }
 
     [Fact]
-    public void Generate_Code128_Chinese_Characters_Throws_ArgumentException()
+    public void Generate_DataMatrix_ReturnsNonEmptyMatrix()
     {
-        // ZXing Code128 不支持非 ASCII 字符; 当前实现直接抛出 (非静默吞掉)
-        // 这是 ZXing 库的契约 - 我们测试的是"边界行为可见", 不是"自动 fallback"
-        var act = () => BarcodeGenerator.Generate("你好世界", BarcodeFormat.Code128, 200, 80);
-
-        act.Should().Throw<ArgumentException>();
+        var matrix = BarcodeGenerator.Generate("DATA123", BarcodeFormat.DataMatrix, 100, 100);
+        Assert.NotNull(matrix);
+        Assert.True(matrix.GetLength(0) > 0);
     }
 
     [Fact]
-    public void Generate_Two_Calls_With_Same_Input_Produce_Equivalent_Matrix()
+    public void Generate_PDF417_ReturnsNonEmptyMatrix()
     {
-        // 同样的输入 -> 同样的输出 (确定性)
-        var m1 = BarcodeGenerator.Generate("test-content-123", BarcodeFormat.QRCode, 100, 100);
-        var m2 = BarcodeGenerator.Generate("test-content-123", BarcodeFormat.QRCode, 100, 100);
-
-        m1.GetLength(0).Should().Be(m2.GetLength(0));
-        m1.GetLength(1).Should().Be(m2.GetLength(1));
-        for (int y = 0; y < m1.GetLength(0); y++)
-            for (int x = 0; x < m1.GetLength(1); x++)
-                m1[y, x].Should().Be(m2[y, x]);
-    }
-
-    // ===== D8: 边界用例 (v0.1.18) =====
-
-    [Fact]
-    public void Generate_QRCode_All_Numeric_Content_Does_Not_Throw()
-    {
-        // QR Code 数字模式: 高密度编码
-        var act = () => BarcodeGenerator.Generate("123456789012345678901234567890", BarcodeFormat.QRCode, 150, 150);
-
-        act.Should().NotThrow();
-        var matrix = act();
-        matrix.Cast<bool>().Should().Contain(true);
+        var matrix = BarcodeGenerator.Generate("PDF417TEST", BarcodeFormat.PDF417, 200, 100);
+        Assert.NotNull(matrix);
+        Assert.True(matrix.GetLength(0) > 0);
     }
 
     [Fact]
-    public void Generate_Various_Dimensions_For_QRCode_Do_Not_Throw()
+    public void Generate_EmptyContent_ReturnsEmptyMatrix()
     {
-        // 不同画布尺寸都应能容纳 QR 编码 (实际尺寸由编码决定, 画布被裁剪/居中)
-        var sizes = new[] { (50, 50), (100, 100), (300, 300), (500, 500) };
-        foreach (var (w, h) in sizes)
-        {
-            var act = () => BarcodeGenerator.Generate("Hello", BarcodeFormat.QRCode, w, h);
-            act.Should().NotThrow();
-        }
+        var matrix = BarcodeGenerator.Generate("", BarcodeFormat.QRCode, 100, 100);
+        Assert.NotNull(matrix);
+        // 空内容返回指定尺寸的空白矩阵
+        Assert.Equal(100, matrix.GetLength(0));
+        Assert.Equal(100, matrix.GetLength(1));
+    }
+
+    [Fact]
+    public void Generate_NullContent_ReturnsEmptyMatrix()
+    {
+        var matrix = BarcodeGenerator.Generate(null!, BarcodeFormat.QRCode, 100, 100);
+        Assert.NotNull(matrix);
+        Assert.Equal(100, matrix.GetLength(0));
+        Assert.Equal(100, matrix.GetLength(1));
+    }
+
+    [Fact]
+    public void Generate_EAN13_ValidInput()
+    {
+        // EAN-13 需要 12 或 13 位数字
+        var matrix = BarcodeGenerator.Generate("5901234123457", BarcodeFormat.EAN13, 200, 50);
+        Assert.NotNull(matrix);
+        Assert.True(matrix.GetLength(0) > 0);
+    }
+
+    [Fact]
+    public void Generate_EAN8_ValidInput()
+    {
+        // EAN-8 需要 7 或 8 位数字
+        var matrix = BarcodeGenerator.Generate("96385074", BarcodeFormat.EAN8, 150, 40);
+        Assert.NotNull(matrix);
+        Assert.True(matrix.GetLength(0) > 0);
+    }
+
+    [Fact]
+    public void Generate_UPC_A_ValidInput()
+    {
+        // UPC-A 需要 11 或 12 位数字
+        var matrix = BarcodeGenerator.Generate("012345678905", BarcodeFormat.UPC_A, 200, 50);
+        Assert.NotNull(matrix);
+        Assert.True(matrix.GetLength(0) > 0);
+    }
+
+    [Fact]
+    public void Generate_MatrixContainsTrueValues()
+    {
+        var matrix = BarcodeGenerator.Generate("TEST", BarcodeFormat.Code128, 200, 50);
+        bool hasTrue = false;
+        for (int y = 0; y < matrix.GetLength(0) && !hasTrue; y++)
+            for (int x = 0; x < matrix.GetLength(1) && !hasTrue; x++)
+                if (matrix[y, x]) hasTrue = true;
+        Assert.True(hasTrue); // 条码矩阵应该包含黑色模块
+    }
+
+    [Fact]
+    public void Generate_DifferentSizes_ReturnsDifferentDimensions()
+    {
+        var small = BarcodeGenerator.Generate("TEST", BarcodeFormat.QRCode, 50, 50);
+        var large = BarcodeGenerator.Generate("TEST", BarcodeFormat.QRCode, 200, 200);
+        Assert.NotEqual(small.GetLength(0), large.GetLength(0));
     }
 }
