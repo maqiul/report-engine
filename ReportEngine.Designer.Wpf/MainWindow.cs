@@ -117,76 +117,6 @@ namespace ReportEngine.Designer.Wpf
         private bool _formatPainterActive;
         private ReportElement? _formatPainterSource;
 
-        public MainWindow()
-        {
-            Title = "报表设计器";
-            Width = 1400;
-            Height = 900;
-            WindowStartupLocation = WindowStartupLocation.CenterScreen;
-            Background = new SolidColorBrush(Color.FromRgb(240, 240, 240));
-
-            _canvas = new Canvas { Background = Brushes.Transparent, ClipToBounds = true, AllowDrop = true };
-            _canvas.MouseLeftButtonDown += OnCanvasMouseDown;
-            _canvas.MouseMove += OnCanvasMouseMove;
-            _canvas.MouseLeftButtonUp += OnCanvasMouseUp;
-            _canvas.MouseRightButtonUp += OnCanvasRightClick;
-            _canvas.PreviewMouseLeftButtonDown += (s, e) => { if (e.ClickCount == 2) { OnCanvasDoubleClick(s, e); e.Handled = true; } };
-            _canvas.Drop += OnCanvasDrop;
-            _canvas.DragOver += (s, e) => { e.Effects = e.Data.GetDataPresent("ElementType") ? DragDropEffects.Copy : DragDropEffects.None; e.Handled = true; };
-
-            _scrollViewer = new ScrollViewer
-            {
-                HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
-                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                Background = new SolidColorBrush(Color.FromRgb(200, 200, 200)),
-                Content = _canvas,
-            };
-
-            _hRuler = new Canvas { Height = RulerSize, Background = new SolidColorBrush(Color.FromRgb(230, 230, 230)), ClipToBounds = true };
-            _vRuler = new Canvas { Width = RulerSize, Background = new SolidColorBrush(Color.FromRgb(230, 230, 230)), ClipToBounds = true };
-            _hRuler.MouseLeftButtonDown += OnHRulerMouseDown;
-            _vRuler.MouseLeftButtonDown += OnVRulerMouseDown;
-
-            _previewCanvas = new Canvas { Background = new SolidColorBrush(Color.FromRgb(180, 180, 180)) };
-            _previewScrollViewer = new ScrollViewer
-            {
-                HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
-                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                Background = new SolidColorBrush(Color.FromRgb(180, 180, 180)),
-                Content = _previewCanvas,
-                Visibility = Visibility.Collapsed,
-            };
-
-            // 渲染器（Step2.A 拆出）：构造函数持 canvas/ruler/scroll 引用，渲染状态走 ctx 参数
-            _canvasRenderer = new CanvasRenderer(_canvas, _hRuler, _vRuler, _scrollViewer);
-            _previewRenderer = new PreviewRenderer(_previewCanvas);
-
-            _bandTree = new TreeView { Background = Brushes.White, Foreground = Brushes.Black, BorderThickness = new Thickness(0) };
-            _bandTree.SelectedItemChanged += OnBandTreeSelectionChanged;
-
-            _propertyStack = new StackPanel();
-            _propertyPanel = new ScrollViewer
-            {
-                Content = _propertyStack,
-                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                Background = Brushes.White,
-            };
-
-            _statusText = new TextBlock { Text = "就绪", Foreground = Brushes.White, VerticalAlignment = VerticalAlignment.Center };
-            _zoomLabel = new TextBlock { Text = "100%", Foreground = Brushes.White, VerticalAlignment = VerticalAlignment.Center, MinWidth = 40 };
-            _posLabel = new TextBlock { Text = "", Foreground = Brushes.White, VerticalAlignment = VerticalAlignment.Center, MinWidth = 120 };
-            _zoomSlider = new Slider { Minimum = 25, Maximum = 400, Value = 100, Width = 120, VerticalAlignment = VerticalAlignment.Center };
-            _zoomSlider.ValueChanged += (_, __) => { _zoom = _zoomSlider.Value / 100.0; _zoomLabel.Text = (int)_zoomSlider.Value + "%"; _canvasRenderer.Render(CanvasRenderContextFactory.Build(_template, _zoom, _gridSpacingMm, _showGrid, _gridColor, _vGuides, _hGuides, _snapLinesX, _snapLinesY), _selectedElements, _selectedBand); _canvasRenderer.RenderRulers(_template!, _zoom); };
-
-            BuildLayout();
-            ApplyScrollBarStyle();
-            SetupKeyBindings();
-            LoadRecentFiles();
-            SetupAutoSave();
-            NewTemplate();
-            CheckAutoSaveRecovery();
-        }
-
         // ============================== 布局 ==============================
 
         // 字体工具栏组件
@@ -202,43 +132,10 @@ namespace ReportEngine.Designer.Wpf
         /// <summary>应用格式刷到目标元素</summary>
         /// <summary>关闭格式刷</summary>
         /// <summary>设置自动保存定时器：每60秒自动保存一次草稿</summary>
-        private void SetupAutoSave()
-        {
-            _autoSaveTimer = AutoSaveTimerBuilder.Build(TimeSpan.FromMinutes(1), (_, __) =>
-            {
-                if (_dirty && _template != null)
-                {
-                    try
-                    {
-                        var json = _parser.Serialize(_template);
-                        System.IO.File.WriteAllText(AutoSavePath, json);
-                        _statusText.Text = "自动保存草稿: " + DateTime.Now.ToString("HH:mm:ss");
-                    }
-                    catch { }
-                }
-            });
-        }
 
         /// <summary>启动时检查是否有自动保存的草稿</summary>
-        private void CheckAutoSaveRecovery()
-        {
-            AutoSaveRecoveryChecker.Check(AutoSavePath, _parser,
-                onRecovered: template =>
-                {
-                    _template = template;
-                    _currentFilePath = null;
-                    _dirty = false;
-                    RefreshUI();
-                    _statusText.Text = "已从草稿恢复";
-                },
-                onSkipped: () => { _statusText.Text = "已忽略草稿文件"; });
-        }
 
         /// <summary>手动保存后删除自动保存草稿</summary>
-        private void ClearAutoSave()
-        {
-            FileDeleter.SafeDelete(AutoSavePath);
-        }
 
         /// <summary>重置选中元素的属性为默认值</summary>
         private TextBlock _selectedObjLabel = null!;
@@ -290,13 +187,5 @@ namespace ReportEngine.Designer.Wpf
         /// <summary>数据绑定向导 — 引导用户选择数据源并绑定字段到元素</summary>
         // ============================== RelayCmd ==============================
 
-        private class RelayCmd : ICommand
-        {
-            private readonly Action _execute;
-            public RelayCmd(Action execute) { _execute = execute; }
-            public event EventHandler? CanExecuteChanged { add { } remove { } }
-            public bool CanExecute(object? parameter) => true;
-            public void Execute(object? parameter) => _execute();
-        }
     }
 }
