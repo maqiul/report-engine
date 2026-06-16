@@ -328,7 +328,6 @@ defineExpose({
 .element-text {
   display: flex;
   align-items: center;
-  padding: 2px;
   box-sizing: border-box;
 }
 
