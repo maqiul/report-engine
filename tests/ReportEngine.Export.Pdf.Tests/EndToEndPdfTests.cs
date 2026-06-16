@@ -442,4 +442,206 @@ public class EndToEndPdfTests
         var pdfBytes = RenderAndExportPdf(template, data);
         Assert.True(pdfBytes.Length > 100);
     }
+
+    // ============== 子报表 ==============
+
+    [Fact]
+    public void EndToEnd_SubReport_PdfGenerated()
+    {
+        // 子模板：简单的 Detail band
+        var childJson = @"{
+            ""version"": ""1.0"",
+            ""dataSources"": [{""name"": ""items""}],
+            ""bands"": [{
+                ""type"": ""detail"",
+                ""height"": 8,
+                ""dataSource"": ""items"",
+                ""elements"": [{
+                    ""type"": ""text"",
+                    ""text"": ""  - {{currentRow.name}}"",
+                    ""x"": 10, ""y"": 0, ""width"": 100, ""height"": 6
+                }]
+            }]
+        }";
+        _resolver.Add("child.rptx", childJson);
+
+        // 主模板：Detail band 含 SubReportElement
+        var template = new ReportTemplate();
+        template.DataSources.Add(new DataSourceDef { Name = "orders" });
+        template.Bands.Add(new Band
+        {
+            Type = BandType.Detail,
+            Height = 12,
+            DataSource = "orders",
+            Elements = {
+                new TextElement { Text = "Order: {{currentRow.id}}", X = 10, Y = 0, Width = 100, Height = 8 },
+                new SubReportElement {
+                    TemplateRef = "child.rptx",
+                    X = 10, Y = 8, Width = 180, Height = 4,
+                    DataBinding = new SubReportDataBinding { Source = "orders" }
+                }
+            }
+        });
+
+        var data = new Dictionary<string, List<Dictionary<string, object>>>
+        {
+            ["orders"] = new() { new() { ["id"] = "ORD-001" } }
+        };
+
+        var pdfBytes = RenderAndExportPdf(template, data);
+        Assert.True(pdfBytes.Length > 100);
+        Assert.Equal('%', (char)pdfBytes[0]);
+    }
+
+    [Fact]
+    public void EndToEnd_SubReportJsonRoundTrip_PdfGenerated()
+    {
+        // 子模板
+        var childJson = @"{
+            ""version"": ""1.0"",
+            ""dataSources"": [{""name"": ""items""}],
+            ""bands"": [{
+                ""type"": ""detail"",
+                ""height"": 8,
+                ""dataSource"": ""items"",
+                ""elements"": [{
+                    ""type"": ""text"",
+                    ""text"": ""Item: {{currentRow.name}}"",
+                    ""x"": 10, ""y"": 0, ""width"": 100, ""height"": 6
+                }]
+            }]
+        }";
+        _resolver.Add("items.rptx", childJson);
+
+        // 主模板 JSON → 解析 → 序列化 → 反序列化 → 渲染 → 导出
+        var mainJson = @"{
+            ""version"": ""1.0"",
+            ""dataSources"": [{""name"": ""ds""}],
+            ""bands"": [{
+                ""type"": ""detail"",
+                ""height"": 15,
+                ""dataSource"": ""ds"",
+                ""elements"": [{
+                    ""type"": ""text"",
+                    ""text"": ""{{currentRow.title}}"",
+                    ""x"": 10, ""y"": 0, ""width"": 100, ""height"": 8
+                }, {
+                    ""type"": ""subreport"",
+                    ""templateRef"": ""items.rptx"",
+                    ""x"": 10, ""y"": 8, ""width"": 180, ""height"": 5,
+                    ""dataBinding"": {""source"": ""ds""}
+                }]
+            }]
+        }";
+
+        var template = _parser.Parse(mainJson);
+        var json2 = _parser.Serialize(template);
+        var restored = _parser.Parse(json2);
+
+        var data = new Dictionary<string, List<Dictionary<string, object>>>
+        {
+            ["ds"] = new() { new() { ["title"] = "Test" } }
+        };
+
+        var pdfBytes = RenderAndExportPdf(restored, data);
+        Assert.True(pdfBytes.Length > 100);
+    }
+
+    [Fact]
+    public void EndToEnd_SubReportMissing_ThrowsException()
+    {
+        var template = new ReportTemplate();
+        template.DataSources.Add(new DataSourceDef { Name = "ds" });
+        template.Bands.Add(new Band
+        {
+            Type = BandType.Detail,
+            Height = 15,
+            DataSource = "ds",
+            Elements = {
+                new TextElement { Text = "Main", X = 10, Y = 0, Width = 80, Height = 8 },
+                new SubReportElement {
+                    TemplateRef = "nonexistent.rptx",
+                    X = 10, Y = 8, Width = 180, Height = 5,
+                    DataBinding = new SubReportDataBinding { Source = "ds" }
+                }
+            }
+        });
+
+        var data = new Dictionary<string, List<Dictionary<string, object>>>
+        {
+            ["ds"] = new() { new() { ["name"] = "test" } }
+        };
+
+        Assert.Throws<Exception>(() => RenderAndExportPdf(template, data));
+    }
+
+    [Fact]
+    public void EndToEnd_NestedSubReport_PdfGenerated()
+    {
+        // 孙模板
+        var grandchildJson = @"{
+            ""version"": ""1.0"",
+            ""dataSources"": [{""name"": ""details""}],
+            ""bands"": [{
+                ""type"": ""detail"",
+                ""height"": 6,
+                ""dataSource"": ""details"",
+                ""elements"": [{
+                    ""type"": ""text"",
+                    ""text"": ""    * {{currentRow.info}}"",
+                    ""x"": 10, ""y"": 0, ""width"": 100, ""height"": 5
+                }]
+            }]
+        }";
+        _resolver.Add("grandchild.rptx", grandchildJson);
+
+        // 子模板：含嵌套子报表
+        var childJson = @"{
+            ""version"": ""1.0"",
+            ""dataSources"": [{""name"": ""items""}],
+            ""bands"": [{
+                ""type"": ""detail"",
+                ""height"": 12,
+                ""dataSource"": ""items"",
+                ""elements"": [{
+                    ""type"": ""text"",
+                    ""text"": ""  - {{currentRow.name}}"",
+                    ""x"": 10, ""y"": 0, ""width"": 100, ""height"": 6
+                }, {
+                    ""type"": ""subreport"",
+                    ""templateRef"": ""grandchild.rptx"",
+                    ""x"": 10, ""y"": 6, ""width"": 160, ""height"": 5,
+                    ""dataBinding"": {""source"": ""items""}
+                }]
+            }]
+        }";
+        _resolver.Add("child.rptx", childJson);
+
+        // 主模板
+        var template = new ReportTemplate();
+        template.DataSources.Add(new DataSourceDef { Name = "ds" });
+        template.Bands.Add(new Band
+        {
+            Type = BandType.Detail,
+            Height = 15,
+            DataSource = "ds",
+            Elements = {
+                new TextElement { Text = "Root: {{currentRow.title}}", X = 10, Y = 0, Width = 100, Height = 8 },
+                new SubReportElement {
+                    TemplateRef = "child.rptx",
+                    X = 10, Y = 8, Width = 180, Height = 5,
+                    DataBinding = new SubReportDataBinding { Source = "ds" }
+                }
+            }
+        });
+
+        var data = new Dictionary<string, List<Dictionary<string, object>>>
+        {
+            ["ds"] = new() { new() { ["title"] = "Root Item" } }
+        };
+
+        var pdfBytes = RenderAndExportPdf(template, data);
+        Assert.True(pdfBytes.Length > 100);
+        Assert.Equal('%', (char)pdfBytes[0]);
+    }
 }
