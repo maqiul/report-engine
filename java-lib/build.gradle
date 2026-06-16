@@ -28,6 +28,7 @@ dependencies {
     
     // PDF 生成 - iText 7
     api 'com.itextpdf:itext7-core:7.2.5'
+    api 'com.itextpdf:font-asian:7.2.5'
     
     // Excel 生成 - Apache POI
     api 'org.apache.poi:poi:5.2.3'

@@ -170,9 +170,114 @@ function nextPage() {
   }
 }
 
-// 打印
+// 打印 - 打开新窗口只打印报表内容
 function handlePrint() {
-  window.print()
+  if (!report.value || !currentPageData.value) return
+  
+  // 获取当前页的页面尺寸
+  const page = currentPageData.value
+  const widthMm = page.width
+  const heightMm = page.height
+  
+  // 构建打印 HTML
+  let html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>报表打印</title>
+  <style>
+    @page {
+      size: ${widthMm}mm ${heightMm}mm;
+      margin: 0;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Microsoft YaHei', 'SimSun', sans-serif;
+    }
+    .print-page {
+      width: ${widthMm}mm;
+      height: ${heightMm}mm;
+      position: relative;
+      overflow: hidden;
+      page-break-after: always;
+    }
+    .element {
+      position: absolute;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+    .element-text {
+      display: flex;
+      align-items: center;
+    }
+    .element-text span {
+      width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .element-line .line {
+      width: 100%;
+      height: 100%;
+      border-bottom-style: solid;
+    }
+    .element-shape .shape {
+      width: 100%;
+      height: 100%;
+    }
+    .element-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+  </style>
+</head>
+<body>`
+
+  // 添加所有页面的内容
+  for (const p of report.value.pages) {
+    html += `<div class="print-page">`
+    for (const el of p.elements) {
+      const style = `left:${el.x}mm;top:${el.y}mm;width:${el.width}mm;height:${el.height}mm;`
+      const font = el.font ? `font-family:${el.font.family || 'Microsoft YaHei'};font-size:${el.font.size}pt;${el.font.bold ? 'font-weight:bold;' : ''}${el.font.italic ? 'font-style:italic;' : ''}${el.font.underline ? 'text-decoration:underline;' : ''}color:${el.font.color || '#000'};` : ''
+      const align = el.alignment ? `text-align:${el.alignment};` : ''
+      
+      if (el.type === 'text') {
+        html += `<div class="element element-text" style="${style}"><span style="${font}${align}">${el.text || ''}</span></div>`
+      } else if (el.type === 'line') {
+        html += `<div class="element element-line" style="${style}"><div class="line" style="border-color:${el.borderColor || '#000'};border-width:${el.borderWidth || 1}px;"></div></div>`
+      } else if (el.type === 'shape') {
+        html += `<div class="element element-shape" style="${style}background-color:${el.backgroundColor || '#fff'};"></div>`
+      } else if (el.type === 'image' && el.text) {
+        html += `<div class="element element-image" style="${style}"><img src="${el.text}" /></div>`
+      } else if (el.type === 'barcode') {
+        html += `<div class="element" style="${style}font-family:monospace;font-size:10px;text-align:center;">${el.text || ''}</div>`
+      }
+    }
+    html += `</div>`
+  }
+
+  html += `</body></html>`
+
+  // 打开新窗口并打印
+  const printWindow = window.open('', '_blank', 'width=800,height=600')
+  if (printWindow) {
+    printWindow.document.write(html)
+    printWindow.document.close()
+    
+    // 延迟打印，确保页面完全加载
+    setTimeout(() => {
+      printWindow.focus()
+      printWindow.print()
+      // 打印完成后延迟关闭，给用户时间操作
+      setTimeout(() => {
+        printWindow.close()
+      }, 1000)
+    }, 500)
+  } else {
+    alert('请允许浏览器弹出窗口以使用打印功能')
+  }
 }
 
 // 导出 PDF
@@ -366,18 +471,23 @@ defineExpose({
 
 /* 打印样式 */
 @media print {
-  .toolbar {
-    display: none;
+  .toolbar,
+  .page-info,
+  .toolbar button {
+    display: none !important;
   }
 
   .preview-container {
     padding: 0;
     overflow: visible;
+    display: block;
   }
 
   .page {
     box-shadow: none;
     page-break-after: always;
+    transform: none !important;
+    margin: 0;
   }
 }
 </style>

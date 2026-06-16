@@ -33,7 +33,8 @@ public class ExportController {
             
             return ResponseEntity.ok().headers(headers).body(pdfBytes);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body(("Error: " + e.getMessage()).getBytes());
         }
     }
 
@@ -51,7 +52,8 @@ public class ExportController {
             
             return ResponseEntity.ok().headers(headers).body(excelBytes);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body(("Error: " + e.getMessage()).getBytes());
         }
     }
 }

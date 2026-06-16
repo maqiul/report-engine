@@ -120,4 +120,4 @@ scripts/strip_render_methods.py
 # 一次性探索脚本（count_funcs.py / find_callers.py 仅在 step3a 阶段
 # 用来统计 MainWindow 中各函数出现次数，driver 是 step3a_finish.py）
 scripts/count_funcs.py
-scripts/find_callers.py
+scripts/find_callers.py"web/backend.zip"  

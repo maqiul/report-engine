@@ -342,4 +342,46 @@ body {
   flex: 1;
   overflow: hidden;
 }
+
+/* 打印样式：只打印报表预览区域 */
+@media print {
+  body {
+    margin: 0;
+    padding: 0;
+  }
+  
+  .app-header,
+  .sidebar,
+  .toolbar,
+  .page-info,
+  .toolbar button {
+    display: none !important;
+  }
+  
+  .app-main {
+    display: block;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .viewer {
+    overflow: visible;
+    width: 100%;
+  }
+  
+  .report-viewer {
+    background: white;
+  }
+  
+  .preview-container {
+    transform: none !important;
+  }
+  
+  .page {
+    transform: none !important;
+    box-shadow: none;
+    margin: 0;
+    page-break-after: always;
+  }
+}
 </style>
