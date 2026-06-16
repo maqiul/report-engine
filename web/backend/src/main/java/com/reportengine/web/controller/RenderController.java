@@ -50,6 +50,7 @@ public class RenderController {
             // 渲染 bands
             List<RenderedElementInfo> allElements = new ArrayList<>();
             double currentY = 0;
+            int totalPages = 1; // 简化：默认 1 页
             
             if (template.has("bands")) {
                 JsonNode bands = template.get("bands");
@@ -66,7 +67,7 @@ public class RenderController {
                             Map<String, Object> row = rows.get(i);
                             if (band.has("elements")) {
                                 for (JsonNode element : band.get("elements")) {
-                                    RenderedElementInfo el = renderElement(element, row, currentY);
+                                    RenderedElementInfo el = renderElement(element, row, currentY, 1, totalPages);
                                     if (el != null) {
                                         allElements.add(el);
                                     }
@@ -78,7 +79,7 @@ public class RenderController {
                         // 非 detail band（header, footer 等）
                         if (band.has("elements")) {
                             for (JsonNode element : band.get("elements")) {
-                                RenderedElementInfo el = renderElement(element, null, currentY);
+                                RenderedElementInfo el = renderElement(element, null, currentY, 1, totalPages);
                                 if (el != null) {
                                     allElements.add(el);
                                 }
@@ -101,6 +102,7 @@ public class RenderController {
             
             response.setSuccess(true);
             response.setPages(pages);
+            response.setTotalPages(totalPages);
             
         } catch (Exception e) {
             response.setSuccess(false);
@@ -113,7 +115,7 @@ public class RenderController {
     /**
      * 渲染单个元素
      */
-    private RenderedElementInfo renderElement(JsonNode element, Map<String, Object> rowData, double offsetY) {
+    private RenderedElementInfo renderElement(JsonNode element, Map<String, Object> rowData, double offsetY, int currentPage, int totalPages) {
         String type = element.has("type") ? element.get("type").asText() : "text";
         
         RenderedElementInfo el = new RenderedElementInfo();
@@ -125,10 +127,12 @@ public class RenderController {
         
         if ("text".equals(type)) {
             String text = element.has("text") ? element.get("text").asText() : "";
-            // 替换表达式 {{currentRow.xxx}}
+            // 替换表达式 {{currentRow.xxx}} 和全局变量 {{page}}, {{totalPages}}
             if (rowData != null) {
                 text = replaceExpressions(text, rowData);
             }
+            // 替换全局变量
+            text = replaceGlobalVariables(text, currentPage, totalPages);
             el.setText(text);
             el.setAlignment(element.has("alignment") ? element.get("alignment").asText() : "left");
             
@@ -175,6 +179,20 @@ public class RenderController {
             result = result.replace(placeholder, value);
         }
         
+        return result;
+    }
+    
+    /**
+     * 替换全局变量 {{page}}, {{totalPages}} 等
+     */
+    private String replaceGlobalVariables(String text, int currentPage, int totalPages) {
+        if (text == null || !text.contains("{{")) {
+            return text;
+        }
+        
+        String result = text;
+        result = result.replace("{{page}}", String.valueOf(currentPage));
+        result = result.replace("{{totalPages}}", String.valueOf(totalPages));
         return result;
     }
 }

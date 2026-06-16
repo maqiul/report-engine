@@ -33,14 +33,13 @@
       <div
         class="page"
         :style="{
-          width: `${currentPageData.width * scale}mm`,
-          height: `${currentPageData.height * scale}mm`
+          width: `${currentPageData.width}mm`,
+          height: `${currentPageData.height}mm`,
+          transform: `scale(${scale})`,
+          transformOrigin: 'top left'
         }"
       >
-        <div
-          class="page-content"
-          :style="{ transform: `scale(${scale})`, transformOrigin: 'top left' }"
-        >
+        <div class="page-content">
           <div
             v-for="(el, idx) in currentPageData.elements"
             :key="idx"
@@ -215,16 +214,20 @@ function getElementStyle(el: RenderedElementInfo) {
 
 // 文本样式
 function getTextStyle(el: RenderedElementInfo) {
-  if (!el.font) return {}
-  return {
-    fontFamily: el.font.family,
-    fontSize: `${el.font.size}pt`,
-    fontWeight: el.font.bold ? 'bold' : 'normal',
-    fontStyle: el.font.italic ? 'italic' : 'normal',
-    textDecoration: el.font.underline ? 'underline' : 'none',
-    color: el.font.color || '#000',
+  const style: any = {
     textAlign: (el.alignment || 'left') as any
   }
+  
+  if (el.font) {
+    style.fontFamily = el.font.family
+    style.fontSize = `${el.font.size}pt`
+    style.fontWeight = el.font.bold ? 'bold' : 'normal'
+    style.fontStyle = el.font.italic ? 'italic' : 'normal'
+    style.textDecoration = el.font.underline ? 'underline' : 'none'
+    style.color = el.font.color || '#000'
+  }
+  
+  return style
 }
 
 // 暴露方法
@@ -326,6 +329,7 @@ defineExpose({
   display: flex;
   align-items: center;
   padding: 2px;
+  box-sizing: border-box;
 }
 
 .element-text span {
@@ -333,6 +337,7 @@ defineExpose({
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  display: block;
 }
 
 .element-line .line {
