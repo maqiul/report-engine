@@ -1,0 +1,61 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+}
+
+group = 'com.reportengine'
+version = '0.2.0'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+    withSourcesJar()
+    withJavadocJar()
+}
+
+javadoc {
+    options.encoding = 'UTF-8'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // JSON 处理
+    api 'com.fasterxml.jackson.core:jackson-databind:2.15.3'
+    
+    // PDF 生成 - iText 7
+    api 'com.itextpdf:itext7-core:7.2.5'
+    
+    // Excel 生成 - Apache POI
+    api 'org.apache.poi:poi:5.2.3'
+    api 'org.apache.poi:poi-ooxml:5.2.3'
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            pom {
+                name = 'ReportEngine Java Library'
+                description = 'Java library for report rendering, PDF and Excel export'
+                url = 'https://github.com/maqiul/report-engine'
+                licenses {
+                    license {
+                        name = 'MIT License'
+                        url = 'https://opensource.org/licenses/MIT'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'maqiul'
+                        name = 'Ma Qiuliang'
+                        email = 'maqiuliang4@163.com'
+                    }
+                }
+            }
+        }
+    }
+}

@@ -14,25 +14,15 @@ java {
 }
 
 repositories {
+	mavenLocal()
 	mavenCentral()
 }
 
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
 	
-	// PDF 生成 - iText 7
-	implementation 'com.itextpdf:itext7-core:7.2.5'
-	
-	// Excel 生成 - Apache POI
-	implementation 'org.apache.poi:poi:5.2.3'
-	implementation 'org.apache.poi:poi-ooxml:5.2.3'
-	
-	// JSON 处理
-	implementation 'com.fasterxml.jackson.core:jackson-databind'
-	
-	// Lombok（可选，简化代码）
-	compileOnly 'org.projectlombok:lombok:1.18.30'
-	annotationProcessor 'org.projectlombok:lombok:1.18.30'
+	// ReportEngine Java 库
+	implementation 'com.reportengine:java-lib:0.2.0'
 	
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
