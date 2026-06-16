@@ -242,7 +242,7 @@ public class EndToEndPdfTests
     // ============== 大数据量 ==============
 
     [Fact]
-    public void EndToEnd_LargeDataset_PdfGenerated()
+    public async Task EndToEnd_LargeDataset_PdfGenerated()
     {
         var template = new ReportTemplate();
         template.Bands.Add(new Band
@@ -267,7 +267,7 @@ public class EndToEndPdfTests
 
         // 验证生成了多页
         var renderer = new ReportRenderer(_resolver);
-        var rendered = renderer.RenderAsync(template, data).GetAwaiter().GetResult();
+        var rendered = await renderer.RenderAsync(template, data);
         Assert.True(rendered.Pages.Count > 1);
     }
 
@@ -378,7 +378,7 @@ public class EndToEndPdfTests
     // ============== 文件导出 ==============
 
     [Fact]
-    public void EndToEnd_ExportToFile_FileCreated()
+    public async Task EndToEnd_ExportToFile_FileCreated()
     {
         var template = new ReportTemplate();
         template.Bands.Add(new Band
@@ -395,7 +395,7 @@ public class EndToEndPdfTests
         };
 
         var renderer = new ReportRenderer(_resolver);
-        var rendered = renderer.RenderAsync(template, data).GetAwaiter().GetResult();
+        var rendered = await renderer.RenderAsync(template, data);
 
         var tempFile = Path.Combine(Path.GetTempPath(), $"test_e2e_{Guid.NewGuid()}.pdf");
         try

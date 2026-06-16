@@ -289,7 +289,7 @@ public class EndToEndExcelTests
     // ============== 文件导出 ==============
 
     [Fact]
-    public void EndToEnd_ExportToFile_FileCreated()
+    public async Task EndToEnd_ExportToFile_FileCreated()
     {
         var template = new ReportTemplate();
         template.Bands.Add(new Band
@@ -306,7 +306,7 @@ public class EndToEndExcelTests
         };
 
         var renderer = new ReportRenderer(_resolver);
-        var rendered = renderer.RenderAsync(template, data).GetAwaiter().GetResult();
+        var rendered = await renderer.RenderAsync(template, data);
 
         var tempFile = Path.Combine(Path.GetTempPath(), $"test_e2e_{Guid.NewGuid()}.xlsx");
         try
