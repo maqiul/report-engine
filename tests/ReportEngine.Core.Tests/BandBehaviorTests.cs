@@ -210,7 +210,7 @@ public class BandBehaviorTests
             }
         };
         Assert.NotNull(band.SubBands[0].SubBands);
-        Assert.Single(band.SubBands[0].SubBands);
+        Assert.Single(band.SubBands[0].SubBands!);
     }
 
     // ============== Elements ==============

@@ -344,8 +344,8 @@ public class TemplateParserBoundary2Tests
         var t = _parser.Parse(json);
         Assert.NotNull(t.Bands[0].MultiColumn);
         Assert.Equal(3, t.Bands[0].MultiColumn!.ColumnCount);
-        Assert.Equal(10, t.Bands[0].MultiColumn.ColumnSpacing);
-        Assert.Equal("vertical", t.Bands[0].MultiColumn.Direction);
+        Assert.Equal(10, t.Bands[0].MultiColumn!.ColumnSpacing);
+        Assert.Equal("vertical", t.Bands[0].MultiColumn!.Direction);
     }
 
     [Fact]
@@ -355,7 +355,7 @@ public class TemplateParserBoundary2Tests
         var t = _parser.Parse(json);
         Assert.NotNull(t.Bands[0].Group);
         Assert.Equal("[Region]", t.Bands[0].Group!.Expression);
-        Assert.False(t.Bands[0].Group.KeepTogether);
+        Assert.False(t.Bands[0].Group!.KeepTogether);
     }
 
     [Fact]

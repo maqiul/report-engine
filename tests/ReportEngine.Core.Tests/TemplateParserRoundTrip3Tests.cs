@@ -245,7 +245,7 @@ public class TemplateParserRoundTrip3Tests
         var parsed = _parser.Parse(json);
         Assert.NotNull(parsed.Bands[0].Group);
         Assert.Equal("[Category]", parsed.Bands[0].Group!.Expression);
-        Assert.True(parsed.Bands[0].Group.KeepTogether);
+        Assert.True(parsed.Bands[0].Group!.KeepTogether);
     }
 
     [Fact]
@@ -262,8 +262,8 @@ public class TemplateParserRoundTrip3Tests
         var parsed = _parser.Parse(json);
         Assert.NotNull(parsed.Bands[0].MultiColumn);
         Assert.Equal(3, parsed.Bands[0].MultiColumn!.ColumnCount);
-        Assert.Equal(8, parsed.Bands[0].MultiColumn.ColumnSpacing);
-        Assert.Equal("Vertical", parsed.Bands[0].MultiColumn.Direction);
+        Assert.Equal(8, parsed.Bands[0].MultiColumn!.ColumnSpacing);
+        Assert.Equal("Vertical", parsed.Bands[0].MultiColumn!.Direction);
     }
 
     [Fact]

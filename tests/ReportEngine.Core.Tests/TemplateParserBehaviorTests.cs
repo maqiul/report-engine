@@ -229,7 +229,7 @@ public class TemplateParserBehaviorTests
         Assert.Equal(t1.Bands[0].Height, t2.Bands[0].Height);
         var el1 = t1.Bands[0].Elements[0] as TextElement;
         var el2 = t2.Bands[0].Elements[0] as TextElement;
-        Assert.Equal(el1.Text, el2.Text);
+        Assert.Equal(el1!.Text, el2!.Text);
     }
 
     // ============== 多元素混合 ==============

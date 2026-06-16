@@ -181,7 +181,7 @@ public class MultiUpConfigBehaviorTests
     public void Direction_CanBeCleared()
     {
         var config = new MultiUpConfig { Direction = "Horizontal" };
-        config.Direction = null;
+        config.Direction = null!;
         Assert.Null(config.Direction);
     }
 

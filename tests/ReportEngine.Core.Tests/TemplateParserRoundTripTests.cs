@@ -494,7 +494,7 @@ public class TemplateParserRoundTripTests
         Assert.Equal(3, parsed.Bands.Count);
         Assert.NotNull(parsed.Bands[0].Group);
         Assert.Equal("region", parsed.Bands[0].Group!.Expression);
-        Assert.True(parsed.Bands[0].Group.KeepTogether);
+        Assert.True(parsed.Bands[0].Group!.KeepTogether);
     }
 
     // ============== TemplateParam 往返 ==============

@@ -188,7 +188,7 @@ public class ExpressionEngineExtendedTests
     {
         var ctx = CreateContext();
         ctx.FieldFormat = "date";
-        ctx.CurrentRow["Date"] = new DateTime(2024, 6, 15);
+        ctx.CurrentRow!["Date"] = new DateTime(2024, 6, 15);
         var result = _engine.Evaluate("{{currentRow.Date}}", ctx);
         Assert.Equal("2024-06-15", result);
     }
@@ -198,7 +198,7 @@ public class ExpressionEngineExtendedTests
     {
         var ctx = CreateContext();
         ctx.FieldFormat = "datetime";
-        ctx.CurrentRow["Date"] = new DateTime(2024, 6, 15, 14, 30, 0);
+        ctx.CurrentRow!["Date"] = new DateTime(2024, 6, 15, 14, 30, 0);
         var result = _engine.Evaluate("{{currentRow.Date}}", ctx);
         Assert.Equal("2024-06-15 14:30:00", result);
     }
@@ -275,7 +275,7 @@ public class ExpressionEngineExtendedTests
     {
         var ctx = CreateContext();
         ctx.FieldFormat = "percent";
-        ctx.CurrentRow["Rate"] = 0.856m;
+        ctx.CurrentRow!["Rate"] = 0.856m;
         var result = _engine.Evaluate("{{currentRow.Rate}}", ctx);
         Assert.Contains("%", result);
     }

@@ -71,7 +71,7 @@ public class GroupDefBehaviorTests
     public void Expression_CanBeCleared()
     {
         var group = new GroupDef { Expression = "category" };
-        group.Expression = null;
+        group.Expression = null!;
         Assert.Null(group.Expression);
     }
 
@@ -243,7 +243,7 @@ public class GroupDefBehaviorTests
 
         Assert.Equal(3, template.Bands.Count);
         Assert.NotNull(template.Bands[0].Group);
-        Assert.Equal("category", template.Bands[0].Group.Expression);
+        Assert.Equal("category", template.Bands[0].Group!.Expression);
         Assert.Null(template.Bands[1].Group);
         Assert.Null(template.Bands[2].Group);
     }

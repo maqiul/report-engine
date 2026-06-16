@@ -202,6 +202,6 @@ public class BandCompleteTests
             },
         };
         Assert.NotNull(b.SubBands[0].SubBands);
-        Assert.Single(b.SubBands[0].SubBands);
+        Assert.Single(b.SubBands[0].SubBands!);
     }
 }

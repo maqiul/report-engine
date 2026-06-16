@@ -482,7 +482,7 @@ public class FinalSprint3000Tests
         var t = _parser.Parse(json);
         Assert.NotNull(t.Bands[0].Group);
         Assert.Equal("[Region]", t.Bands[0].Group!.Expression);
-        Assert.True(t.Bands[0].Group.KeepTogether);
+        Assert.True(t.Bands[0].Group!.KeepTogether);
     }
 
     [Fact]
@@ -492,8 +492,8 @@ public class FinalSprint3000Tests
         var t = _parser.Parse(json);
         Assert.NotNull(t.Bands[0].MultiColumn);
         Assert.Equal(3, t.Bands[0].MultiColumn!.ColumnCount);
-        Assert.Equal(8, t.Bands[0].MultiColumn.ColumnSpacing);
-        Assert.Equal("vertical", t.Bands[0].MultiColumn.Direction);
+        Assert.Equal(8, t.Bands[0].MultiColumn!.ColumnSpacing);
+        Assert.Equal("vertical", t.Bands[0].MultiColumn!.Direction);
     }
 
     [Fact]

@@ -175,7 +175,7 @@ public class ExpressionEngineBoundary2Tests
     public void Evaluate_CurrentRow_StringField()
     {
         var ctx = MakeContext();
-        ctx.CurrentRow["name"] = "Alice";
+        ctx.CurrentRow!["name"] = "Alice";
         var result = _engine.Evaluate("{{currentRow.name}}", ctx);
         Assert.Equal("Alice", result);
     }
@@ -184,7 +184,7 @@ public class ExpressionEngineBoundary2Tests
     public void Evaluate_CurrentRow_IntField()
     {
         var ctx = MakeContext();
-        ctx.CurrentRow["age"] = 30;
+        ctx.CurrentRow!["age"] = 30;
         var result = _engine.Evaluate("{{currentRow.age}}", ctx);
         Assert.Equal("30", result);
     }
@@ -193,7 +193,7 @@ public class ExpressionEngineBoundary2Tests
     public void Evaluate_CurrentRow_DoubleField()
     {
         var ctx = MakeContext();
-        ctx.CurrentRow["price"] = 99.99;
+        ctx.CurrentRow!["price"] = 99.99;
         var result = _engine.Evaluate("{{currentRow.price}}", ctx);
         Assert.Equal("99.99", result);
     }
@@ -202,7 +202,7 @@ public class ExpressionEngineBoundary2Tests
     public void Evaluate_CurrentRow_BoolField()
     {
         var ctx = MakeContext();
-        ctx.CurrentRow["active"] = true;
+        ctx.CurrentRow!["active"] = true;
         var result = _engine.Evaluate("{{currentRow.active}}", ctx);
         Assert.Equal("True", result);
     }
@@ -230,7 +230,7 @@ public class ExpressionEngineBoundary2Tests
     public void Evaluate_SimpleField_Works()
     {
         var ctx = MakeContext();
-        ctx.CurrentRow["name"] = "Bob";
+        ctx.CurrentRow!["name"] = "Bob";
         var result = _engine.Evaluate("{{name}}", ctx);
         Assert.Equal("Bob", result);
     }
