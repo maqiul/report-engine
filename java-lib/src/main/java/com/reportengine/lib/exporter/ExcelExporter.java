@@ -122,16 +122,18 @@ public class ExcelExporter {
                                 style.setAlignment(parseAlignment(align));
                                 style.setVerticalAlignment(VerticalAlignment.CENTER);
                                 
-                                // 字体
+                                // 字体（如果没设也给个默认）
+                                XSSFFont poiFont = workbook.createFont();
+                                poiFont.setFontName("Microsoft YaHei");
+                                poiFont.setFontHeightInPoints((short) 11);
                                 if (el.has("font")) {
                                     JsonNode font = el.get("font");
-                                    XSSFFont poiFont = workbook.createFont();
                                     if (font.has("family")) poiFont.setFontName(font.get("family").asText());
                                     if (font.has("size")) poiFont.setFontHeightInPoints((short) font.get("size").asInt());
                                     if (font.has("bold") && font.get("bold").asBoolean()) poiFont.setBold(true);
                                     if (font.has("italic") && font.get("italic").asBoolean()) poiFont.setItalic(true);
-                                    style.setFont(poiFont);
                                 }
+                                style.setFont(poiFont);
                                 
                                 cell.setCellStyle(style);
                                 
@@ -244,6 +246,15 @@ public class ExcelExporter {
             short paperSize = getPaperSize(widthMm, heightMm);
             sheet.getPrintSetup().setPaperSize(paperSize);
             sheet.getPrintSetup().setLandscape(widthMm > heightMm);
+            
+            // 缩放适应页面
+            sheet.setFitToPage(true);
+            sheet.getPrintSetup().setFitWidth((short) 1);
+            sheet.getPrintSetup().setFitHeight((short) 0); // 不限制高度
+            
+            // 水平垂直居中
+            sheet.setHorizontallyCenter(true);
+            sheet.setVerticallyCenter(true);
             
             double mmToInch = 0.03937;
             sheet.setMargin(org.apache.poi.ss.usermodel.Sheet.TopMargin, marginTop * mmToInch);
