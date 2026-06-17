@@ -110,7 +110,7 @@ public class ExcelExporter {
                             double absX = marginLeft + x;
                             
                             int col = findColumnIndex(xBoundaries, absX);
-                            int endCol = findColumnIndex(xBoundaries, absX + w) - 1;
+                            int endCol = findEndColumnIndex(xBoundaries, absX, w, numCols);
                             
                             if (col >= 0 && col < numCols) {
                                 XSSFCell cell = row.createCell(col);
@@ -139,7 +139,7 @@ public class ExcelExporter {
                                 cell.setCellStyle(style);
                                 
                                 // 合并单元格
-                                if (endCol > col) {
+                                if (endCol > col && !isOverlapping(sheet, currentRow, col, endCol)) {
                                     sheet.addMergedRegion(new CellRangeAddress(currentRow, currentRow, col, endCol));
                                 }
                             }
@@ -166,7 +166,7 @@ public class ExcelExporter {
                                 
                                 double absX = marginLeft + x;
                                 int col = findColumnIndex(xBoundaries, absX);
-                                int endCol = findColumnIndex(xBoundaries, absX + w) - 1;
+                                int endCol = findEndColumnIndex(xBoundaries, absX, w, numCols);
                                 
                                 if (col >= 0 && col < numCols) {
                                     XSSFCell cell = dataRow.createCell(col);
@@ -207,38 +207,67 @@ public class ExcelExporter {
     }
     
     private int findColumnIndex(List<Double> boundaries, double value) {
-        for (int i = 0; i < boundaries.size(); i++) {
-            if (Math.abs(boundaries.get(i) - value) < 0.5) {
+        // 左闭右开：[boundaries[i], boundaries[i+1]) 属于第 i 列
+        // value 等于边界时取左列，让 endCol 不会和下一个元素重叠
+        final double eps = 0.01;
+        if (value < boundaries.get(0) - eps) return 0;
+        if (value >= boundaries.get(boundaries.size() - 1) - eps) return boundaries.size() - 1;
+        for (int i = 0; i < boundaries.size() - 1; i++) {
+            if (value >= boundaries.get(i) - eps && value < boundaries.get(i + 1) - eps) {
                 return i;
             }
         }
-        // 找最近的
-        int closest = 0;
-        double minDiff = Math.abs(boundaries.get(0) - value);
-        for (int i = 1; i < boundaries.size(); i++) {
-            double diff = Math.abs(boundaries.get(i) - value);
-            if (diff < minDiff) {
-                minDiff = diff;
-                closest = i;
+        return 0;
+    }
+    
+    /**
+     * 查找元素的结束列。元素宽度跨多列时，返回右侧边界所在的列。
+     * 起点落在边界 i-1 和 i 之间（包含）→ 属于第 i-1 列
+     * 终点 absX+w 落在边界 j-1 和 j 之间（包含）→ 跨到第 j-1 列
+     */
+    private int findEndColumnIndex(List<Double> boundaries, double startValue, double width, int numCols) {
+        double endValue = startValue + width;
+        // 找第一个 > endValue+0.5 的边界索引，即为结束列+1
+        for (int i = 0; i < boundaries.size(); i++) {
+            if (boundaries.get(i) > endValue + 0.5) {
+                return Math.min(i, numCols) - 1;
             }
         }
-        return closest;
+        return numCols - 1;
+    }
+    
+    /**
+     * 检查新合并区域是否与已有合并区域重叠
+     */
+    private boolean isOverlapping(XSSFSheet sheet, int row, int startCol, int endCol) {
+        for (int i = 0; i < sheet.getNumMergedRegions(); i++) {
+            CellRangeAddress existing = sheet.getMergedRegion(i);
+            if (existing.getFirstRow() == row && existing.getLastRow() == row) {
+                int exStart = existing.getFirstColumn();
+                int exEnd = existing.getLastColumn();
+                if (startCol <= exEnd && endCol >= exStart) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
     
     private void applyPrintSettings(XSSFWorkbook workbook, JsonNode template) {
-        if (!template.has("page")) return;
-        
-        JsonNode page = template.get("page");
-        double widthMm = page.has("width") ? page.get("width").asDouble() : 210;
-        double heightMm = page.has("height") ? page.get("height").asDouble() : 297;
-        
+        // 页面尺寸和边距（取 page 配置，缺省用 A4）
+        double widthMm = 210, heightMm = 297;
         double marginTop = 0, marginBottom = 0, marginLeft = 0, marginRight = 0;
-        if (page.has("margin")) {
-            JsonNode margin = page.get("margin");
-            if (margin.has("top")) marginTop = margin.get("top").asDouble();
-            if (margin.has("bottom")) marginBottom = margin.get("bottom").asDouble();
-            if (margin.has("left")) marginLeft = margin.get("left").asDouble();
-            if (margin.has("right")) marginRight = margin.get("right").asDouble();
+        if (template.has("page")) {
+            JsonNode page = template.get("page");
+            if (page.has("width")) widthMm = page.get("width").asDouble();
+            if (page.has("height")) heightMm = page.get("height").asDouble();
+            if (page.has("margin")) {
+                JsonNode margin = page.get("margin");
+                if (margin.has("top")) marginTop = margin.get("top").asDouble();
+                if (margin.has("bottom")) marginBottom = margin.get("bottom").asDouble();
+                if (margin.has("left")) marginLeft = margin.get("left").asDouble();
+                if (margin.has("right")) marginRight = margin.get("right").asDouble();
+            }
         }
         
         // 收集 pageFooter band 的内容（pageHeader 作为表头单元格输出）
@@ -246,7 +275,7 @@ public class ExcelExporter {
         String footerAlign = "left";
         if (template.has("bands")) {
             for (JsonNode band : template.get("bands")) {
-                String type = band.get("type").asText();
+                String type = band.has("type") ? band.get("type").asText() : "";
                 if (!"pageFooter".equals(type)) continue;
                 if (!band.has("elements")) continue;
                 
