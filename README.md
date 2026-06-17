@@ -1,30 +1,65 @@
 # ReportEngine
 
-> 一个轻量级、跨平台的 .NET 报表引擎：JSON 模板 + 核心渲染 + Excel/PDF 导出 + WPF/WinForms 预览与设计器。
+> 一个跨平台、可视化、容器化的报表引擎：JSON 模板 + 核心渲染 + Excel/PDF 导出 + WPF/WinForms/Web 多端预览与设计器。
 
-![status](https://img.shields.io/badge/status-alpha-orange)
+![status](https://img.shields.io/badge/status-v0.2.0--web-blue)
 ![.net](https://img.shields.io/badge/.NET-net462%20%7C%20netstandard2.0%20%7C%20net8.0-blue)
+![java](https://img.shields.io/badge/Java-Spring%20Boot%204.1-orange)
+![docker](https://img.shields.io/badge/docker-compose-blue)
 ![license](https://img.shields.io/badge/license-MIT-blue)
-![tests](https://img.shields.io/badge/tests-4693%2F4693-brightgreen)
-![ci](https://github.com/maqiul/report-engine/actions/workflows/ci.yml/badge.svg)
+![tests](https://img.shields.io/badge/tests-4793%2F4793-brightgreen)
 
 ---
 
 ## ✨ 特性
 
-- **跨平台核心库**：`ReportEngine.Core` 同时支持 `net462` / `netstandard2.0` / `net8.0`，可直接打包为 NuGet 包嵌入到现有 WinForms/WPF/控制台业务系统中。
+- **跨平台核心库**：
+  - .NET 端：`ReportEngine.Core` 同时支持 `net462` / `netstandard2.0` / `net8.0`，可直接打包为 NuGet 包嵌入到现有 WinForms/WPF/控制台业务系统中。
+  - Java 端：`com.reportengine:java-lib` 独立库，发布到 Maven Local，可被任意 JVM 项目依赖。
 - **JSON 模板格式 `.rptx`**：纯文本、易 diff、易版本管理。包含 Header/Detail/Footer、变量绑定 `{{...}}`、聚合函数、子报表、条码/二维码、字体/颜色/对齐等。
 - **多端渲染**：
   - 桌面运行时预览 —— WPF / WinForms
-  - 模板设计器 —— WPF（基础）
+  - Web 端运行时预览 —— Vue 3 + Spring Boot
+  - 模板设计器 —— WPF（基础）/ Web（可视化拖拽）
 - **多格式导出**：
-  - Excel —— 基于 [ClosedXML](https://github.com/ClosedXML/ClosedXML)
-  - PDF —— 基于 [PdfSharpCore](https://github.com/ststeiger/PdfSharpCore)
-- **条码/二维码** —— 基于 [ZXing.Net](https://github.com/micjahn/ZXing.Net)
+  - Excel —— .NET 端用 [ClosedXML](https://github.com/ClosedXML/ClosedXML)，Java 端用 [Apache POI](https://poi.apache.org/)
+  - PDF —— .NET 端用 [PdfSharpCore](https://github.com/ststeiger/PdfSharpCore)，Java 端用 [iText 7](https://itextpdf.com/)
+- **条码/二维码** —— .NET 端用 [ZXing.Net](https://github.com/micjahn/ZXing.Net)
+- **容器化部署** —— `docker compose up -d` 一键启动前后端
+- **OpenAPI 文档** —— Springdoc OpenAPI 自动生成 API 契约
 
 ---
 
-## 📦 NuGet 包（v0.2.0-alpha）
+## 🐳 一键启动（最快路径）
+
+环境要求：Docker Desktop 4.0+（Windows / macOS / Linux）
+
+```bash
+git clone https://github.com/maqiul/report-engine.git
+cd report-engine/docker
+docker compose up -d
+```
+
+启动后访问：
+
+- 前端（含可视化编辑器）：http://localhost:3000
+- 后端 API：http://localhost:5000
+- Swagger UI：http://localhost:5000/swagger-ui.html
+- OpenAPI JSON：http://localhost:5000/v3/api-docs
+
+停止：
+
+```bash
+docker compose down
+```
+
+详见 [`docker/README.md`](./docker/README.md)。
+
+---
+
+## 📦 包与产物（v0.2.0-web）
+
+### .NET NuGet 包（0.2.0-alpha）
 
 | 包 | 版本 | 目标框架 | 说明 |
 |----|------|----------|------|
@@ -32,84 +67,100 @@
 | `ReportEngine.Export.Pdf` | `0.2.0-alpha` | net462 / netstandard2.0 / net8.0 | PDF 导出器（基于 PdfSharpCore） |
 | `ReportEngine.Export.Excel` | `0.2.0-alpha` | net462 / netstandard2.0 / net8.0 | Excel 导出器（基于 ClosedXML） |
 
-本地打包：
+### Java Maven 库
+
+```xml
+<dependency>
+    <groupId>com.reportengine</groupId>
+    <artifactId>java-lib</artifactId>
+    <version>0.2.0</version>
+</dependency>
+```
+
+发布到 Maven Local：
 
 ```bash
-dotnet pack ReportEngine.Core/ReportEngine.Core.csproj -c Release -o ./nupkgs
-dotnet pack ReportEngine.Export.Pdf/ReportEngine.Export.Pdf.csproj -c Release -o ./nupkgs
-dotnet pack ReportEngine.Export.Excel/ReportEngine.Export.Excel.csproj -c Release -o ./nupkgs
+cd java-lib
+gradlew publishToMavenLocal
 ```
 
-> 版本号统一由 `Directory.Build.props` 管理，修改一处即可全局生效。
+### Docker 镜像
+
+| 镜像 | 标签 | 大小 |
+|------|------|------|
+| `reportengine-backend` | `0.2.0` | ~280MB（Eclipse Temurin 17 JRE） |
+| `reportengine-frontend` | `0.2.0` | ~50MB（nginx alpine） |
 
 ---
 
-## 📄 许可证
-
-本项目基于 [MIT License](./LICENSE) 开源。
-
----
-
-## 📦 项目结构
+## 🏗️ 项目结构
 
 ```
-ReportEngine.slnx
-├── Directory.Build.props          ← 统一构建属性（版本号/NuGet元数据/编译选项）
-├── ReportEngine.Core/             ← 跨平台核心：模板解析、渲染、表达式、子报表、条码
-│   ├── Parsing/        TemplateParser
-│   ├── Rendering/      ReportRenderer
-│   ├── Data/           ExpressionEngine
-│   ├── SubReports/     SubReportResolver / FileSystemTemplateResolver
-│   ├── Barcodes/       BarcodeGenerator
-│   └── Export/         IExcelExporter / IPdfExporter（接口）
-├── ReportEngine.Export.Excel/    ← ClosedXML 实现
-├── ReportEngine.Export.Pdf/      ← PdfSharpCore 实现
-├── ReportEngine.Viewer.Wpf/      ← WPF 运行时预览控件
-├── ReportEngine.Viewer.WinForms/ ← WinForms 运行时预览控件
-├── ReportEngine.Designer.Wpf/    ← WPF 可视化设计器
-│   ├── MainWindow.cs              ← 180 行（从 5050 行拆分，-96.4%）
-│   ├── MainWindow.*.cs            ← 15 个 partial class 文件
-│   ├── UiFactory / ElementFactory / ElementIcons
-│   ├── CanvasRenderer / BandStyle / BrushParser
-│   ├── PreviewRenderer / PreviewJsonParser / ExportDataBuilder
-│   ├── PropertyRowFactory / EnumCnMap
-│   ├── ColorPickerDialog / PageSetupDialog / FontDialog / ExpressionEditorDialog
-│   └── ...
-├── ReportEngine.Designer.WinForms/ ← WinForms 可视化设计器（占位）
-├── ReportEngine.Desktop/         ← 桌面启动器（exe，net8.0）
-├── tests/
-│   ├── ReportEngine.Core.Tests/          ← 4575 测试
-│   ├── ReportEngine.Export.Pdf.Tests/    ← 67 测试（含 17 个端到端）
-│   └── ReportEngine.Export.Excel.Tests/  ← 51 测试（含 16 个端到端）
-└── SampleTemplates/              ← 示例 .rptx 模板
+report-engine/
+├── Directory.Build.props          ← .NET 统一构建属性（版本号/NuGet 元数据）
+├── ReportEngine.Core/             ← .NET 跨平台核心
+├── ReportEngine.Export.Pdf/       ← .NET PDF 导出
+├── ReportEngine.Export.Excel/     ← .NET Excel 导出
+├── ReportEngine.Viewer.Wpf/       ← WPF 运行时预览
+├── ReportEngine.Viewer.WinForms/  ← WinForms 运行时预览
+├── ReportEngine.Designer.Wpf/     ← WPF 可视化设计器（180 行 MainWindow）
+├── ReportEngine.Desktop/          ← 桌面启动器
+├── tests/                         ← .NET 测试（4693 个）
+├── java-lib/                      ← Java 独立库（核心模型 + 渲染 + PDF/Excel 导出）
+│   ├── src/main/java/com/reportengine/lib/
+│   │   ├── model/        RenderRequest / RenderResponse / PageInfo / ElementInfo
+│   │   ├── renderer/     ReportRenderer
+│   │   └── exporter/     PdfExporter / ExcelExporter
+│   └── src/test/java/    ← JUnit 5 + Mockito + AssertJ（89 个测试）
+├── web/                           ← Web 版本
+│   ├── frontend/         ← Vue 3 + Vite + TypeScript
+│   │   ├── src/components/editor/   ← 可视化模板编辑器（4 组件）
+│   │   └── src/components/ReportViewer.vue
+│   ├── backend/          ← Java Spring Boot 4.1 + Gradle
+│   └── ReportEngine.WebApi/  ← .NET 端 Web API（备选实现）
+├── docker/                        ← Docker 编排
+│   ├── docker-compose.yml
+│   ├── backend/Dockerfile
+│   ├── frontend/Dockerfile
+│   ├── frontend/nginx.conf
+│   └── fonts/STSONG.TTF           ← 11MB 中文字体
+└── SampleTemplates/               ← 示例 .rptx 模板
 ```
 
 ---
 
 ## 🚀 快速开始
 
-### 环境要求
-
-- [.NET SDK 8.0+](https://dotnet.microsoft.com/download)
-- Windows 10/11（运行 WPF/WinForms 端需要）
-- Visual Studio 2022 17.8+ 或 JetBrains Rider 2023.3+
-
-### 克隆与构建
+### Web 版本（Java 后端 + Vue 前端）
 
 ```bash
-git clone <repo-url> report-engine
-cd report-engine
-dotnet restore ReportEngine.slnx
-dotnet build   ReportEngine.slnx -c Debug
+# 1. 启动容器
+cd docker && docker compose up -d
+
+# 2. 打开浏览器
+#    前端：http://localhost:3000
+#    Swagger：http://localhost:5000/swagger-ui.html
 ```
 
-### 运行桌面启动器
+### Web 版本（.NET 后端，本地开发）
+
+```bash
+# 前端
+cd web/frontend
+npm install
+npm run dev          # localhost:3000
+
+# .NET 后端
+dotnet run --project web/ReportEngine.WebApi   # localhost:5000
+```
+
+### 桌面版本（Windows）
 
 ```bash
 dotnet run --project ReportEngine.Desktop
 ```
 
-### 在自己的项目里使用 Core
+### 在自己的项目里使用 Core（.NET）
 
 ```csharp
 // 1. 加载模板
@@ -122,26 +173,40 @@ var data = new Dictionary<string, List<Dictionary<string, object>>>
 {
     ["orders"] = new()
     {
-        new() { ["orderNo"] = "SO-2026-0001", ["customer"] = "ACME", ["totalAmount"] = 12345.67 },
-        // ...
+        new() { ["orderNo"] = "SO-2026-0001", ["customer"] = "ACME", ["totalAmount"] = 12345.67 }
     }
 };
 
-// 3. 渲染
+// 3. 渲染 + 导出
 var resolver = new FileSystemTemplateResolver("./templates");
 var renderer = new ReportRenderer(resolver);
 var rendered = await renderer.RenderAsync(template, data);
-
-// 4. 导出
 new PdfSharpExporter().ExportToFile(rendered, "output.pdf");
 new ClosedXmlExporter().ExportToFile(rendered, "output.xlsx");
+```
+
+### 在自己的项目里使用 java-lib（Java）
+
+```java
+// 1. 构造请求
+RenderRequest request = new RenderRequest();
+request.setTemplateJson("{\"bands\":[...]}");
+Map<String, List<Map<String, Object>>> data = new HashMap<>();
+data.put("orders", List.of(Map.of("id", "1", "name", "张三")));
+request.setData(data);
+
+// 2. 渲染
+ReportRenderer renderer = new ReportRenderer();
+RenderResponse response = renderer.render(request);
+
+// 3. 导出
+byte[] pdfBytes = new PdfExporter().export(request);
+byte[] excelBytes = new ExcelExporter().export(request);
 ```
 
 ---
 
 ## 📝 模板格式 (.rptx) 示例
-
-模板是 JSON，结构示意：
 
 ```jsonc
 {
@@ -153,8 +218,7 @@ new ClosedXmlExporter().ExportToFile(rendered, "output.xlsx");
     "margin": { "top": 15, "bottom": 15, "left": 10, "right": 10 }
   },
   "dataSources": [
-    {
-      "name": "orders", "type": "json",
+    { "name": "orders", "type": "json",
       "fields": [
         { "name": "orderNo", "type": "string" },
         { "name": "totalAmount", "type": "number" }
@@ -173,9 +237,16 @@ new ClosedXmlExporter().ExportToFile(rendered, "output.xlsx");
     {
       "type": "detail", "height": 10, "dataSource": "orders",
       "elements": [
-        { "type": "text", "text": "{{currentRow.orderNo}}",     "x": 10, "y": 1, "width": 35,  "height": 8 },
-        { "type": "text", "text": "{{currentRow.totalAmount}}", "x": 130, "y": 1, "width": 30,  "height": 8,
+        { "type": "text", "text": "{{currentRow.orderNo}}",     "x": 10, "y": 1, "width": 35, "height": 8 },
+        { "type": "text", "text": "{{currentRow.totalAmount}}", "x": 130, "y": 1, "width": 30, "height": 8,
           "alignment": "right" }
+      ]
+    },
+    {
+      "type": "pageFooter", "height": 15,
+      "elements": [
+        { "type": "text", "text": "第 {{page}} / {{totalPages}} 页", "x": 0, "y": 2, "width": 210, "height": 8,
+          "alignment": "center" }
       ]
     }
   ]
@@ -188,54 +259,94 @@ new ClosedXmlExporter().ExportToFile(rendered, "output.xlsx");
 
 ## ✅ 测试
 
-**4693 个测试，全部通过。**
+**4793 个测试，全部通过。**
 
-| 项目 | 测试数 | 覆盖范围 |
-|------|--------|----------|
-| `ReportEngine.Core.Tests` | 4575 | 模板解析、表达式引擎、条码生成、子报表、渲染路径、ClosedXML 导出 |
-| `ReportEngine.Export.Pdf.Tests` | 67 | PdfSharpExporter + 17 个端到端集成测试 |
-| `ReportEngine.Export.Excel.Tests` | 51 | ClosedXmlExporter + 16 个端到端集成测试 |
+| 项目 | 数量 | 说明 |
+|------|------|------|
+| `ReportEngine.Core.Tests` | 4575 | .NET 核心 |
+| `ReportEngine.Export.Pdf.Tests` | 67 | .NET PDF（含 17 个 E2E） |
+| `ReportEngine.Export.Excel.Tests` | 51 | .NET Excel（含 16 个 E2E） |
+| `java-lib` (JUnit 5) | 89 | Java 核心（模型/渲染/PDF/Excel） |
+| `web/backend` (Spring Boot Test) | 11 | Java 后端 E2E（MockMvc） |
 
-端到端测试覆盖完整流程：JSON 模板解析 → 渲染 → PDF/Excel 导出，包括多 Band 类型、多元素类型、大数据量、分组报表、表达式格式化、多数据源、子报表嵌套等场景。
+覆盖率（java-lib JaCoCo）：**90%**（model 100% / renderer 97% / exporter 86%）
 
-运行测试：
+### .NET 测试
 
 ```bash
 dotnet test ReportEngine.slnx
+```
+
+### Java 测试
+
+```bash
+# java-lib
+cd java-lib
+gradlew test jacocoTestReport
+# 报告：build/reports/jacoco/test/html/index.html
+
+# web/backend
+cd web/backend
+gradlew test
 ```
 
 ---
 
 ## 🗓️ 版本与路线图
 
-当前版本：**v0.1.245**
+当前版本：**v0.2.0-web**
 
 | 阶段 | 内容 | 状态 |
 |------|------|------|
-| 0.1.x | Core 引擎 + Excel/PDF 导出 + ZXing 条码 + NuGet pack + 代码重构 | ✅ |
-| 0.2.x | WPF 运行时预览（分页 / 缩放 / 打印） | 🚧 |
-| 0.3.x | WPF 可视化设计器完善 | 🚧 |
-| 0.4.x | WinForms 端对齐 | ⏳ |
-| 1.0   | 文档、首个稳定 NuGet 发布 | 🚧 |
+| 0.1.x | .NET 核心 + Excel/PDF 导出 + ZXing 条码 + NuGet pack + 代码重构 | ✅ |
+| **0.2.x** | **Java 后端 + Web 前端 + Docker + 可视化编辑器 + OpenAPI** | ✅ |
+| 0.3.x | 数据库持久化（spring-data-jpa）+ 模板版本管理 | ⏳ |
+| 0.4.x | 用户/权限/多租户（spring-security）+ 登录页 | ⏳ |
+| 1.0   | 文档站 + 首版稳定 NuGet/Maven 发布 | 🚧 |
 
-### v0.1.x 已完成里程碑
+### v0.2 里程碑
 
 | 指标 | 成果 |
 |------|------|
-| **MainWindow.cs 拆分** | 5050 → **180 行**（-96.4%），提取 15 个 partial class 文件 |
-| **单元测试** | 100 → **4693**（+4593），含 33 个端到端集成测试 |
-| **Nullable 警告** | 全部消除，**0 警告** |
-| **NuGet 打包** | 3 个包统一版本 0.2.0-alpha |
-| **CI/CD** | GitHub Actions 自动构建 + 测试 + 打包 |
-| **代码规范** | `.editorconfig` + `Directory.Build.props` 统一管理 |
-| **文档** | `LICENSE` / `README.md` / `CONTRIBUTING.md` 三件套 |
+| **Java 后端** | Spring Boot 4.1 + Gradle 9.5 + iText 7 + Apache POI，3 端点（preview/pdf/excel） |
+| **Java 库** | `com.reportengine:java-lib:0.2.0` 发布到 Maven Local，可被任意 JVM 项目依赖 |
+| **Web 前端** | Vue 3 + Vite + TypeScript，3 模式（代码/可视化/预览） |
+| **可视化编辑器** | Toolbox + BandTree + PropertyPanel + TemplateEditor，4 元素/4 band，原生拖拽 + 8 方向缩放 |
+| **Docker** | `docker-compose.yml` 一键编排前后端，含 healthcheck + depends_on + 中文字体 |
+| **OpenAPI** | springdoc 2.6，3 端点 + 5 schema，UI 自动生成 |
+| **E2E 测试** | 11 个 Spring Boot MockMvc 测试，零回归 |
+| **跨平台字体** | `PdfExporter.resolveFontPath()` 支持 env / cwd / classpath / Windows / Linux 五级 fallback |
+| **测试** | .NET 4693 + Java 89 + Web E2E 11 = **4793 全绿** |
 
-### v0.2+ 展望
+---
 
-- **v0.2.x** — WPF 运行时预览补完（分页 / 缩放 / 打印对话框）
-- **v0.3.x** — WPF 可视化设计器完善 + Designer 单元测试
-- **v0.4.x** — WinForms 端对齐
-- **v1.0** — 首版稳定 NuGet 发布 + 完整文档站
+## 🛠️ 技术栈
+
+### .NET 端
+- .NET 8 / netstandard2.0 / net462
+- ClosedXML 0.104（Excel）
+- PdfSharpCore 1.3.65（PDF）
+- ZXing.Net 0.16.10（条码）
+- WPF / WinForms
+
+### Java 端
+- JDK 17+
+- Spring Boot 4.1.0
+- iText 7（PDF）
+- Apache POI（Excel）
+- JUnit 5 + Mockito + AssertJ（测试）
+- springdoc-openapi 2.6（API 文档）
+- JaCoCo（覆盖率）
+
+### Web 前端
+- Vue 3 + Vite + TypeScript
+- 原生 HTML5 鼠标事件（拖拽/缩放）
+- 无第三方 UI 框架
+
+### 部署
+- Docker 29 + Docker Compose v2
+- nginx 1.27 alpine
+- Eclipse Temurin 17 JRE
 
 ---
 
@@ -245,4 +356,10 @@ dotnet test ReportEngine.slnx
 
 ---
 
-<sub>Built with ❤️ using .NET 8 + ClosedXML + PdfSharpCore + ZXing.Net</sub>
+## 📄 许可证
+
+本项目基于 [MIT License](./LICENSE) 开源。
+
+---
+
+<sub>Built with ❤️ using .NET 8 + Java 17 + Vue 3 + Docker · v0.2.0-web</sub>
