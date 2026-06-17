@@ -8,66 +8,157 @@
       </div>
       <nav class="topnav">
         <span class="status">Java 后端 : 5000</span>
+        <div class="mode-tabs">
+          <button
+            class="mode-tab"
+            :class="{ active: mode === 'code' }"
+            @click="mode = 'code'"
+          >代码</button>
+          <button
+            class="mode-tab"
+            :class="{ active: mode === 'visual' }"
+            @click="mode = 'visual'"
+          >可视化</button>
+          <button
+            class="mode-tab"
+            :class="{ active: mode === 'preview' }"
+            @click="mode = 'preview'"
+          >预览</button>
+        </div>
       </nav>
     </header>
 
     <main class="layout">
-      <aside class="panel">
-        <div class="panel-section">
-          <div class="section-title">模板</div>
-          <textarea
-            v-model="templateJson"
-            class="code-input"
-            rows="22"
-            spellcheck="false"
-          ></textarea>
-        </div>
-
-        <div class="panel-section">
-          <div class="section-title">数据源</div>
-          <textarea
-            v-model="dataJson"
-            class="code-input"
-            rows="10"
-            spellcheck="false"
-          ></textarea>
-        </div>
-
-        <div class="panel-section">
-          <div class="section-title">缩放 <span class="muted">{{ scale * 100 }}%</span></div>
-          <input type="range" v-model.number="scale" min="0.5" max="2" step="0.05" class="slider" />
-        </div>
-
-        <div class="panel-section">
-          <div class="section-title">示例</div>
-          <div class="button-group">
-            <button class="btn" @click="loadSampleTemplate">简单报表</button>
-            <button class="btn" @click="loadSalesTemplate">销售订单</button>
+      <!-- ===== 代码模式：JSON 编辑 ===== -->
+      <template v-if="mode === 'code'">
+        <aside class="panel">
+          <div class="panel-section">
+            <div class="section-title">模板</div>
+            <textarea
+              v-model="templateJson"
+              class="code-input"
+              rows="22"
+              spellcheck="false"
+            ></textarea>
           </div>
-        </div>
-      </aside>
+          <div class="panel-section">
+            <div class="section-title">数据源</div>
+            <textarea
+              v-model="dataJson"
+              class="code-input"
+              rows="10"
+              spellcheck="false"
+            ></textarea>
+          </div>
+          <div class="panel-section">
+            <div class="section-title">缩放 <span class="muted">{{ scale * 100 }}%</span></div>
+            <input type="range" v-model.number="scale" min="0.5" max="2" step="0.05" class="slider" />
+          </div>
+          <div class="panel-section">
+            <div class="section-title">示例</div>
+            <div class="button-group">
+              <button class="btn" @click="loadSampleTemplate">简单报表</button>
+              <button class="btn" @click="loadSalesTemplate">销售订单</button>
+            </div>
+          </div>
+        </aside>
+        <section class="stage">
+          <ReportViewer
+            ref="viewerRef"
+            :template-json="templateJson"
+            :data="parsedData"
+            :scale="scale"
+          />
+        </section>
+      </template>
 
-      <section class="stage">
-        <ReportViewer
-          ref="viewerRef"
-          :template-json="templateJson"
-          :data="parsedData"
-          :scale="scale"
-        />
-      </section>
+      <!-- ===== 可视化模式：拖拽编辑器 ===== -->
+      <template v-else-if="mode === 'visual'">
+        <aside class="panel">
+          <Toolbox @add="addElement" @add-band="addBand" />
+          <BandTree
+            :bands="parsedTemplate.bands || []"
+            :selected-band-index="selectedBandIndex"
+            @select="onSelectBand"
+            @move-up="moveBandUp"
+            @move-down="moveBandDown"
+            @duplicate="duplicateBand"
+            @remove="removeBand"
+          />
+          <PropertyPanel
+            :element="selectedElement"
+            @delete="deleteElement"
+          />
+        </aside>
+        <section class="stage">
+          <TemplateEditor
+            :template="parsedTemplate"
+            :selected-band-index="selectedBandIndex"
+            :selected-element-index="selectedElementIndex"
+            :zoom="scale"
+            @select-band="onSelectBand"
+            @select-element="onSelectElement"
+            @canvas-click="onCanvasClick"
+            @update="syncTemplateJson"
+          />
+        </section>
+      </template>
+
+      <!-- ===== 预览模式：ReportViewer ===== -->
+      <template v-else>
+        <aside class="panel">
+          <div class="panel-section">
+            <div class="section-title">数据源</div>
+            <textarea
+              v-model="dataJson"
+              class="code-input"
+              rows="18"
+              spellcheck="false"
+            ></textarea>
+          </div>
+          <div class="panel-section">
+            <div class="section-title">缩放 <span class="muted">{{ scale * 100 }}%</span></div>
+            <input type="range" v-model.number="scale" min="0.5" max="2" step="0.05" class="slider" />
+          </div>
+          <div class="panel-section">
+            <div class="section-title">导出</div>
+            <div class="button-group">
+              <button class="btn" @click="exportAs('pdf')">PDF</button>
+              <button class="btn" @click="exportAs('excel')">Excel</button>
+            </div>
+          </div>
+        </aside>
+        <section class="stage">
+          <ReportViewer
+            ref="viewerRef"
+            :template-json="templateJson"
+            :data="parsedData"
+            :scale="scale"
+          />
+        </section>
+      </template>
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import ReportViewer from './components/ReportViewer.vue'
+import Toolbox from './components/editor/Toolbox.vue'
+import BandTree from './components/editor/BandTree.vue'
+import PropertyPanel from './components/editor/PropertyPanel.vue'
+import TemplateEditor from './components/editor/TemplateEditor.vue'
+import { exportPdf, exportExcel } from './api/report'
+
+type Mode = 'code' | 'visual' | 'preview'
+
+const mode = ref<Mode>('code')
 
 const viewerRef = ref<InstanceType<typeof ReportViewer> | null>(null)
 const scale = ref(0.8)
 
-// 默认模板
-const templateJson = ref(`{
+// ===== 模板 JSON =====
+const defaultTemplate = `{
   "version": "1.0",
   "page": {
     "width": 210,
@@ -77,126 +168,196 @@ const templateJson = ref(`{
   "dataSources": [{ "name": "orders" }],
   "bands": [
     {
-      "type": "reportHeader",
+      "type": "title",
       "height": 30,
       "elements": [
-        {
-          "type": "text",
-          "text": "销售订单报表",
-          "x": 10, "y": 10, "width": 190, "height": 15,
-          "font": { "family": "Microsoft YaHei", "size": 20, "bold": true },
-          "alignment": "center"
-        }
+        { "type": "text", "text": "报表标题", "x": 10, "y": 10, "width": 190, "height": 15, "font": { "size": 18, "bold": true }, "alignment": "center" }
       ]
     },
     {
       "type": "pageHeader",
       "height": 10,
       "elements": [
-        { "type": "text", "text": "订单号", "x": 10, "y": 0, "width": 40, "height": 8, "font": { "bold": true } },
-        { "type": "text", "text": "客户", "x": 55, "y": 0, "width": 50, "height": 8, "font": { "bold": true } },
-        { "type": "text", "text": "金额", "x": 130, "y": 0, "width": 60, "height": 8, "font": { "bold": true }, "alignment": "right" }
+        { "type": "text", "text": "列 1", "x": 10, "y": 0, "width": 60, "height": 8, "font": { "bold": true } }
       ]
     },
     {
       "type": "detail",
-      "height": 8,
+      "height": 10,
       "dataSource": "orders",
       "elements": [
-        { "type": "text", "text": "{{currentRow.orderNo}}", "x": 10, "y": 0, "width": 40, "height": 6 },
-        { "type": "text", "text": "{{currentRow.customer}}", "x": 55, "y": 0, "width": 50, "height": 6 },
-        { "type": "text", "text": "{{currentRow.amount}}", "x": 130, "y": 0, "width": 60, "height": 6, "alignment": "right" }
-      ]
-    },
-    {
-      "type": "pageFooter",
-      "height": 10,
-      "elements": [
-        { "type": "text", "text": "第 {{page}} / {{totalPages}} 页", "x": 130, "y": 0, "width": 60, "height": 6, "alignment": "right" }
+        { "type": "text", "text": "{{currentRow.name}}", "x": 10, "y": 0, "width": 60, "height": 8 }
       ]
     }
   ]
+}`
+
+const templateJson = ref(defaultTemplate)
+const dataJson = ref(`{
+  "orders": [
+    { "name": "张三", "amount": 100 },
+    { "name": "李四", "amount": 200 }
+  ]
 }`)
 
-// 默认数据
-const dataJson = ref(JSON.stringify({
-  orders: [
-    { orderNo: 'SO-001', customer: '张三', amount: 1234.56 },
-    { orderNo: 'SO-002', customer: '李四', amount: 789.00 },
-    { orderNo: 'SO-003', customer: '王五', amount: 2345.67 },
-    { orderNo: 'SO-004', customer: '赵六', amount: 567.89 },
-    { orderNo: 'SO-005', customer: '钱七', amount: 3456.78 }
-  ]
-}, null, 2))
-
-// 解析数据
 const parsedData = computed(() => {
   try {
-    return JSON.parse(dataJson.value)
+    return JSON.parse(dataJson.value || '{}')
   } catch {
     return {}
   }
 })
 
-// 加载简单示例
-function loadSampleTemplate() {
-  templateJson.value = `{
-  "version": "1.0",
-  "page": { "width": 210, "height": 297 },
-  "dataSources": [{ "name": "items" }],
-  "bands": [
-    {
-      "type": "reportHeader",
-      "height": 20,
-      "elements": [{
-        "type": "text",
-        "text": "简单报表",
-        "x": 80, "y": 5, "width": 50, "height": 10,
-        "font": { "size": 16, "bold": true }
-      }]
-    },
-    {
-      "type": "detail",
-      "height": 8,
-      "dataSource": "items",
-      "elements": [{
-        "type": "text",
-        "text": "{{currentRow.name}} - {{currentRow.value}}",
-        "x": 20, "y": 0, "width": 170, "height": 6
-      }]
+// 可视化模式共享同一份 JSON
+const parsedTemplate = computed({
+  get: () => {
+    try {
+      return JSON.parse(templateJson.value || '{}')
+    } catch {
+      return { bands: [] }
     }
-  ]
-}`
-  dataJson.value = JSON.stringify({
-    items: [
-      { name: '项目A', value: 100 },
-      { name: '项目B', value: 200 },
-      { name: '项目C', value: 300 }
-    ]
-  }, null, 2)
+  },
+  set: (v) => {
+    templateJson.value = JSON.stringify(v, null, 2)
+  }
+})
+
+watch(parsedTemplate, (val) => {
+  if (!val.bands) val.bands = []
+  if (!val.page) {
+    val.page = { width: 210, height: 297, margin: { top: 15, bottom: 15, left: 10, right: 10 } }
+  }
+}, { deep: true })
+
+// ===== 选中状态 =====
+const selectedBandIndex = ref<number>(-1)
+const selectedElementIndex = ref<number>(-1)
+
+const selectedElement = computed(() => {
+  if (selectedBandIndex.value < 0) return null
+  const band = parsedTemplate.value.bands?.[selectedBandIndex.value]
+  if (!band) return null
+  if (selectedElementIndex.value < 0) return null
+  return band.elements?.[selectedElementIndex.value] || null
+})
+
+function onSelectBand(i: number) {
+  selectedBandIndex.value = i
+  selectedElementIndex.value = -1
 }
 
-// 加载销售报表
+function onSelectElement(bi: number, ei: number) {
+  selectedBandIndex.value = bi
+  selectedElementIndex.value = ei
+}
+
+function onCanvasClick() {
+  selectedBandIndex.value = -1
+  selectedElementIndex.value = -1
+}
+
+// ===== 添加操作 =====
+function addBand(type: string) {
+  if (!parsedTemplate.value.bands) parsedTemplate.value.bands = []
+  const newBand: any = {
+    type,
+    height: type === 'detail' ? 10 : 20,
+    elements: []
+  }
+  if (type === 'detail') newBand.dataSource = 'orders'
+  parsedTemplate.value.bands.push(newBand)
+  selectedBandIndex.value = parsedTemplate.value.bands.length - 1
+  selectedElementIndex.value = -1
+  syncTemplateJson()
+}
+
+function addElement(type: 'text' | 'line' | 'rect' | 'barcode') {
+  if (selectedBandIndex.value < 0) {
+    addBand('title')
+  }
+  const band = parsedTemplate.value.bands[selectedBandIndex.value]
+  if (!band.elements) band.elements = []
+  const defaults: any = {
+    text: { type: 'text', text: '新文本', x: 20, y: 2, width: 50, height: 8, font: { size: 10 } },
+    line: { type: 'line', x: 20, y: 5, width: 100, height: 0, lineWidth: 0.5, borderColor: '#000000' },
+    rect: { type: 'rect', x: 20, y: 2, width: 60, height: 8, lineWidth: 0.5, borderColor: '#000000' },
+    barcode: { type: 'barcode', x: 20, y: 2, width: 60, height: 12, dataField: '' }
+  }
+  const el = JSON.parse(JSON.stringify(defaults[type]))
+  band.elements.push(el)
+  selectedElementIndex.value = band.elements.length - 1
+  syncTemplateJson()
+}
+
+function deleteElement() {
+  if (selectedBandIndex.value < 0 || selectedElementIndex.value < 0) return
+  const band = parsedTemplate.value.bands[selectedBandIndex.value]
+  band.elements.splice(selectedElementIndex.value, 1)
+  selectedElementIndex.value = -1
+  syncTemplateJson()
+}
+
+// ===== Band 操作 =====
+function moveBandUp(i: number) {
+  if (i <= 0) return
+  const arr = parsedTemplate.value.bands
+  ;[arr[i - 1], arr[i]] = [arr[i], arr[i - 1]]
+  selectedBandIndex.value = i - 1
+  syncTemplateJson()
+}
+
+function moveBandDown(i: number) {
+  const arr = parsedTemplate.value.bands
+  if (i >= arr.length - 1) return
+  ;[arr[i + 1], arr[i]] = [arr[i], arr[i + 1]]
+  selectedBandIndex.value = i + 1
+  syncTemplateJson()
+}
+
+function duplicateBand(i: number) {
+  const arr = parsedTemplate.value.bands
+  const copy = JSON.parse(JSON.stringify(arr[i]))
+  copy.elements = (copy.elements || []).map((e: any) => ({ ...e, y: (e.y || 0) + 5 }))
+  arr.splice(i + 1, 0, copy)
+  selectedBandIndex.value = i + 1
+  syncTemplateJson()
+}
+
+function removeBand(i: number) {
+  parsedTemplate.value.bands.splice(i, 1)
+  if (selectedBandIndex.value === i) selectedBandIndex.value = -1
+  else if (selectedBandIndex.value > i) selectedBandIndex.value--
+  syncTemplateJson()
+}
+
+function syncTemplateJson() {
+  // 触发 parsedTemplate.setter
+  templateJson.value = JSON.stringify(parsedTemplate.value, null, 2)
+}
+
+// ===== 示例加载 =====
+function loadSampleTemplate() {
+  templateJson.value = defaultTemplate
+  dataJson.value = `{
+  "orders": [
+    { "name": "示例 1", "amount": 100 },
+    { "name": "示例 2", "amount": 200 }
+  ]
+}`
+}
+
 function loadSalesTemplate() {
   templateJson.value = `{
   "version": "1.0",
-  "page": {
-    "width": 210,
-    "height": 297,
-    "margin": { "top": 15, "bottom": 15, "left": 10, "right": 10 }
-  },
+  "page": { "width": 210, "height": 297, "margin": { "top": 15, "bottom": 15, "left": 10, "right": 10 } },
   "dataSources": [{ "name": "orders" }],
   "bands": [
     {
-      "type": "reportHeader",
+      "type": "title",
       "height": 30,
-      "elements": [{
-        "type": "text",
-        "text": "销售订单报表",
-        "x": 10, "y": 10, "width": 190, "height": 15,
-        "font": { "size": 20, "bold": true },
-        "alignment": "center"
-      }]
+      "elements": [
+        { "type": "text", "text": "销售订单报表", "x": 10, "y": 10, "width": 190, "height": 15, "font": { "size": 20, "bold": true }, "alignment": "center" }
+      ]
     },
     {
       "type": "pageHeader",
@@ -209,264 +370,181 @@ function loadSalesTemplate() {
     },
     {
       "type": "detail",
-      "height": 8,
+      "height": 10,
       "dataSource": "orders",
       "elements": [
-        { "type": "text", "text": "{{currentRow.orderNo}}", "x": 10, "y": 0, "width": 40, "height": 6 },
-        { "type": "text", "text": "{{currentRow.customer}}", "x": 55, "y": 0, "width": 50, "height": 6 },
-        { "type": "text", "text": "{{currentRow.amount}}", "x": 130, "y": 0, "width": 60, "height": 6, "alignment": "right" }
+        { "type": "text", "text": "{{currentRow.id}}", "x": 10, "y": 0, "width": 40, "height": 8 },
+        { "type": "text", "text": "{{currentRow.cust}}", "x": 55, "y": 0, "width": 50, "height": 8 },
+        { "type": "text", "text": "{{currentRow.amt}}", "x": 130, "y": 0, "width": 60, "height": 8, "alignment": "right" }
       ]
-    },
-    {
-      "type": "reportFooter",
-      "height": 15,
-      "elements": [{
-        "type": "text",
-        "text": "合计: {{sum.orders.amount}}",
-        "x": 130, "y": 5, "width": 60, "height": 8,
-        "font": { "bold": true },
-        "alignment": "right"
-      }]
     }
   ]
 }`
-  dataJson.value = JSON.stringify({
-    orders: [
-      { orderNo: 'SO-2026-001', customer: '北京科技有限公司', amount: 12500.00 },
-      { orderNo: 'SO-2026-002', customer: '上海贸易公司', amount: 8900.50 },
-      { orderNo: 'SO-2026-003', customer: '深圳电子科技', amount: 23400.00 },
-      { orderNo: 'SO-2026-004', customer: '广州商贸集团', amount: 5670.80 },
-      { orderNo: 'SO-2026-005', customer: '杭州网络技术', amount: 15890.00 }
-    ]
-  }, null, 2)
+  dataJson.value = `{
+  "orders": [
+    { "id": "001", "cust": "张三", "amt": 100 },
+    { "id": "002", "cust": "李四", "amt": 200 }
+  ]
+}`
 }
+
+// ===== 导出 =====
+async function exportAs(type: 'pdf' | 'excel') {
+  const req = {
+    templateJson: templateJson.value,
+    data: parsedData.value
+  }
+  try {
+    const blob = type === 'pdf' ? await exportPdf(req) : await exportExcel(req)
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `report.${type === 'pdf' ? 'pdf' : 'xlsx'}`
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (e: any) {
+    alert('导出失败：' + e.message)
+  }
+}
+
+onMounted(() => {
+  // 初始模式由 mode 控制
+})
 </script>
 
 <style>
 :root {
-  --bg: #fafafa;
-  --bg-panel: #ffffff;
-  --bg-elev: #f5f5f5;
-  --bg-code: #1e1e1e;
-  --fg: #1a1a1a;
-  --fg-muted: #6b7280;
-  --fg-subtle: #9ca3af;
-  --border: #e5e7eb;
-  --border-strong: #d1d5db;
+  --bg: #f3f3f3;
+  --bg-elev: #e7e7e7;
+  --border: #e0e0e0;
+  --border-strong: #c8c8c8;
+  --fg: #1f1f1f;
+  --fg-muted: #6b6b6b;
   --accent: #2563eb;
-  --accent-hover: #1d4ed8;
-  --danger: #dc2626;
-  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --accent-soft: #e7f0ff;
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
+html, body, #app { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 13px; color: var(--fg); background: var(--bg); }
 
-html, body {
-  height: 100%;
-  font-family: var(--sans);
-  color: var(--fg);
-  background: var(--bg);
-  font-size: 14px;
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-}
+.app { display: flex; flex-direction: column; height: 100%; }
 
-.app {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-}
-
-/* 顶部栏 */
 .topbar {
-  height: 48px;
-  background: #1a1a1a;
-  color: #e5e5e5;
+  height: 44px;
+  background: #2d2d30;
+  color: #d4d4d4;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
-  border-bottom: 1px solid #000;
+  border-bottom: 1px solid #1e1e1e;
   flex-shrink: 0;
 }
 
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
+.brand { display: flex; align-items: center; gap: 10px; }
 .logo {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  background: var(--accent);
+  width: 26px; height: 26px;
+  background: #0e639c;
   color: #fff;
-  font-weight: 700;
-  font-size: 12px;
-  letter-spacing: -0.5px;
-  border-radius: 4px;
-}
-
-.name {
-  font-weight: 600;
-  font-size: 15px;
-  color: #fff;
-}
-
-.version {
-  font-family: var(--mono);
   font-size: 11px;
-  color: #9ca3af;
-  padding: 2px 6px;
-  background: #2a2a2a;
-  border-radius: 3px;
+  font-weight: 700;
+  border-radius: 4px;
+  font-family: 'Cascadia Code', 'Consolas', monospace;
 }
+.name { font-size: 14px; font-weight: 600; color: #fff; }
+.version { font-size: 11px; color: #888; font-family: 'Cascadia Code', 'Consolas', monospace; }
 
-.topnav {
+.topnav { display: flex; align-items: center; gap: 16px; }
+.status { font-size: 12px; color: #999; font-family: 'Cascadia Code', 'Consolas', monospace; }
+
+.mode-tabs {
   display: flex;
-  align-items: center;
-  gap: 16px;
+  background: #1e1e1e;
+  border-radius: 4px;
+  padding: 2px;
+  gap: 2px;
 }
 
-.status {
-  font-family: var(--mono);
+.mode-tab {
+  padding: 4px 12px;
   font-size: 12px;
-  color: #9ca3af;
+  background: transparent;
+  color: #aaa;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-family: inherit;
 }
 
-.status::before {
-  content: '';
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  background: #22c55e;
-  border-radius: 50%;
-  margin-right: 6px;
-  vertical-align: middle;
+.mode-tab:hover { color: #fff; }
+
+.mode-tab.active {
+  background: #0e639c;
+  color: #fff;
 }
 
-/* 主布局 */
 .layout {
-  display: flex;
   flex: 1;
-  overflow: hidden;
+  display: flex;
+  min-height: 0;
 }
 
-/* 左侧面板 */
 .panel {
-  width: 360px;
-  background: var(--bg-panel);
+  width: 280px;
+  background: #fafafa;
   border-right: 1px solid var(--border);
   overflow-y: auto;
   flex-shrink: 0;
 }
 
-.panel-section {
-  padding: 16px;
-  border-bottom: 1px solid var(--border);
-}
+.panel-section { padding: 12px; border-bottom: 1px solid var(--border); }
 
 .section-title {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--fg-muted);
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
-.muted {
-  color: var(--fg-subtle);
-  font-weight: 400;
-  text-transform: none;
-  letter-spacing: 0;
-}
+.muted { color: var(--fg-muted); font-weight: 400; }
 
 .code-input {
   width: 100%;
-  padding: 8px 10px;
-  background: #fafafa;
+  font-family: 'Cascadia Code', 'Consolas', monospace;
+  font-size: 11.5px;
   border: 1px solid var(--border-strong);
   border-radius: 4px;
-  font-family: var(--mono);
-  font-size: 12px;
+  padding: 6px 8px;
+  background: #fff;
   color: var(--fg);
   resize: vertical;
-  line-height: 1.5;
 }
 
-.code-input:focus {
-  outline: none;
-  border-color: var(--accent);
-  background: #fff;
-}
+.slider { width: 100%; }
 
-.slider {
-  width: 100%;
-  height: 4px;
-  appearance: none;
-  background: var(--border-strong);
-  border-radius: 2px;
-  outline: none;
-}
-
-.slider::-webkit-slider-thumb {
-  appearance: none;
-  width: 14px;
-  height: 14px;
-  background: var(--accent);
-  border-radius: 50%;
-  cursor: pointer;
-}
-
-.button-group {
-  display: flex;
-  gap: 8px;
-}
-
+.button-group { display: flex; gap: 6px; flex-wrap: wrap; }
 .btn {
-  flex: 1;
-  padding: 6px 12px;
+  padding: 5px 12px;
+  font-size: 12px;
   background: #fff;
-  color: var(--fg);
   border: 1px solid var(--border-strong);
   border-radius: 4px;
-  font-size: 13px;
   cursor: pointer;
-  transition: all 0.1s;
+  color: var(--fg);
+  font-family: inherit;
 }
+.btn:hover { background: var(--bg-elev); }
 
-.btn:hover {
-  background: var(--bg-elev);
-  border-color: var(--fg-muted);
-}
-
-.btn:active {
-  background: #ebebeb;
-}
-
-/* 右侧舞台 */
 .stage {
   flex: 1;
   overflow: hidden;
-  background: var(--bg);
-}
-
-/* 打印样式 */
-@media print {
-  body { background: #fff; }
-  .topbar, .panel, .toolbar, .page-info, .toolbar button { display: none !important; }
-  .layout { display: block; }
-  .stage { overflow: visible; }
-  .preview-container { transform: none !important; }
-  .page { transform: none !important; box-shadow: none; margin: 0; page-break-after: always; }
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 </style>
