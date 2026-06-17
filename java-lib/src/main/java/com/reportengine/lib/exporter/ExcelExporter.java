@@ -252,9 +252,8 @@ public class ExcelExporter {
             sheet.getPrintSetup().setFitWidth((short) 1);
             sheet.getPrintSetup().setFitHeight((short) 0); // 不限制高度
             
-            // 水平垂直居中
+            // 水平居中（垂直顶部对齐，更符合报表习惯）
             sheet.setHorizontallyCenter(true);
-            sheet.setVerticallyCenter(true);
             
             double mmToInch = 0.03937;
             sheet.setMargin(org.apache.poi.ss.usermodel.Sheet.TopMargin, marginTop * mmToInch);
