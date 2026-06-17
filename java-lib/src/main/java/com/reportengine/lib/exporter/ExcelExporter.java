@@ -95,8 +95,9 @@ public class ExcelExporter {
                 String bandType = band.get("type").asText();
                 double bandHeight = band.has("height") ? band.get("height").asDouble() : 8;
                 
-                // 非 detail band：先创建行，输出元素
-                if (!"detail".equals(bandType)) {
+                // 非 detail / pageFooter band：先创建行，输出元素
+                // pageFooter 转成 Excel 页脚，不在表格里输出
+                if (!"detail".equals(bandType) && !"pageFooter".equals(bandType)) {
                     XSSFRow row = sheet.createRow(currentRow);
                     row.setHeightInPoints((float)(bandHeight * MM_TO_ROW_HEIGHT));
                     
@@ -240,6 +241,34 @@ public class ExcelExporter {
             if (margin.has("right")) marginRight = margin.get("right").asDouble();
         }
         
+        // 收集 pageFooter band 的内容（pageHeader 作为表头单元格输出）
+        String footerText = null;
+        String footerAlign = "left";
+        if (template.has("bands")) {
+            for (JsonNode band : template.get("bands")) {
+                String type = band.get("type").asText();
+                if (!"pageFooter".equals(type)) continue;
+                if (!band.has("elements")) continue;
+                
+                StringBuilder sb = new StringBuilder();
+                String align = "left";
+                for (JsonNode el : band.get("elements")) {
+                    String t = el.has("text") ? el.get("text").asText() : "";
+                    String a = el.has("alignment") ? el.get("alignment").asText() : "left";
+                    if (sb.length() > 0) sb.append("    ");
+                    sb.append(t);
+                    align = a;
+                }
+                footerText = sb.toString();
+                footerAlign = align;
+            }
+        }
+        
+        // 转换 {{page}} {{totalPages}} 为 Excel 页码字段
+        if (footerText != null) {
+            footerText = convertPageVariables(footerText);
+        }
+        
         for (int i = 0; i < workbook.getNumberOfSheets(); i++) {
             XSSFSheet sheet = workbook.getSheetAt(i);
             
@@ -250,10 +279,21 @@ public class ExcelExporter {
             // 缩放适应页面
             sheet.setFitToPage(true);
             sheet.getPrintSetup().setFitWidth((short) 1);
-            sheet.getPrintSetup().setFitHeight((short) 0); // 不限制高度
+            sheet.getPrintSetup().setFitHeight((short) 0);
             
-            // 水平居中（垂直顶部对齐，更符合报表习惯）
+            // 水平居中
             sheet.setHorizontallyCenter(true);
+            
+            // 设置页脚（页眉不用，pageHeader 已作为表头单元格输出）
+            if (footerText != null && !footerText.isEmpty()) {
+                if ("center".equals(footerAlign)) {
+                    sheet.getFooter().setCenter(footerText);
+                } else if ("right".equals(footerAlign)) {
+                    sheet.getFooter().setRight(footerText);
+                } else {
+                    sheet.getFooter().setLeft(footerText);
+                }
+            }
             
             double mmToInch = 0.03937;
             sheet.setMargin(org.apache.poi.ss.usermodel.Sheet.TopMargin, marginTop * mmToInch);
@@ -274,12 +314,24 @@ public class ExcelExporter {
                 }
             }
             if (lastRow >= 0 && lastCol >= 0) {
-                // 用字符串方式设置打印区域，避免参数顺序问题
                 String colLetter = org.apache.poi.ss.util.CellReference.convertNumToColString(lastCol);
                 String printArea = "$A$1:$" + colLetter + "$" + (lastRow + 1);
                 workbook.setPrintArea(i, printArea);
             }
         }
+    }
+    
+    /**
+     * 将模板页码变量转为 Excel 页脚字段码
+     * {{page}} → &P （当前页）
+     * {{totalPages}} → &N （总页数）
+     */
+    private String convertPageVariables(String text) {
+        if (text == null) return null;
+        String result = text;
+        result = result.replace("{{page}}", "&P");
+        result = result.replace("{{totalPages}}", "&N");
+        return result;
     }
     
     private short getPaperSize(double widthMm, double heightMm) {
