@@ -1,48 +1,60 @@
 <template>
-  <div id="app">
-    <header class="app-header">
-      <h1>📊 ReportEngine Web</h1>
-      <p>在线报表预览、打印、导出</p>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="logo">RE</span>
+        <span class="name">ReportEngine</span>
+        <span class="version">v0.2.0-web</span>
+      </div>
+      <nav class="topnav">
+        <span class="status">Java 后端 : 5000</span>
+      </nav>
     </header>
 
-    <main class="app-main">
-      <div class="sidebar">
-        <h3>📋 模板配置</h3>
-        <div class="form-group">
-          <label>模板 JSON：</label>
+    <main class="layout">
+      <aside class="panel">
+        <div class="panel-section">
+          <div class="section-title">模板</div>
           <textarea
             v-model="templateJson"
-            rows="20"
-            placeholder="输入报表模板 JSON..."
+            class="code-input"
+            rows="22"
+            spellcheck="false"
           ></textarea>
         </div>
-        <div class="form-group">
-          <label>数据源 (JSON)：</label>
+
+        <div class="panel-section">
+          <div class="section-title">数据源</div>
           <textarea
             v-model="dataJson"
+            class="code-input"
             rows="10"
-            placeholder='{"ds": [{"name": "test"}]}'
+            spellcheck="false"
           ></textarea>
         </div>
-        <div class="form-group">
-          <label>缩放比例：{{ scale * 100 }}%</label>
-          <input type="range" v-model.number="scale" min="0.5" max="2" step="0.1" />
-        </div>
-        <div class="form-group">
-          <h4>示例模板：</h4>
-          <button @click="loadSampleTemplate">加载简单示例</button>
-          <button @click="loadSalesTemplate">加载销售报表</button>
-        </div>
-      </div>
 
-      <div class="viewer">
+        <div class="panel-section">
+          <div class="section-title">缩放 <span class="muted">{{ scale * 100 }}%</span></div>
+          <input type="range" v-model.number="scale" min="0.5" max="2" step="0.05" class="slider" />
+        </div>
+
+        <div class="panel-section">
+          <div class="section-title">示例</div>
+          <div class="button-group">
+            <button class="btn" @click="loadSampleTemplate">简单报表</button>
+            <button class="btn" @click="loadSalesTemplate">销售订单</button>
+          </div>
+        </div>
+      </aside>
+
+      <section class="stage">
         <ReportViewer
           ref="viewerRef"
           :template-json="templateJson"
           :data="parsedData"
           :scale="scale"
         />
-      </div>
+      </section>
     </main>
   </div>
 </template>
@@ -231,157 +243,230 @@ function loadSalesTemplate() {
 </script>
 
 <style>
+:root {
+  --bg: #fafafa;
+  --bg-panel: #ffffff;
+  --bg-elev: #f5f5f5;
+  --bg-code: #1e1e1e;
+  --fg: #1a1a1a;
+  --fg-muted: #6b7280;
+  --fg-subtle: #9ca3af;
+  --border: #e5e7eb;
+  --border-strong: #d1d5db;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --danger: #dc2626;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  background: #f0f2f5;
+html, body {
+  height: 100%;
+  font-family: var(--sans);
+  color: var(--fg);
+  background: var(--bg);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
-#app {
+.app {
   display: flex;
   flex-direction: column;
   height: 100vh;
 }
 
-.app-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 16px 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+/* 顶部栏 */
+.topbar {
+  height: 48px;
+  background: #1a1a1a;
+  color: #e5e5e5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  border-bottom: 1px solid #000;
+  flex-shrink: 0;
 }
 
-.app-header h1 {
-  font-size: 24px;
-  margin-bottom: 4px;
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.app-header p {
-  font-size: 14px;
-  opacity: 0.9;
+.logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: -0.5px;
+  border-radius: 4px;
 }
 
-.app-main {
+.name {
+  font-weight: 600;
+  font-size: 15px;
+  color: #fff;
+}
+
+.version {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: #9ca3af;
+  padding: 2px 6px;
+  background: #2a2a2a;
+  border-radius: 3px;
+}
+
+.topnav {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.status {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.status::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: #22c55e;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+/* 主布局 */
+.layout {
   display: flex;
   flex: 1;
   overflow: hidden;
 }
 
-.sidebar {
-  width: 380px;
-  background: #fff;
-  border-right: 1px solid #e0e0e0;
-  padding: 16px;
+/* 左侧面板 */
+.panel {
+  width: 360px;
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border);
   overflow-y: auto;
+  flex-shrink: 0;
 }
 
-.sidebar h3 {
-  font-size: 16px;
-  margin-bottom: 16px;
-  color: #333;
+.panel-section {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
 }
 
-.form-group {
-  margin-bottom: 16px;
-}
-
-.form-group label {
-  display: block;
-  font-size: 13px;
-  color: #666;
-  margin-bottom: 6px;
-}
-
-.form-group textarea {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #d0d0d0;
-  border-radius: 4px;
-  font-family: 'Consolas', 'Monaco', monospace;
+.section-title {
   font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--fg-muted);
+  margin-bottom: 10px;
+}
+
+.muted {
+  color: var(--fg-subtle);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.code-input {
+  width: 100%;
+  padding: 8px 10px;
+  background: #fafafa;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--fg);
   resize: vertical;
+  line-height: 1.5;
 }
 
-.form-group textarea:focus {
+.code-input:focus {
   outline: none;
-  border-color: #667eea;
-}
-
-.form-group input[type="range"] {
-  width: 100%;
-}
-
-.form-group h4 {
-  font-size: 13px;
-  color: #666;
-  margin-bottom: 8px;
-}
-
-.form-group button {
-  padding: 6px 12px;
-  margin-right: 8px;
-  margin-bottom: 8px;
-  border: 1px solid #d0d0d0;
-  border-radius: 4px;
+  border-color: var(--accent);
   background: #fff;
+}
+
+.slider {
+  width: 100%;
+  height: 4px;
+  appearance: none;
+  background: var(--border-strong);
+  border-radius: 2px;
+  outline: none;
+}
+
+.slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  background: var(--accent);
+  border-radius: 50%;
   cursor: pointer;
-  font-size: 12px;
-  transition: all 0.2s;
 }
 
-.form-group button:hover {
-  background: #f0f0f0;
-  border-color: #999;
+.button-group {
+  display: flex;
+  gap: 8px;
 }
 
-.viewer {
+.btn {
+  flex: 1;
+  padding: 6px 12px;
+  background: #fff;
+  color: var(--fg);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.btn:hover {
+  background: var(--bg-elev);
+  border-color: var(--fg-muted);
+}
+
+.btn:active {
+  background: #ebebeb;
+}
+
+/* 右侧舞台 */
+.stage {
   flex: 1;
   overflow: hidden;
+  background: var(--bg);
 }
 
-/* 打印样式：只打印报表预览区域 */
+/* 打印样式 */
 @media print {
-  body {
-    margin: 0;
-    padding: 0;
-  }
-  
-  .app-header,
-  .sidebar,
-  .toolbar,
-  .page-info,
-  .toolbar button {
-    display: none !important;
-  }
-  
-  .app-main {
-    display: block;
-    padding: 0;
-    margin: 0;
-  }
-  
-  .viewer {
-    overflow: visible;
-    width: 100%;
-  }
-  
-  .report-viewer {
-    background: white;
-  }
-  
-  .preview-container {
-    transform: none !important;
-  }
-  
-  .page {
-    transform: none !important;
-    box-shadow: none;
-    margin: 0;
-    page-break-after: always;
-  }
+  body { background: #fff; }
+  .topbar, .panel, .toolbar, .page-info, .toolbar button { display: none !important; }
+  .layout { display: block; }
+  .stage { overflow: visible; }
+  .preview-container { transform: none !important; }
+  .page { transform: none !important; box-shadow: none; margin: 0; page-break-after: always; }
 }
 </style>
