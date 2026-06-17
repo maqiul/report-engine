@@ -74,7 +74,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import {
   previewReport,
   exportPdf,
@@ -111,6 +111,11 @@ watch(
   },
   { deep: true }
 )
+
+// 首次加载
+onMounted(() => {
+  loadReport()
+})
 
 async function loadReport() {
   if (!props.templateJson.trim()) {
