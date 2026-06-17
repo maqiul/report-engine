@@ -106,7 +106,7 @@ public class PdfExporter {
         
         // 中文字体
         PdfFont chineseFont = PdfFontFactory.createFont(
-            "C:/Windows/Fonts/STSONG.TTF",
+            resolveFontPath(),
             PdfFontFactory.EmbeddingStrategy.FORCE_EMBEDDED
         );
         
@@ -185,7 +185,7 @@ public class PdfExporter {
             
             try {
                 PdfFont font = PdfFontFactory.createFont(
-                    "C:/Windows/Fonts/STSONG.TTF",
+                    resolveFontPath(),
                     PdfFontFactory.EmbeddingStrategy.FORCE_EMBEDDED
                 );
                 
@@ -231,5 +231,53 @@ public class PdfExporter {
                 // 忽略字体错误
             }
         }
+    }
+
+    /**
+     * 解析中文字体路径
+     * 优先级：
+     *   1. 环境变量 REPORT_ENGINE_FONT
+     *   2. 当前工作目录下的 fonts/STSONG.TTF
+     *   3. classpath:/fonts/STSONG.TTF
+     *   4. Windows 系统字体目录
+     *   5. Linux 常见字体目录（/usr/share/fonts/...）
+     */
+    static String resolveFontPath() {
+        String env = System.getenv("REPORT_ENGINE_FONT");
+        if (env != null && !env.isEmpty() && new java.io.File(env).exists()) {
+            return env;
+        }
+        String cwd = System.getProperty("user.dir");
+        java.io.File local = new java.io.File(cwd, "fonts/STSONG.TTF");
+        if (local.exists()) return local.getAbsolutePath();
+
+        // classpath 查找
+        try {
+            java.net.URL url = PdfExporter.class.getResource("/fonts/STSONG.TTF");
+            if (url != null && "file".equals(url.getProtocol())) {
+                return new java.io.File(url.toURI()).getAbsolutePath();
+            }
+        } catch (Exception ignore) { }
+
+        // Windows 系统目录
+        String os = System.getProperty("os.name").toLowerCase();
+        if (os.contains("win")) {
+            String win = "C:/Windows/Fonts/STSONG.TTF";
+            if (new java.io.File(win).exists()) return win;
+        }
+
+        // Linux 常见目录
+        String[] linuxPaths = {
+            "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+            "/usr/share/fonts/wqy-microhei/wqy-microhei.ttc",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/app/fonts/STSONG.TTF"
+        };
+        for (String p : linuxPaths) {
+            if (new java.io.File(p).exists()) return p;
+        }
+
+        // 都没有就回退到 Windows 路径（让 iText 报明确错）
+        return "C:/Windows/Fonts/STSONG.TTF";
     }
 }

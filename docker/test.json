@@ -1,0 +1,4 @@
+{
+  "templateJson": "{\"bands\":[{\"type\":\"title\",\"height\":20,\"elements\":[{\"type\":\"text\",\"x\":10,\"y\":0,\"width\":100,\"height\":10,\"text\":\"Hello\"}]}]}",
+  "data": {}
+}

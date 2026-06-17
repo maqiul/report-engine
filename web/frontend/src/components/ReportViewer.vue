@@ -79,7 +79,7 @@ import {
   previewReport,
   exportPdf,
   exportExcel,
-  type ReportResponse
+  type RenderResponse
 } from '../api/report'
 
 const props = defineProps<{
@@ -88,7 +88,7 @@ const props = defineProps<{
   scale: number
 }>()
 
-const report = ref<ReportResponse | null>(null)
+const report = ref<RenderResponse | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
 const currentPage = ref(0)
