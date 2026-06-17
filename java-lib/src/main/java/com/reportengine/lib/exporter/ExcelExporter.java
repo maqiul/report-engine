@@ -169,12 +169,18 @@ public class ExcelExporter {
                                     XSSFCell cell = dataRow.createCell(col);
                                     String text = el.has("text") ? el.get("text").asText() : "";
                                     text = replaceExpressions(text, rowData);
-                                    cell.setCellValue(text);
                                     
+                                    // 智能识别类型
                                     XSSFCellStyle style = workbook.createCellStyle();
                                     String align = el.has("alignment") ? el.get("alignment").asText() : "left";
                                     style.setAlignment(parseAlignment(align));
                                     style.setVerticalAlignment(VerticalAlignment.CENTER);
+                                    
+                                    if (setCellValueSmart(cell, text, style, workbook)) {
+                                        // 数字已设置
+                                    } else {
+                                        cell.setCellValue(text);
+                                    }
                                     cell.setCellStyle(style);
                                     
                                     if (endCol > col) {
@@ -291,5 +297,57 @@ public class ExcelExporter {
             result = result.replace(placeholder, value);
         }
         return result;
+    }
+    
+    /**
+     * 智能识别值类型并设置单元格
+     * @return true 表示是数字/日期
+     */
+    private boolean setCellValueSmart(XSSFCell cell, String text, XSSFCellStyle style, XSSFWorkbook workbook) {
+        if (text == null || text.isEmpty()) return false;
+        
+        // 数字识别（含小数、负数、千分位）
+        if (text.matches("^-?\\d{1,3}(,\\d{3})*(\\.\\d+)?$") || text.matches("^-?\\d+(\\.\\d+)?$")) {
+            try {
+                double num = Double.parseDouble(text.replace(",", ""));
+                cell.setCellValue(num);
+                // 检测是否含小数
+                if (text.contains(".")) {
+                    // 保留原始小数位数
+                    int decimals = text.substring(text.indexOf('.') + 1).length();
+                    if (decimals > 0 && decimals <= 10) {
+                        String format = "#,##0.";
+                        for (int i = 0; i < decimals; i++) format += "0";
+                        style.setDataFormat(workbook.createDataFormat().getFormat(format));
+                    }
+                } else {
+                    style.setDataFormat(workbook.createDataFormat().getFormat("#,##0"));
+                }
+                return true;
+            } catch (NumberFormatException e) {
+                return false;
+            }
+        }
+        
+        // 日期识别 yyyy-MM-dd 或 yyyy/MM/dd
+        if (text.matches("^\\d{4}[-/]\\d{1,2}[-/]\\d{1,2}.*$")) {
+            try {
+                String datePart = text.substring(0, 10).replace("/", "-");
+                java.time.LocalDate date = java.time.LocalDate.parse(datePart);
+                cell.setCellValue(java.sql.Date.valueOf(date));
+                style.setDataFormat(workbook.createDataFormat().getFormat("yyyy-MM-dd"));
+                return true;
+            } catch (Exception e) {
+                return false;
+            }
+        }
+        
+        // 布尔值
+        if ("true".equalsIgnoreCase(text) || "false".equalsIgnoreCase(text)) {
+            cell.setCellValue(Boolean.parseBoolean(text));
+            return true;
+        }
+        
+        return false;
     }
 }
