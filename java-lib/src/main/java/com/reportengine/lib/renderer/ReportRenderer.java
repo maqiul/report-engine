@@ -69,7 +69,7 @@ public class ReportRenderer {
                             }
                             currentY += bandHeight;
                         }
-                    } else {
+                    } else if (!"pageFooter".equals(bandType)) {
                         if (band.has("elements")) {
                             for (JsonNode element : band.get("elements")) {
                                 RenderedElementInfo el = renderElement(element, null, currentY, 1, totalPages);
@@ -80,6 +80,7 @@ public class ReportRenderer {
                         }
                         currentY += bandHeight;
                     }
+                    // pageFooter band 不在 elements 列表里输出，由导出器单独处理（PDF 用 iText EventHandler 画在每页底部）
                 }
             }
             
