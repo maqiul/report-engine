@@ -1,0 +1,12 @@
+server:
+  port: 8080
+
+report:
+  engine:
+    enabled: true
+    auto-rest-api: true
+    rest-prefix: /api/reports
+
+logging:
+  level:
+    com.example: INFO

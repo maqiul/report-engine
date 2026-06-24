@@ -1,0 +1,41 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+group = 'com.example'
+version = '1.0.0'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+// ========= 关键：只加 starter 依赖 =========
+// 这模拟"别人的项目"，源码里完全不需要写 ReportEngine 的实现。
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web:3.2.0'
+    implementation 'com.reportengine:report-engine-spring-boot-starter:0.3.0'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test:3.2.0'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.1'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.1'
+}
+
+application {
+    mainClass = 'com.example.demo.DemoApplication'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs.add('-parameters')
+}

@@ -15,27 +15,33 @@ java {
     withJavadocJar()
 }
 
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs.add('-parameters')
+}
+
 javadoc {
     options.encoding = 'UTF-8'
 }
 
 repositories {
+    mavenLocal()
     mavenCentral()
 }
 
 dependencies {
-    // JSON 处理
-    api 'com.fasterxml.jackson.core:jackson-databind:2.15.3'
-    
-    // PDF 生成 - iText 7
-    api 'com.itextpdf:itext7-core:7.2.5'
-    api 'com.itextpdf:font-asian:7.2.5'
-    
-    // Excel 生成 - Apache POI
-    api 'org.apache.poi:poi:5.2.3'
-    api 'org.apache.poi:poi-ooxml:5.2.3'
-    
-    // 测试依赖
+    // 依赖核心库
+    api 'com.reportengine:java-lib:0.3.0'
+
+    // Spring Boot Starter（最小集）
+    api 'org.springframework.boot:spring-boot-starter:3.2.0'
+    api 'org.springframework.boot:spring-boot-starter-web:3.2.0'
+    api 'org.springframework.boot:spring-boot-autoconfigure:3.2.0'
+
+    // 配置元数据生成（IDE 自动补全 application.yml）
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor:3.2.0'
+
+    // 测试
+    testImplementation 'org.springframework.boot:spring-boot-starter-test:3.2.0'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.1'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.1'
     testImplementation 'org.mockito:mockito-core:5.8.0'
@@ -55,10 +61,11 @@ test {
 publishing {
     publications {
         mavenJava(MavenPublication) {
+            artifactId = 'report-engine-spring-boot-starter'
             from components.java
             pom {
-                name = 'ReportEngine Java Library'
-                description = 'Java library for report rendering, PDF and Excel export'
+                name = 'ReportEngine Spring Boot Starter'
+                description = 'Spring Boot starter for ReportEngine: auto-config + REST endpoints + ReportEngine bean'
                 url = 'https://github.com/maqiul/report-engine'
                 licenses {
                     license {
