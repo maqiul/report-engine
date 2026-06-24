@@ -8,7 +8,7 @@
 ![npm](https://img.shields.io/badge/npm-%40reportengine%2Fvue-red)
 ![docker](https://img.shields.io/badge/docker-compose-blue)
 ![license](https://img.shields.io/badge/license-MIT-blue)
-![tests](https://img.shields.io/badge/tests-4875%2F4875-brightgreen)
+![tests](https://img.shields.io/badge/tests-4794%2F4794-brightgreen)
 
 ---
 
@@ -339,7 +339,7 @@ createApp(App)
 
 ## ✅ 测试
 
-**4875+ 个测试 + 集成验证，全部通过。**
+**4794 个测试 + 集成验证，全部通过。**
 
 | 项目 | 数量 | 说明 |
 |------|------|------|
