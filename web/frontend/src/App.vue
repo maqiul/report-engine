@@ -1,10 +1,11 @@
 <template>
-  <div class="app">
+  <Login v-if="!auth.isLoggedIn" @success="onLoginSuccess" />
+  <div v-else class="app">
     <header class="topbar">
       <div class="brand">
         <span class="logo">RE</span>
         <span class="name">ReportEngine</span>
-        <span class="version">v0.2.0-web</span>
+        <span class="version">v0.4.0-auth</span>
       </div>
       <nav class="topnav">
         <span class="status">Java 后端 : 5000</span>
@@ -24,6 +25,13 @@
             :class="{ active: mode === 'preview' }"
             @click="mode = 'preview'"
           >预览</button>
+        </div>
+        <div v-if="auth.isLoggedIn" class="user-info">
+          <span class="username">{{ auth.username }}</span>
+          <span class="role-badge" :class="{ admin: auth.isAdmin }">
+            {{ auth.role }}
+          </span>
+          <button class="btn-logout" @click="onLogout">登出</button>
         </div>
       </nav>
     </header>
@@ -144,11 +152,17 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import ReportViewer from './components/ReportViewer.vue'
+import Login from './components/Login.vue'
 import Toolbox from './components/editor/Toolbox.vue'
 import BandTree from './components/editor/BandTree.vue'
 import PropertyPanel from './components/editor/PropertyPanel.vue'
 import TemplateEditor from './components/editor/TemplateEditor.vue'
 import { exportPdf, exportExcel } from './api/report'
+import { useAuthStore } from './stores/auth'
+
+const auth = useAuthStore()
+function onLoginSuccess() { /* App.vue 自动从 v-if 切到主界面 */ }
+function onLogout() { auth.logout() }
 
 type Mode = 'code' | 'visual' | 'preview'
 
@@ -459,6 +473,29 @@ html, body, #app { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI',
 
 .topnav { display: flex; align-items: center; gap: 16px; }
 .status { font-size: 12px; color: #999; font-family: 'Cascadia Code', 'Consolas', monospace; }
+
+.user-info { display: flex; align-items: center; gap: 8px; padding-left: 12px; border-left: 1px solid #333; }
+.user-info .username { font-size: 12px; color: #d4d4d4; }
+.user-info .role-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 2px;
+  background: #2d2d30;
+  color: #888;
+  font-family: 'Cascadia Code', 'Consolas', monospace;
+}
+.user-info .role-badge.admin { background: #5a1d1d; color: #f48771; }
+.btn-logout {
+  font-size: 11px;
+  padding: 3px 10px;
+  background: transparent;
+  border: 1px solid #3c3c3c;
+  color: #888;
+  border-radius: 3px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.btn-logout:hover { background: #2d2d30; color: #d4d4d4; border-color: #555; }
 
 .mode-tabs {
   display: flex;
