@@ -185,8 +185,8 @@ public class ExcelExporter {
                                         cell.setCellValue(text);
                                     }
                                     cell.setCellStyle(style);
-                                    
-                                    if (endCol > col) {
+
+                                    if (endCol > col && !isOverlapping(sheet, currentRow, col, endCol)) {
                                         sheet.addMergedRegion(new CellRangeAddress(currentRow, currentRow, col, endCol));
                                     }
                                 }
