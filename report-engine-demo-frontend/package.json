@@ -1,0 +1,25 @@
+{
+  "name": "report-engine-demo-frontend",
+  "private": true,
+  "version": "0.5.0-demo",
+  "type": "module",
+  "description": "ReportEngine 开箱即用销售订单 demo - Vue 3 前端",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview --port 4173",
+    "type-check": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "vue": "^3.5.0",
+    "vue-router": "^4.4.0",
+    "axios": "^1.7.0",
+    "@reportengine/vue": "file:../report-engine-vue"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.0",
+    "typescript": "^5.4.0",
+    "vite": "^5.4.0",
+    "vue-tsc": "^2.0.0"
+  }
+}
