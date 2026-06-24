@@ -1,0 +1,53 @@
+{
+  "name": "@reportengine/vue",
+  "version": "0.3.0",
+  "description": "Vue 3 components for ReportEngine: viewer + visual editor + template editor",
+  "type": "module",
+  "main": "dist/report-engine-vue.umd.js",
+  "module": "dist/report-engine-vue.es.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/report-engine-vue.es.js",
+      "require": "./dist/report-engine-vue.umd.js"
+    },
+    "./style.css": "./dist/style.css"
+  },
+  "scripts": {
+    "build": "vue-tsc --emitDeclarationOnly && vite build",
+    "dev": "vite",
+    "pack": "npm pack"
+  },
+  "peerDependencies": {
+    "vue": "^3.4.0"
+  },
+  "dependencies": {
+    "axios": "^1.6.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.0",
+    "typescript": "^5.4.0",
+    "vite": "^5.2.0",
+    "vue-tsc": "^2.0.0"
+  },
+  "keywords": [
+    "report",
+    "report-engine",
+    "vue",
+    "vue3",
+    "template",
+    "editor",
+    "pdf",
+    "excel"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maqiul/report-engine"
+  }
+}
