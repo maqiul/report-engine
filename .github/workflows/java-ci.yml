@@ -1,0 +1,140 @@
+name: Java CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  JAVA_VERSION: 17
+
+jobs:
+  java-lib-test:
+    name: java-lib test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+          cache: gradle
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x java-lib/gradlew
+
+      - name: Test + JaCoCo
+        run: cd java-lib && ./gradlew test jacocoTestReport
+
+      - name: Publish test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: java-lib-test-results
+          path: java-lib/build/test-results/test/
+          if-no-files-found: warn
+          retention-days: 7
+
+  backend-e2e:
+    name: Spring Boot E2E
+    runs-on: ubuntu-latest
+    needs: java-lib-test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+          cache: gradle
+
+      - name: Publish java-lib to local Maven
+        run: cd java-lib && ./gradlew publishToMavenLocal
+
+      - name: Run backend E2E tests
+        run: cd web/backend && ./gradlew test
+
+      - name: Upload backend test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-results
+          path: web/backend/build/test-results/test/
+          if-no-files-found: warn
+          retention-days: 7
+
+  starter-e2e:
+    name: Spring Boot Starter E2E
+    runs-on: ubuntu-latest
+    needs: backend-e2e
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+          cache: gradle
+
+      - name: Publish java-lib + starter to local Maven
+        run: |
+          cd java-lib && ./gradlew publishToMavenLocal
+          cd ../report-engine-starter && ./gradlew publishToMavenLocal
+
+      - name: Run starter + sample tests
+        run: |
+          cd report-engine-starter && ./gradlew test
+          cd ../report-engine-starter-sample && ./gradlew test
+
+      - name: Upload starter test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: starter-test-results
+          path: |
+            report-engine-starter/build/test-results/test/
+            report-engine-starter-sample/build/test-results/test/
+          if-no-files-found: warn
+          retention-days: 7
+
+  publish-maven:
+    name: Publish java-lib + starter to Maven Central
+    needs: [java-lib-test, backend-e2e, starter-e2e]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+
+      - name: Publish java-lib
+        run: cd java-lib && ./gradlew publish
+        env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
+          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.GPG_SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.GPG_SIGNING_PASSWORD }}
+
+      - name: Publish starter
+        run: cd report-engine-starter && ./gradlew publish
+        env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
+          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.GPG_SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.GPG_SIGNING_PASSWORD }}
