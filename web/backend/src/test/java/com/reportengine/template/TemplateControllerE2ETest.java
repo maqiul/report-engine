@@ -7,10 +7,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -19,8 +21,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *
  * - 使用真实 H2 数据库（@SpringBootTest 默认）
  * - 每个测试前清空表
+ * - @WithMockUser 绕过 JWT，直接注入 ROLE_USER
  */
 @SpringBootTest
+@WithMockUser(username = "tester", roles = "USER")
 @DisplayName("模板 CRUD E2E")
 class TemplateControllerE2ETest {
 
@@ -35,7 +39,7 @@ class TemplateControllerE2ETest {
 
     @BeforeEach
     void setup() {
-        mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+        mockMvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
         repo.deleteAll();
     }
 
