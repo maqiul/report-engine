@@ -4,10 +4,13 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
+using Microsoft.Win32;
 using ReportEngine.Core;
 using ReportEngine.Core.Parsing;
 using ReportEngine.Core.Rendering;
 using ReportEngine.Core.SubReports;
+using ReportEngine.Export.Excel;
+using ReportEngine.Export.Pdf;
 using ReportEngine.Viewer.Wpf;
 
 namespace ReportEngine.WpfSample;
@@ -72,6 +75,10 @@ public partial class MainWindow : Window
             // 4. 喂给 WPF 预览控件
             Viewer.SetReport(rendered);
             Log($"  ✓ 已显示预览");
+
+            // 5. 启用导出按钮（首次渲染成功后）
+            BtnExportPdf.IsEnabled = true;
+            BtnExportExcel.IsEnabled = true;
         }
         catch (Exception ex)
         {
@@ -157,6 +164,91 @@ public partial class MainWindow : Window
             Log($"✗ 错误: {ex.Message}");
         }
     }
+
+    // ==================== 按钮 4：导出 PDF ====================
+    private void BtnExportPdf_Click(object sender, RoutedEventArgs e)
+    {
+        if (Viewer.TotalPages == 0)
+        {
+            Log("请先加载并渲染模板");
+            return;
+        }
+
+        try
+        {
+            // 让用户选择保存路径
+            var dlg = new SaveFileDialog
+            {
+                Title = "导出 PDF",
+                Filter = "PDF 文件 (*.pdf)|*.pdf",
+                FileName = "order-summary.pdf",
+                InitialDirectory = AppContext.BaseDirectory
+            };
+            if (dlg.ShowDialog(this) != true) return;
+
+            // 重新渲染一次以拿最新数据
+            var data = SampleData();
+            var rendered = _renderer.RenderAsync(_currentTemplate!, data).Result;
+
+            // 导出
+            var exporter = new PdfSharpExporter();
+            exporter.ExportToFile(rendered, dlg.FileName);
+            var fi = new FileInfo(dlg.FileName);
+            Log($"✓ PDF 已导出: {fi.Name} ({fi.Length:N0} 字节)");
+        }
+        catch (Exception ex)
+        {
+            Log($"✗ PDF 导出失败: {ex.Message}");
+        }
+    }
+
+    // ==================== 按钮 5：导出 Excel ====================
+    private void BtnExportExcel_Click(object sender, RoutedEventArgs e)
+    {
+        if (Viewer.TotalPages == 0)
+        {
+            Log("请先加载并渲染模板");
+            return;
+        }
+
+        try
+        {
+            // 让用户选择保存路径
+            var dlg = new SaveFileDialog
+            {
+                Title = "导出 Excel",
+                Filter = "Excel 文件 (*.xlsx)|*.xlsx",
+                FileName = "order-summary.xlsx",
+                InitialDirectory = AppContext.BaseDirectory
+            };
+            if (dlg.ShowDialog(this) != true) return;
+
+            // 重新渲染一次以拿最新数据
+            var data = SampleData();
+            var rendered = _renderer.RenderAsync(_currentTemplate!, data).Result;
+
+            // 导出
+            var exporter = new ClosedXmlExporter();
+            exporter.ExportToFile(rendered, dlg.FileName);
+            var fi = new FileInfo(dlg.FileName);
+            Log($"✓ Excel 已导出: {fi.Name} ({fi.Length:N0} 字节)");
+        }
+        catch (Exception ex)
+        {
+            Log($"✗ Excel 导出失败: {ex.Message}");
+        }
+    }
+
+    private static Dictionary<string, List<Dictionary<string, object>>> SampleData() =>
+        new()
+        {
+            ["orders"] = new List<Dictionary<string, object>>
+            {
+                new() { ["id"] = "SO-001", ["customer"] = "Acme Corp",   ["total"] = 1990.00 },
+                new() { ["id"] = "SO-002", ["customer"] = "Globex Inc",  ["total"] = 1497.50 },
+                new() { ["id"] = "SO-003", ["customer"] = "Initech Ltd", ["total"] =  749.85 }
+            }
+        };
 
     // ==================== 翻页 + 缩放 ====================
     private void BtnPrev_Click(object sender, RoutedEventArgs e)
