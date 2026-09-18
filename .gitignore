@@ -128,4 +128,7 @@ docker/test.pdf
 docker/test.xlsx
 
 # Java 后端打包产物
-web/backend.zip"web/backend.zip"  
+web/backend.zip"web/backend.zip"
+
+# Coding Mode session 本地 TODO 笔记（不提交）
+*_TODO.md  

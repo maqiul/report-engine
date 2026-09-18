@@ -1,0 +1,39 @@
+{
+  "version": "1.0",
+  "page": {
+    "width": 210,
+    "height": 297,
+    "margin": { "top": 15, "bottom": 15, "left": 15, "right": 15 }
+  },
+  "dataSources": [
+    { "name": "orders", "type": "json" }
+  ],
+  "bands": [
+    {
+      "type": "reportHeader",
+      "height": 12,
+      "elements": [
+        {
+          "type": "text",
+          "text": "订单汇总（动态替换标题）",
+          "x": 0, "y": 0, "width": 180, "height": 10,
+          "font": { "size": 20, "bold": true },
+          "alignment": "center"
+        }
+      ]
+    },
+    {
+      "type": "detail",
+      "height": 8,
+      "dataSource": "orders",
+      "elements": [
+        {
+          "type": "text",
+          "text": "{{orders.id}} - {{orders.customer}} - ¥{{orders.total}}",
+          "x": 0, "y": 0, "width": 180, "height": 6,
+          "font": { "size": 12 }
+        }
+      ]
+    }
+  ]
+}

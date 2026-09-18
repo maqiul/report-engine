@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <RootNamespace>ReportEngine.WinFormsSample</RootNamespace>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ReportEngine.Core\ReportEngine.Core.csproj" />
+    <ProjectReference Include="..\ReportEngine.Viewer.WinForms\ReportEngine.Viewer.WinForms.csproj" />
+    <ProjectReference Include="..\ReportEngine.Export.Pdf\ReportEngine.Export.Pdf.csproj" />
+    <ProjectReference Include="..\ReportEngine.Export.Excel\ReportEngine.Export.Excel.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Templates\*.rptx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>
