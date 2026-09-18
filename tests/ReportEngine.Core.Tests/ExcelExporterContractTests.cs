@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using ReportEngine.Core.Export;
 using ReportEngine.Core.Rendering;
 using ReportEngine.Export.Excel;
@@ -79,7 +80,11 @@ public class ExcelExporterContractTests
         r2.Pages.Add(new RenderedPage { Elements = { new RenderedTextElement { Text = "b" } } });
         var b1 = exporter.Export(r1);
         var b2 = exporter.Export(r2);
-        Assert.NotEqual(b1.Length, b2.Length);
+        // xlsx 是 zip 容器：两个小报表压缩后字节长度可能恰好相同（跨平台 zip/ICU 差异下更易触发），
+        // 不能用长度判断"报表独立"。内容不同（"a" vs "b"）→ 字节序列必不同。
+        Assert.NotEmpty(b1);
+        Assert.NotEmpty(b2);
+        Assert.False(b1.SequenceEqual(b2));
     }
 
     [Fact]
