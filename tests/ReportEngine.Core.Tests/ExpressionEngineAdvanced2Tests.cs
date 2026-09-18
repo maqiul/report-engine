@@ -1,3 +1,4 @@
+using System.Globalization;
 using ReportEngine.Core.Data;
 using Xunit;
 
@@ -177,10 +178,22 @@ public class ExpressionEngineExtendedTests
     [Fact]
     public void Evaluate_CurrencyFormat_Works()
     {
-        var ctx = CreateContext();
-        ctx.FieldFormat = "currency";
-        var result = _engine.Evaluate("{{currentRow.Amount}}", ctx);
-        Assert.Contains("¥", result);
+        // 货币格式化依赖当前 culture：固定为 en-US 使断言跨环境确定
+        // （CI runner 默认 en-US 出 $，本地可能 zh-CN 出 ¥，不固定 culture 会因符号差异 flaky）。
+        var prev = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = new CultureInfo("en-US");
+            var ctx = CreateContext();
+            ctx.FieldFormat = "currency";
+            var result = _engine.Evaluate("{{currentRow.Amount}}", ctx);
+            Assert.Contains("$", result);
+            Assert.Contains("200.00", result);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = prev;
+        }
     }
 
     [Fact]
