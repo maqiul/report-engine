@@ -1,0 +1,8 @@
+<Solution>
+  <!-- 跨平台核心子集：不含任何 WPF/WinForms 桌面项目，可在 ubuntu + windows 双端 build/test -->
+  <Project Path="ReportEngine.Core/ReportEngine.Core.csproj" />
+  <Project Path="ReportEngine.Export.Excel/ReportEngine.Export.Excel.csproj" />
+  <Project Path="ReportEngine.Export.Pdf/ReportEngine.Export.Pdf.csproj" />
+  <Project Path="tests/ReportEngine.Core.Tests/ReportEngine.Core.Tests.csproj" />
+  <Project Path="tests/ReportEngine.Export.Pdf.Tests/ReportEngine.Export.Pdf.Tests.csproj" />
+</Solution>

@@ -38,13 +38,13 @@ jobs:
             ${{ runner.os }}-nuget-
 
       - name: Restore
-        run: dotnet restore ReportEngine.slnx
+        run: dotnet restore ReportEngine.Core.slnx
 
       - name: Build
-        run: dotnet build ReportEngine.slnx --no-restore --configuration Debug
+        run: dotnet build ReportEngine.Core.slnx --no-restore --configuration Debug
 
       - name: Test
-        run: dotnet test ReportEngine.slnx --no-build --configuration Debug --logger "console;verbosity=normal"
+        run: dotnet test ReportEngine.Core.slnx --no-build --configuration Debug --logger "console;verbosity=normal"
 
   pack:
     name: Pack NuGet (Linux)
