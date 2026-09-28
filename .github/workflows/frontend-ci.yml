@@ -55,6 +55,9 @@ jobs:
           cache: 'npm'
           cache-dependency-path: report-engine-vue-sample/package-lock.json
 
+      - name: Build @reportengine/vue (sample 依赖其 dist 产物，dist 不入库需现构建)
+        run: cd report-engine-vue && npm ci && npm run build
+
       - name: Install sample
         run: cd report-engine-vue-sample && npm install
 
