@@ -10,7 +10,7 @@ on:
 
 jobs:
   vue-build:
-    name: @reportengine/vue build
+    name: "@reportengine/vue build"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -41,7 +41,7 @@ jobs:
           retention-days: 14
 
   vue-sample-build:
-    name: @reportengine/vue sample build
+    name: "@reportengine/vue sample build"
     runs-on: ubuntu-latest
     needs: vue-build
     steps:
