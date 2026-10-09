@@ -12,9 +12,10 @@ namespace ReportEngine.Designer.Wpf
         public MainWindow()
         {
             Title = "报表设计器";
-            Width = 1400;
-            Height = 900;
+            Width = 1100;
+            Height = 720;
             WindowStartupLocation = WindowStartupLocation.CenterScreen;
+            WindowState = WindowState.Normal;
             Background = new SolidColorBrush(Color.FromRgb(240, 240, 240));
 
             _canvas = new Canvas { Background = Brushes.Transparent, ClipToBounds = true, AllowDrop = true };
