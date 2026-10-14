@@ -9,6 +9,13 @@
       <button class="tbtn" :disabled="!copied" @click="handlePaste" title="粘贴 (Ctrl+V)">📋 粘贴</button>
       <button class="tbtn" :disabled="!currentElement" @click="handleCut" title="剪切 (Ctrl+X)">✂ 剪切</button>
       <span class="sep"></span>
+      <button class="tbtn" :disabled="!currentElement" @click="alignLeft" title="左对齐">⇤</button>
+      <button class="tbtn" :disabled="!currentElement" @click="alignHCenter" title="水平居中">⇹</button>
+      <button class="tbtn" :disabled="!currentElement" @click="alignRight" title="右对齐">⇥</button>
+      <button class="tbtn" :disabled="!currentElement" @click="alignTop" title="顶对齐">⤒</button>
+      <button class="tbtn" :disabled="!currentElement" @click="alignVCenter" title="垂直居中">⇕</button>
+      <button class="tbtn" :disabled="!currentElement" @click="alignBottom" title="底对齐">⤓</button>
+      <span class="sep"></span>
       <button class="tbtn" @click="zoomOut" title="缩小">🔍−</button>
       <span class="zoom-lbl">{{ Math.round(zoom * 100) }}%</span>
       <button class="tbtn" @click="zoomIn" title="放大">🔍+</button>
@@ -254,6 +261,25 @@ function handleCut() { handleCopy(); handleDeleteCurrent() }
 function zoomIn() { zoom.value = Math.min(3, Math.round((zoom.value + 0.25) * 100) / 100) }
 function zoomOut() { zoom.value = Math.max(0.5, Math.round((zoom.value - 0.25) * 100) / 100) }
 function zoomFit() { zoom.value = 1 }
+
+// ====== 对齐（选中元素对齐到页面宽 / 带区高） ======
+function mutateCurrent(fn: (el: any, pageW: number, bandH: number) => void) {
+  if (!currentElement.value) return
+  const t = JSON.parse(JSON.stringify(templateObj.value))
+  const el = t.bands[selectedBandIdx.value]?.elements?.[selectedElementIdx.value]
+  if (!el) return
+  const pageW = Number(t.page?.width || 210)
+  const bandH = Number(t.bands[selectedBandIdx.value]?.height || 0)
+  fn(el, pageW, bandH)
+  templateJsonText.value = JSON.stringify(t, null, 2)
+  commit()
+}
+const alignLeft = () => mutateCurrent((el) => { el.x = 0 })
+const alignHCenter = () => mutateCurrent((el, w) => { el.x = (w - Number(el.width || 0)) / 2 })
+const alignRight = () => mutateCurrent((el, w) => { el.x = w - Number(el.width || 0) })
+const alignTop = () => mutateCurrent((el) => { el.y = 0 })
+const alignVCenter = () => mutateCurrent((el, _w, h) => { el.y = (h - Number(el.height || 0)) / 2 })
+const alignBottom = () => mutateCurrent((el, _w, h) => { el.y = h - Number(el.height || 0) })
 </script>
 
 <style scoped>
