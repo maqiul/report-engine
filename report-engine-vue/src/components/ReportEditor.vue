@@ -5,6 +5,15 @@
       <button class="tab" :class="{ active: mode === 'visual' }" @click="mode = 'visual'">可视化</button>
       <button class="tab" :class="{ active: mode === 'preview' }" @click="mode = 'preview'">预览</button>
       <span class="spacer"></span>
+      <button class="tbtn" :disabled="!currentElement" @click="handleCopy" title="复制 (Ctrl+C)">⧉ 复制</button>
+      <button class="tbtn" :disabled="!copied" @click="handlePaste" title="粘贴 (Ctrl+V)">📋 粘贴</button>
+      <button class="tbtn" :disabled="!currentElement" @click="handleCut" title="剪切 (Ctrl+X)">✂ 剪切</button>
+      <span class="sep"></span>
+      <button class="tbtn" @click="zoomOut" title="缩小">🔍−</button>
+      <span class="zoom-lbl">{{ Math.round(zoom * 100) }}%</span>
+      <button class="tbtn" @click="zoomIn" title="放大">🔍+</button>
+      <button class="tbtn" @click="zoomFit" title="适合">⤢</button>
+      <span class="sep"></span>
       <button class="tbtn" :disabled="histIdx <= 0" @click="undo" title="撤销 (Ctrl+Z)">↶ 撤销</button>
       <button class="tbtn" :disabled="histIdx >= history.length - 1" @click="redo" title="重做 (Ctrl+Y)">↷ 重做</button>
     </div>
@@ -137,9 +146,14 @@ function redo() {
 
 function onKey(e: KeyboardEvent) {
   if (!(e.ctrlKey || e.metaKey)) return
+  const tag = (e.target as HTMLElement)?.tagName
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
   const k = e.key.toLowerCase()
   if (k === 'z' && !e.shiftKey) { e.preventDefault(); undo() }
   else if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); redo() }
+  else if (k === 'c') { e.preventDefault(); handleCopy() }
+  else if (k === 'v') { e.preventDefault(); handlePaste() }
+  else if (k === 'x') { e.preventDefault(); handleCut() }
 }
 
 onMounted(() => { pushHistory(); window.addEventListener('keydown', onKey) })
@@ -214,6 +228,32 @@ function handleDeleteCurrent() {
   templateJsonText.value = JSON.stringify(t, null, 2)
   commit()
 }
+
+// ====== 复制 / 粘贴 / 剪切 ======
+const copied = ref<any>(null)
+function handleCopy() {
+  if (!currentElement.value) return
+  copied.value = JSON.parse(JSON.stringify(currentElement.value))
+}
+function handlePaste() {
+  if (!copied.value) return
+  const t = JSON.parse(JSON.stringify(templateObj.value))
+  if (!t.bands[selectedBandIdx.value]) t.bands[selectedBandIdx.value] = { type: 'detail', height: 10, elements: [] }
+  if (!t.bands[selectedBandIdx.value].elements) t.bands[selectedBandIdx.value].elements = []
+  const el = JSON.parse(JSON.stringify(copied.value))
+  el.x = Number(el.x || 0) + 5
+  el.y = Number(el.y || 0) + 3
+  t.bands[selectedBandIdx.value].elements.push(el)
+  selectedElementIdx.value = t.bands[selectedBandIdx.value].elements.length - 1
+  templateJsonText.value = JSON.stringify(t, null, 2)
+  commit()
+}
+function handleCut() { handleCopy(); handleDeleteCurrent() }
+
+// ====== 画布缩放 ======
+function zoomIn() { zoom.value = Math.min(3, Math.round((zoom.value + 0.25) * 100) / 100) }
+function zoomOut() { zoom.value = Math.max(0.5, Math.round((zoom.value - 0.25) * 100) / 100) }
+function zoomFit() { zoom.value = 1 }
 </script>
 
 <style scoped>
@@ -223,6 +263,8 @@ function handleDeleteCurrent() {
 .tab:hover { background: #2d2d2d; color: #cccccc; }
 .tab.active { background: #0e639c; color: #fff; }
 .spacer { flex: 1; }
+.sep { width: 1px; height: 18px; background: #3c3c3c; margin: 0 4px; }
+.zoom-lbl { color: #cccccc; font-size: 12px; min-width: 42px; text-align: center; }
 .tbtn { background: #2d2d2d; border: 1px solid #3c3c3c; color: #cccccc; padding: 4px 10px; font-size: 12px; border-radius: 3px; cursor: pointer; }
 .tbtn:hover:not(:disabled) { background: #3c3c3c; }
 .tbtn:disabled { opacity: 0.4; cursor: not-allowed; }
