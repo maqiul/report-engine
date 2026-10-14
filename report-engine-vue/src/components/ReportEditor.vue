@@ -50,6 +50,7 @@
           :selectedBandIndex="selectedBandIdx"
           :selectedElementIndex="selectedElementIdx"
           :zoom="zoom"
+          :data="data"
           @selectBand="(i: number) => (selectedBandIdx = i)"
           @selectElement="(bi: number, ei: number) => { selectedBandIdx = bi; selectedElementIdx = ei }"
           @update="commit"

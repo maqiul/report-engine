@@ -47,11 +47,13 @@
               </div>
               <div v-else-if="el.type === 'line'" class="el-line" :style="getLineStyle(Number(bi), Number(ei))"></div>
               <div v-else-if="el.type === 'shape'" class="el-shape" :style="getShapeStyle(Number(bi), Number(ei))"></div>
-              <div v-else-if="el.type === 'image'" class="el-ph el-image">🖼 {{ el.source ? '图片' : '图像(未设置)' }}</div>
-              <div v-else-if="el.type === 'barcode'" class="el-ph el-barcode">▮▮ {{ el.format }}</div>
-              <div v-else-if="el.type === 'table'" class="el-ph el-table">▦ 表格 {{ el.rowCount }}×{{ el.colCount }}</div>
+              <img v-else-if="el.type === 'image' && el.source" :src="el.source" class="el-render" style="object-fit:contain" />
+              <div v-else-if="el.type === 'image'" class="el-ph el-image">🖼 图像(未设置)</div>
+              <svg v-else-if="el.type === 'barcode' && !isQr(el)" class="el-render" data-kind="barcode" :data-cfg="barcodeCfg(el)"></svg>
+              <canvas v-else-if="el.type === 'barcode' && isQr(el)" class="el-render" data-kind="qrcode" :data-cfg="qrCfg(el)"></canvas>
+              <table v-else-if="el.type === 'table'" class="el-render real-table"><tr v-for="r in (Number(el.rowCount)||3)" :key="r"><td v-for="c in (Number(el.colCount)||3)" :key="c"></td></tr></table>
               <div v-else-if="el.type === 'crosstab'" class="el-ph el-crosstab">⊞ 交叉表</div>
-              <div v-else-if="el.type === 'chart'" class="el-ph el-chart">📊 {{ el.chartType }}</div>
+              <div v-else-if="el.type === 'chart'" class="el-render" data-kind="chart" :data-cfg="chartCfg(el)"></div>
               <div v-else-if="el.type === 'subreport'" class="el-ph el-subreport">⧉ 子报表 {{ el.templateRef || '(未指定)' }}</div>
               <div v-else class="el-other">{{ el.type }}</div>
 
@@ -75,13 +77,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import * as echarts from 'echarts'
+import JsBarcode from 'jsbarcode'
+import QRCode from 'qrcode'
 
 const props = defineProps<{
   template: any
   selectedBandIndex: number
   selectedElementIndex: number
   zoom: number
+  data?: Record<string, any[]>
 }>()
 
 const emit = defineEmits<{
@@ -360,6 +366,57 @@ function onMouseUp() {
 function onScroll() {
   // 预留：ruler 联动
 }
+
+// ===== 编辑画布真渲染（图表/条形码/二维码/表格），与预览一致 =====
+function isQr(el: any): boolean {
+  const f = el.format
+  return f === 'QRCode' || f === 'DataMatrix' || f === 'PDF417'
+}
+function sampleValue(el: any): string {
+  const v = el.value
+  if (!v || String(v).includes('{{')) return '1234567890'
+  return String(v)
+}
+function barcodeCfg(el: any): string {
+  return JSON.stringify({ text: sampleValue(el), format: el.format || 'CODE128', lineColor: el.foreColor || '#000', background: el.backColor || '#fff', displayValue: el.showText !== false })
+}
+function qrCfg(el: any): string {
+  const v = el.value
+  return JSON.stringify({ text: (!v || String(v).includes('{{')) ? 'https://report-engine' : String(v) })
+}
+function chartCfg(el: any): string {
+  const rows = (props.data && el.dataSource && props.data[el.dataSource]) || [{}, {}, {}]
+  const cats = rows.map((r: any, i: number) => String(r[el.categoryField] ?? ('项' + (i + 1))))
+  const typeMap: Record<string, string> = { Bar: 'bar', Line: 'line', Pie: 'pie', Area: 'line', Scatter: 'scatter' }
+  const series = (el.series && el.series.length ? el.series : [{ valueField: '' }]).map((sr: any) => ({
+    name: sr.name || '', type: typeMap[el.chartType] || 'bar',
+    data: rows.map((r: any) => Number(r[sr.valueField]) || Math.round(Math.random() * 100))
+  }))
+  return JSON.stringify({ title: el.title || '', cats, series, chartType: el.chartType })
+}
+
+function renderWidgets() {
+  const root = rootRef.value
+  if (!root) return
+  root.querySelectorAll<SVGElement>('svg[data-kind="barcode"]').forEach(svg => {
+    try { const c = JSON.parse(svg.getAttribute('data-cfg') || '{}'); JsBarcode(svg, String(c.text || '0'), { format: c.format || 'CODE128', displayValue: c.displayValue !== false, lineColor: c.lineColor || '#000', background: c.background || '#fff', width: 1.5, height: Math.max(10, svg.clientHeight || 40), margin: 0 }) } catch { /* ignore */ }
+  })
+  root.querySelectorAll<HTMLCanvasElement>('canvas[data-kind="qrcode"]').forEach(cv => {
+    try { const c = JSON.parse(cv.getAttribute('data-cfg') || '{}'); const sz = Math.max(20, cv.clientWidth || 60); cv.width = sz; cv.height = sz; QRCode.toCanvas(cv, String(c.text || ' '), { width: sz, margin: 0 }) } catch { /* ignore */ }
+  })
+  root.querySelectorAll<HTMLElement>('div[data-kind="chart"]').forEach(div => {
+    try {
+      const c = JSON.parse(div.getAttribute('data-cfg') || '{}')
+      const chart = echarts.getInstanceByDom(div) || echarts.init(div)
+      const isPie = c.chartType === 'Pie'
+      const series = isPie ? [{ type: 'pie', radius: '60%', data: (c.cats || []).map((cat: string, i: number) => ({ name: cat, value: c.series?.[0]?.data?.[i] ?? 0 })) }] : (c.series || [])
+      chart.setOption({ title: c.title ? { text: c.title, left: 'center', textStyle: { fontSize: 12 } } : undefined, tooltip: {}, xAxis: isPie ? undefined : { type: 'category', data: c.cats || [] }, yAxis: isPie ? undefined : { type: 'value' }, series }, true)
+    } catch { /* ignore */ }
+  })
+}
+
+onMounted(() => nextTick(renderWidgets))
+watch(() => [props.template, props.zoom, props.selectedElementIndex], () => nextTick(renderWidgets))
 </script>
 
 <style scoped>
@@ -496,6 +553,9 @@ function onScroll() {
 .el-table { background: #f7fff7; }
 .el-chart { background: #fffaf0; color: #b58a4a; }
 .el-subreport { background: #faf0ff; color: #8a4ab5; }
+.el-render { width: 100%; height: 100%; display: block; pointer-events: none; }
+.real-table { width: 100%; height: 100%; border-collapse: collapse; table-layout: fixed; }
+.real-table td { border: 1px solid #999; }
 
 .el-other {
   width: 100%;

@@ -105,6 +105,7 @@
             :selected-band-index="selectedBandIndex"
             :selected-element-index="selectedElementIndex"
             :zoom="scale"
+            :data="parsedData"
             @select-band="onSelectBand"
             @select-element="onSelectElement"
             @canvas-click="onCanvasClick"
