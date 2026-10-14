@@ -4,21 +4,20 @@
       <button class="tab" :class="{ active: mode === 'code' }" @click="mode = 'code'">代码</button>
       <button class="tab" :class="{ active: mode === 'visual' }" @click="mode = 'visual'">可视化</button>
       <button class="tab" :class="{ active: mode === 'preview' }" @click="mode = 'preview'">预览</button>
+      <span class="spacer"></span>
+      <button class="tbtn" :disabled="histIdx <= 0" @click="undo" title="撤销 (Ctrl+Z)">↶ 撤销</button>
+      <button class="tbtn" :disabled="histIdx >= history.length - 1" @click="redo" title="重做 (Ctrl+Y)">↷ 重做</button>
     </div>
 
     <!-- 代码模式 -->
     <div v-show="mode === 'code'" class="pane code-pane">
-      <textarea class="code-editor" v-model="templateJsonText" spellcheck="false"></textarea>
+      <textarea class="code-editor" v-model="templateJsonText" spellcheck="false" @change="commit"></textarea>
     </div>
 
     <!-- 可视化模式 -->
     <div v-show="mode === 'visual'" class="pane visual-pane">
       <div class="visual-left">
-        <Toolbox
-          :template="templateObj"
-          @add-element="handleAddElement"
-          @add-band="handleAddBand"
-        />
+        <Toolbox @add="handleAddElement" @addBand="handleAddBand" />
         <BandTree
           :bands="templateObj.bands || []"
           :selectedBandIndex="selectedBandIdx"
@@ -34,39 +33,39 @@
           :template="templateObj"
           :selectedBandIndex="selectedBandIdx"
           :selectedElementIndex="selectedElementIdx"
-          :zoom="1"
+          :zoom="zoom"
           @selectBand="(i: number) => (selectedBandIdx = i)"
           @selectElement="(bi: number, ei: number) => { selectedBandIdx = bi; selectedElementIdx = ei }"
-          @update="handleTemplateEditorUpdate"
+          @update="commit"
         />
       </div>
       <div class="visual-right">
         <PropertyPanel
           v-if="currentElement"
           :element="currentElement"
+          :dataSources="templateObj.dataSources || []"
           @delete="handleDeleteCurrent"
+          @update="commit"
         />
+        <div v-else class="no-sel">选择一个元素以编辑属性</div>
       </div>
     </div>
 
     <!-- 预览模式 -->
     <div v-show="mode === 'preview'" class="pane preview-pane">
-      <ReportViewer
-        :templateJson="templateJsonText"
-        :data="data"
-        :scale="1"
-      />
+      <ReportViewer :templateJson="templateJsonText" :data="data" :scale="1" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted, onBeforeUnmount } from 'vue'
 import ReportViewer from './ReportViewer.vue'
 import Toolbox from './editor/Toolbox.vue'
 import BandTree from './editor/BandTree.vue'
 import PropertyPanel from './editor/PropertyPanel.vue'
 import TemplateEditor from './editor/TemplateEditor.vue'
+import { findTypeDef, type ElementKind } from './editor/elementTypes'
 
 interface TemplateObj {
   version: string
@@ -80,20 +79,16 @@ const props = defineProps<{
   data?: Record<string, any[]>
 }>()
 
-const emit = defineEmits<{
-  'update:modelValue': [value: string]
-}>()
+const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
 
 const mode = ref<'code' | 'visual' | 'preview'>('visual')
 const templateJsonText = ref(props.modelValue || defaultTemplate())
 const data = computed(() => props.data ?? {})
+const zoom = ref(1)
 
 const templateObj = computed<TemplateObj>(() => {
-  try {
-    return JSON.parse(templateJsonText.value)
-  } catch {
-    return { version: '1.0', bands: [] }
-  }
+  try { return JSON.parse(templateJsonText.value) }
+  catch { return { version: '1.0', bands: [] } }
 })
 
 function defaultTemplate(): string {
@@ -105,9 +100,50 @@ function defaultTemplate(): string {
   }, null, 2)
 }
 
-function emitChange() {
+// ====== undo / redo 历史栈 ======
+const history = ref<string[]>([])
+const histIdx = ref(-1)
+
+function commit() {
+  // 把对 templateObj 的引用式修改序列化回文本（PropertyPanel/TemplateEditor 直接改对象引用）
+  templateJsonText.value = JSON.stringify(templateObj.value, null, 2)
   emit('update:modelValue', templateJsonText.value)
+  pushHistory()
 }
+
+function pushHistory() {
+  // 截断 redo 分支后压入当前快照
+  history.value = history.value.slice(0, histIdx.value + 1)
+  history.value.push(templateJsonText.value)
+  if (history.value.length > 100) history.value.shift()
+  histIdx.value = history.value.length - 1
+}
+
+function undo() {
+  if (histIdx.value > 0) {
+    histIdx.value--
+    templateJsonText.value = history.value[histIdx.value]
+    emit('update:modelValue', templateJsonText.value)
+  }
+}
+
+function redo() {
+  if (histIdx.value < history.value.length - 1) {
+    histIdx.value++
+    templateJsonText.value = history.value[histIdx.value]
+    emit('update:modelValue', templateJsonText.value)
+  }
+}
+
+function onKey(e: KeyboardEvent) {
+  if (!(e.ctrlKey || e.metaKey)) return
+  const k = e.key.toLowerCase()
+  if (k === 'z' && !e.shiftKey) { e.preventDefault(); undo() }
+  else if (k === 'y' || (k === 'z' && e.shiftKey)) { e.preventDefault(); redo() }
+}
+
+onMounted(() => { pushHistory(); window.addEventListener('keydown', onKey) })
+onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
 
 watch(() => props.modelValue, (val) => {
   if (val !== templateJsonText.value) templateJsonText.value = val
@@ -116,31 +152,30 @@ watch(() => props.modelValue, (val) => {
 const selectedBandIdx = ref(0)
 const selectedElementIdx = ref(-1)
 
-const currentElement = computed(() => {
-  return templateObj.value.bands?.[selectedBandIdx.value]?.elements?.[selectedElementIdx.value] ?? null
-})
+const currentElement = computed(() =>
+  templateObj.value.bands?.[selectedBandIdx.value]?.elements?.[selectedElementIdx.value] ?? null)
 
-// ====== Toolbox ======
-function handleAddElement(element: any) {
+// ====== Toolbox：插入元素（工厂造默认属性，type 对齐后端） ======
+function handleAddElement(kind: ElementKind) {
+  const def = findTypeDef(kind)
+  if (!def) return
   const t = JSON.parse(JSON.stringify(templateObj.value))
   if (!t.bands[selectedBandIdx.value]) {
     t.bands[selectedBandIdx.value] = { type: 'detail', height: 10, elements: [] }
   }
-  if (!t.bands[selectedBandIdx.value].elements) {
-    t.bands[selectedBandIdx.value].elements = []
-  }
-  t.bands[selectedBandIdx.value].elements.push(element)
+  if (!t.bands[selectedBandIdx.value].elements) t.bands[selectedBandIdx.value].elements = []
+  t.bands[selectedBandIdx.value].elements.push(def.create())
   selectedElementIdx.value = t.bands[selectedBandIdx.value].elements.length - 1
   templateJsonText.value = JSON.stringify(t, null, 2)
-  emitChange()
+  commit()
 }
 
-function handleAddBand(band: any) {
+function handleAddBand(type: string) {
   const t = JSON.parse(JSON.stringify(templateObj.value))
-  t.bands.push(band)
+  t.bands.push({ type, height: type === 'detail' ? 10 : 15, elements: [] })
   selectedBandIdx.value = t.bands.length - 1
   templateJsonText.value = JSON.stringify(t, null, 2)
-  emitChange()
+  commit()
 }
 
 // ====== BandTree ======
@@ -151,7 +186,7 @@ function handleMoveBand(idx: number, delta: number) {
   ;[t.bands[idx], t.bands[j]] = [t.bands[j], t.bands[idx]]
   selectedBandIdx.value = j
   templateJsonText.value = JSON.stringify(t, null, 2)
-  emitChange()
+  commit()
 }
 
 function handleDuplicateBand(idx: number) {
@@ -159,48 +194,45 @@ function handleDuplicateBand(idx: number) {
   t.bands.splice(idx + 1, 0, JSON.parse(JSON.stringify(t.bands[idx])))
   selectedBandIdx.value = idx + 1
   templateJsonText.value = JSON.stringify(t, null, 2)
-  emitChange()
+  commit()
 }
 
 function handleRemoveBand(idx: number) {
   const t = JSON.parse(JSON.stringify(templateObj.value))
   t.bands.splice(idx, 1)
   if (selectedBandIdx.value >= t.bands.length) selectedBandIdx.value = Math.max(0, t.bands.length - 1)
+  selectedElementIdx.value = -1
   templateJsonText.value = JSON.stringify(t, null, 2)
-  emitChange()
+  commit()
 }
 
-// ====== TemplateEditor (内部已改 template 对象) ======
-function handleTemplateEditorUpdate() {
-  // TemplateEditor 内部直接修改了 templateObj 的引用
-  // 重新序列化为 text 并 emit
-  templateJsonText.value = JSON.stringify(templateObj.value, null, 2)
-  emitChange()
-}
-
-// ====== PropertyPanel delete ======
 function handleDeleteCurrent() {
   const t = JSON.parse(JSON.stringify(templateObj.value))
   if (!t.bands[selectedBandIdx.value]?.elements) return
   t.bands[selectedBandIdx.value].elements.splice(selectedElementIdx.value, 1)
   selectedElementIdx.value = -1
   templateJsonText.value = JSON.stringify(t, null, 2)
-  emitChange()
+  commit()
 }
 </script>
 
 <style scoped>
 .report-editor { display: flex; flex-direction: column; height: 100%; font-family: 'Microsoft YaHei', 'PingFang SC', system-ui, sans-serif; }
-.editor-toolbar { display: flex; gap: 4px; padding: 8px 12px; background: #1e1e1e; border-bottom: 1px solid #2d2d2d; }
+.editor-toolbar { display: flex; gap: 4px; padding: 8px 12px; background: #1e1e1e; border-bottom: 1px solid #2d2d2d; align-items: center; }
 .tab { background: transparent; border: none; color: #969696; padding: 6px 14px; cursor: pointer; font-size: 13px; border-radius: 3px; }
 .tab:hover { background: #2d2d2d; color: #cccccc; }
 .tab.active { background: #0e639c; color: #fff; }
+.spacer { flex: 1; }
+.tbtn { background: #2d2d2d; border: 1px solid #3c3c3c; color: #cccccc; padding: 4px 10px; font-size: 12px; border-radius: 3px; cursor: pointer; }
+.tbtn:hover:not(:disabled) { background: #3c3c3c; }
+.tbtn:disabled { opacity: 0.4; cursor: not-allowed; }
 .pane { flex: 1; overflow: hidden; }
 .code-pane { padding: 12px; background: #1e1e1e; }
 .code-editor { width: 100%; height: 100%; background: #1e1e1e; color: #d4d4d4; border: 1px solid #2d2d2d; font-family: 'Cascadia Code', 'Consolas', monospace; font-size: 13px; padding: 12px; resize: none; outline: none; box-sizing: border-box; }
-.visual-pane { display: grid; grid-template-columns: 220px 1fr 280px; background: #252526; }
+.visual-pane { display: grid; grid-template-columns: 220px 1fr 300px; background: #252526; }
 .visual-left { background: #252526; border-right: 1px solid #2d2d2d; overflow-y: auto; }
 .visual-center { background: #1e1e1e; overflow: auto; }
 .visual-right { background: #252526; border-left: 1px solid #2d2d2d; overflow-y: auto; }
+.no-sel { color: #6a6a6a; font-size: 12px; padding: 24px 12px; text-align: center; }
 .preview-pane { background: #fff; }
 </style>
