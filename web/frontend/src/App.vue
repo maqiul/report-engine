@@ -95,7 +95,9 @@
           />
           <PropertyPanel
             :element="selectedElement"
+            :data-sources="parsedTemplate.dataSources || []"
             @delete="deleteElement"
+            @update="syncTemplateJson"
           />
         </aside>
         <section class="stage">
@@ -157,6 +159,7 @@ import Toolbox from './components/editor/Toolbox.vue'
 import BandTree from './components/editor/BandTree.vue'
 import PropertyPanel from './components/editor/PropertyPanel.vue'
 import TemplateEditor from './components/editor/TemplateEditor.vue'
+import { findTypeDef, type ElementKind } from './components/editor/elementTypes'
 import { exportPdf, exportExcel } from './api/report'
 import { useAuthStore } from './stores/auth'
 
@@ -285,20 +288,15 @@ function addBand(type: string) {
   syncTemplateJson()
 }
 
-function addElement(type: 'text' | 'line' | 'rect' | 'barcode') {
+function addElement(kind: ElementKind) {
+  const def = findTypeDef(kind)
+  if (!def) return
   if (selectedBandIndex.value < 0) {
-    addBand('title')
+    addBand('detail')
   }
   const band = parsedTemplate.value.bands[selectedBandIndex.value]
   if (!band.elements) band.elements = []
-  const defaults: any = {
-    text: { type: 'text', text: '新文本', x: 20, y: 2, width: 50, height: 8, font: { size: 10 } },
-    line: { type: 'line', x: 20, y: 5, width: 100, height: 0, lineWidth: 0.5, borderColor: '#000000' },
-    rect: { type: 'rect', x: 20, y: 2, width: 60, height: 8, lineWidth: 0.5, borderColor: '#000000' },
-    barcode: { type: 'barcode', x: 20, y: 2, width: 60, height: 12, dataField: '' }
-  }
-  const el = JSON.parse(JSON.stringify(defaults[type]))
-  band.elements.push(el)
+  band.elements.push(def.create())
   selectedElementIndex.value = band.elements.length - 1
   syncTemplateJson()
 }

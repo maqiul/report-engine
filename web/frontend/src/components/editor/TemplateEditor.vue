@@ -40,10 +40,19 @@
               @click.stop="selectElement(Number(bi), Number(ei))"
             >
               <div v-if="el.type === 'text'" class="el-text" :style="getTextStyle(Number(bi), Number(ei))">
-                {{ el.text || '(空文本)' }}
+                <template v-if="el.systemVariable">⊕ {{ el.systemVariable }}</template>
+                <template v-else-if="el.summaryFunction">Σ {{ el.summaryFunction }}({{ el.summaryField }})</template>
+                <template v-else-if="el.dataField">⛁ {{ el.dataField }}</template>
+                <template v-else>{{ el.text || '(空文本)' }}</template>
               </div>
               <div v-else-if="el.type === 'line'" class="el-line" :style="getLineStyle(Number(bi), Number(ei))"></div>
-              <div v-else-if="el.type === 'rect'" class="el-rect" :style="getRectStyle(Number(bi), Number(ei))"></div>
+              <div v-else-if="el.type === 'shape'" class="el-shape" :style="getShapeStyle(Number(bi), Number(ei))"></div>
+              <div v-else-if="el.type === 'image'" class="el-ph el-image">🖼 {{ el.source ? '图片' : '图像(未设置)' }}</div>
+              <div v-else-if="el.type === 'barcode'" class="el-ph el-barcode">▮▮ {{ el.format }}</div>
+              <div v-else-if="el.type === 'table'" class="el-ph el-table">▦ 表格 {{ el.rowCount }}×{{ el.colCount }}</div>
+              <div v-else-if="el.type === 'crosstab'" class="el-ph el-crosstab">⊞ 交叉表</div>
+              <div v-else-if="el.type === 'chart'" class="el-ph el-chart">📊 {{ el.chartType }}</div>
+              <div v-else-if="el.type === 'subreport'" class="el-ph el-subreport">⧉ 子报表 {{ el.templateRef || '(未指定)' }}</div>
               <div v-else class="el-other">{{ el.type }}</div>
 
               <!-- 选中时显示 8 个调节手柄 -->
@@ -233,10 +242,17 @@ function getLineStyle(bi: number, ei: number): Record<string, string> {
   return { background: s.background, height: s.lineHeight, top: '50%', transform: 'translateY(-50%)' }
 }
 
-function getRectStyle(bi: number, ei: number): Record<string, string> {
+function getShapeStyle(bi: number, ei: number): Record<string, string> {
   const s = elementStyles.value[bi]?.[ei]
+  const el = props.template?.bands?.[bi]?.elements?.[ei]
   if (!s) return {}
-  return { borderColor: s.borderColor, borderWidth: s.borderWidth, borderStyle: 'solid' }
+  return {
+    borderColor: s.borderColor,
+    borderWidth: s.borderWidth,
+    borderStyle: 'solid',
+    background: el?.fillColor || '#FFFFFF',
+    borderRadius: String(Number(el?.borderRadius || 0) * 3.7795) + 'px'
+  }
 }
 
 function selectBand(i: number) {
@@ -455,11 +471,31 @@ function onScroll() {
   right: 0;
 }
 
-.el-rect {
+.el-shape {
   width: 100%;
   height: 100%;
   box-sizing: border-box;
 }
+
+.el-ph {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: #666;
+  border: 1px dashed #bbb;
+  background: #fbfbfb;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.el-image { background: #f0f4ff; color: #4a6fb5; }
+.el-barcode { background: #fff; letter-spacing: 2px; }
+.el-table { background: #f7fff7; }
+.el-chart { background: #fffaf0; color: #b58a4a; }
+.el-subreport { background: #faf0ff; color: #8a4ab5; }
 
 .el-other {
   width: 100%;
