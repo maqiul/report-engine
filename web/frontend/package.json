@@ -12,11 +12,16 @@
   },
   "dependencies": {
     "axios": "^1.18.0",
+    "echarts": "^6.1.0",
+    "jsbarcode": "^3.12.3",
+    "qrcode": "^1.5.4",
     "vue": "^3.5.32"
   },
   "devDependencies": {
     "@tsconfig/node24": "^24.0.4",
+    "@types/jsbarcode": "^3.11.4",
     "@types/node": "^24.12.2",
+    "@types/qrcode": "^1.5.6",
     "@vitejs/plugin-vue": "^6.0.6",
     "@vue/tsconfig": "^0.9.1",
     "npm-run-all2": "^8.0.4",
