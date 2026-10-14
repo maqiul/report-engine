@@ -6,7 +6,7 @@
 
 export type ElementKind =
   | 'text' | 'field' | 'summary' | 'sysvar'
-  | 'line' | 'shape' | 'image' | 'barcode'
+  | 'line' | 'shape' | 'image' | 'barcode' | 'qrcode'
   | 'table' | 'crosstab' | 'chart' | 'subreport'
 
 export interface ElementTypeDef {
@@ -50,8 +50,12 @@ export const ELEMENT_TYPES: ElementTypeDef[] = [
     create: () => ({ ...base, width: 30, height: 20, type: 'image', source: '', sizing: 'FitProportional' })
   },
   {
-    kind: 'barcode', label: '条码/二维码', icon: '▮▮', group: 'graphic',
-    create: () => ({ ...base, width: 30, height: 15, type: 'barcode', value: '{{currentRow.code}}', format: 'QRCode', foreColor: '#000000', backColor: '#FFFFFF', showText: true })
+    kind: 'barcode', label: '条形码', icon: '▮▮', group: 'graphic',
+    create: () => ({ ...base, width: 40, height: 15, type: 'barcode', value: '{{currentRow.code}}', format: 'Code128', foreColor: '#000000', backColor: '#FFFFFF', showText: true })
+  },
+  {
+    kind: 'qrcode', label: '二维码', icon: '⊞', group: 'graphic',
+    create: () => ({ ...base, width: 25, height: 25, type: 'barcode', value: '{{currentRow.url}}', format: 'QRCode', foreColor: '#000000', backColor: '#FFFFFF', showText: false })
   },
   {
     kind: 'table', label: '表格', icon: '▦', group: 'data',

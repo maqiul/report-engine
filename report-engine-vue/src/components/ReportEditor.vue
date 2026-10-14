@@ -67,16 +67,16 @@
       </div>
     </div>
 
-    <!-- 预览模式 -->
+    <!-- 预览模式（纯前端，无后端） -->
     <div v-show="mode === 'preview'" class="pane preview-pane">
-      <ReportViewer :templateJson="templateJsonText" :data="data" :scale="1" />
+      <PreviewCanvas :template="templateObj" :data="data" :scale="1" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, watch, computed, onMounted, onBeforeUnmount } from 'vue'
-import ReportViewer from './ReportViewer.vue'
+import PreviewCanvas from './editor/PreviewCanvas.vue'
 import Toolbox from './editor/Toolbox.vue'
 import BandTree from './editor/BandTree.vue'
 import PropertyPanel from './editor/PropertyPanel.vue'

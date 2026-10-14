@@ -71,9 +71,8 @@
           </div>
         </aside>
         <section class="stage">
-          <ReportViewer
-            ref="viewerRef"
-            :template-json="templateJson"
+          <PreviewCanvas
+            :template="parsedTemplate"
             :data="parsedData"
             :scale="scale"
           />
@@ -139,9 +138,8 @@
           </div>
         </aside>
         <section class="stage">
-          <ReportViewer
-            ref="viewerRef"
-            :template-json="templateJson"
+          <PreviewCanvas
+            :template="parsedTemplate"
             :data="parsedData"
             :scale="scale"
           />
@@ -154,6 +152,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import ReportViewer from './components/ReportViewer.vue'
+import PreviewCanvas from './components/editor/PreviewCanvas.vue'
 import Login from './components/Login.vue'
 import Toolbox from './components/editor/Toolbox.vue'
 import BandTree from './components/editor/BandTree.vue'
