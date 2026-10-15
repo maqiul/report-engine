@@ -10,7 +10,9 @@
           :style="{
             width: pageWidthPx + 'px',
             minHeight: pageHeightPx + 'px',
-            background: 'white'
+            background: props.showGrid !== false
+              ? '#fff repeating-linear-gradient(0deg, rgba(0,0,0,0.05) 0, rgba(0,0,0,0.05) 1px, transparent 1px, transparent 20px) repeating-linear-gradient(90deg, rgba(0,0,0,0.05) 0, rgba(0,0,0,0.05) 1px, transparent 1px, transparent 20px)'
+              : '#fff'
           }"
           @click="onCanvasClick"
         >
@@ -77,7 +79,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import * as echarts from 'echarts'
 import JsBarcode from 'jsbarcode'
 import QRCode from 'qrcode'
@@ -88,6 +90,7 @@ const props = defineProps<{
   selectedElementIndex: number
   zoom: number
   data?: Record<string, any[]>
+  showGrid?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -415,8 +418,35 @@ function renderWidgets() {
   })
 }
 
-onMounted(() => nextTick(renderWidgets))
+onMounted(() => { nextTick(renderWidgets); window.addEventListener('keydown', onKey) })
+onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
 watch(() => [props.template, props.zoom, props.selectedElementIndex], () => nextTick(renderWidgets))
+
+// ===== 键盘：方向键微调 / Delete 删除 / Ctrl+D 复制 =====
+function currentSelEl(): any {
+  if (props.selectedBandIndex < 0 || props.selectedElementIndex < 0) return null
+  return props.template?.bands?.[props.selectedBandIndex]?.elements?.[props.selectedElementIndex] ?? null
+}
+function onKey(e: KeyboardEvent) {
+  const tag = (e.target as HTMLElement)?.tagName
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+  const el = currentSelEl()
+  if (!el) return
+  const step = e.shiftKey ? 5 : 1
+  const band = props.template?.bands?.[props.selectedBandIndex]
+  if (e.key === 'ArrowLeft') { el.x = Math.max(0, Number(el.x || 0) - step); emit('update'); e.preventDefault() }
+  else if (e.key === 'ArrowRight') { el.x = Number(el.x || 0) + step; emit('update'); e.preventDefault() }
+  else if (e.key === 'ArrowUp') { el.y = Math.max(0, Number(el.y || 0) - step); emit('update'); e.preventDefault() }
+  else if (e.key === 'ArrowDown') { el.y = Number(el.y || 0) + step; emit('update'); e.preventDefault() }
+  else if (e.key === 'Delete' || e.key === 'Backspace') {
+    if (band?.elements) { band.elements.splice(props.selectedElementIndex, 1); emit('update'); e.preventDefault() }
+  } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
+    if (band?.elements) {
+      const copy = JSON.parse(JSON.stringify(el)); copy.x = Number(el.x || 0) + 5; copy.y = Number(el.y || 0) + 5
+      band.elements.push(copy); emit('update'); e.preventDefault()
+    }
+  }
+}
 </script>
 
 <style scoped>

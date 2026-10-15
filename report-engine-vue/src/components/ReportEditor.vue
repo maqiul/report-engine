@@ -20,6 +20,7 @@
       <span class="zoom-lbl">{{ Math.round(zoom * 100) }}%</span>
       <button class="tbtn" @click="zoomIn" title="放大">🔍+</button>
       <button class="tbtn" @click="zoomFit" title="适合">⤢</button>
+      <button class="tbtn" :class="{ on: showGrid }" @click="showGrid = !showGrid" title="网格开关">▦ 网格</button>
       <span class="sep"></span>
       <button class="tbtn" :disabled="histIdx <= 0" @click="undo" title="撤销 (Ctrl+Z)">↶ 撤销</button>
       <button class="tbtn" :disabled="histIdx >= history.length - 1" @click="redo" title="重做 (Ctrl+Y)">↷ 重做</button>
@@ -51,6 +52,7 @@
           :selectedElementIndex="selectedElementIdx"
           :zoom="zoom"
           :data="data"
+          :show-grid="showGrid"
           @selectBand="(i: number) => (selectedBandIdx = i)"
           @selectElement="(bi: number, ei: number) => { selectedBandIdx = bi; selectedElementIdx = ei }"
           @update="commit"
@@ -102,6 +104,7 @@ const mode = ref<'code' | 'visual' | 'preview'>('visual')
 const templateJsonText = ref(props.modelValue || defaultTemplate())
 const data = computed(() => props.data ?? {})
 const zoom = ref(1)
+const showGrid = ref(true)
 
 const templateObj = computed<TemplateObj>(() => {
   try { return JSON.parse(templateJsonText.value) }
@@ -295,6 +298,7 @@ const alignBottom = () => mutateCurrent((el, _w, h) => { el.y = h - Number(el.he
 .tbtn { background: #2d2d2d; border: 1px solid #3c3c3c; color: #cccccc; padding: 4px 10px; font-size: 12px; border-radius: 3px; cursor: pointer; }
 .tbtn:hover:not(:disabled) { background: #3c3c3c; }
 .tbtn:disabled { opacity: 0.4; cursor: not-allowed; }
+.tbtn.on { background: #0e639c; color: #fff; border-color: #0e639c; }
 .pane { flex: 1; overflow: hidden; }
 .code-pane { padding: 12px; background: #1e1e1e; }
 .code-editor { width: 100%; height: 100%; background: #1e1e1e; color: #d4d4d4; border: 1px solid #2d2d2d; font-family: 'Cascadia Code', 'Consolas', monospace; font-size: 13px; padding: 12px; resize: none; outline: none; box-sizing: border-box; }
