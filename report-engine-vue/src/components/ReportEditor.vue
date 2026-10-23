@@ -16,6 +16,11 @@
       <button class="tbtn" :disabled="!currentElement" @click="alignVCenter" title="垂直居中">⇕</button>
       <button class="tbtn" :disabled="!currentElement" @click="alignBottom" title="底对齐">⤓</button>
       <span class="sep"></span>
+      <button class="tbtn" :disabled="selection.length < 2" @click="groupSelection" title="组合 (Ctrl+G)">⛓ 组合</button>
+      <button class="tbtn" :disabled="!hasGroup" @click="ungroupSelection" title="取消组合">⛓ 取消</button>
+      <button class="tbtn" :disabled="!currentElement" @click="toggleLock" title="锁定/解锁 (Ctrl+L)">🔒 锁定</button>
+      <button class="tbtn" :class="{ on: formatPainterActive }" @click="toggleFormatPainter" title="格式刷 (Ctrl+Shift+C)">🖌 格式刷</button>
+      <span class="sep"></span>
       <button class="tbtn" @click="zoomOut" title="缩小">🔍−</button>
       <span class="zoom-lbl">{{ Math.round(zoom * 100) }}%</span>
       <button class="tbtn" @click="zoomIn" title="放大">🔍+</button>
@@ -53,6 +58,8 @@
           :zoom="zoom"
           :data="data"
           :show-grid="showGrid"
+          :format-painter-active="formatPainterActive"
+          @formatPaint="onFormatPaint"
           @selectBand="(i: number) => (selectedBandIdx = i)"
           @selectElement="(bi: number, ei: number) => { selectedBandIdx = bi; selectedElementIdx = ei }"
           @selectionChange="onSelectionChange"
@@ -166,6 +173,9 @@ function onKey(e: KeyboardEvent) {
   else if (k === 'c') { e.preventDefault(); handleCopy() }
   else if (k === 'v') { e.preventDefault(); handlePaste() }
   else if (k === 'x') { e.preventDefault(); handleCut() }
+  else if (k === 'g' && !e.shiftKey) { e.preventDefault(); groupSelection() }
+  else if (k === 'l') { e.preventDefault(); toggleLock() }
+  else if (k === 'c' && e.shiftKey) { e.preventDefault(); toggleFormatPainter() }
 }
 
 onMounted(() => { pushHistory(); window.addEventListener('keydown', onKey) })
@@ -308,6 +318,75 @@ const alignRight = () => mutateSelected((el, w, _h, box) => { el.x = w - box.w }
 const alignTop = () => mutateSelected((el, _w, _h, box) => { el.y = box.minY })
 const alignVCenter = () => mutateSelected((el, _w, h, box) => { el.y = box.minY + (h - box.h) / 2 })
 const alignBottom = () => mutateSelected((el, _w, h, box) => { el.y = h - box.h })
+
+// ====== 组合 / 取消组合（用 Core 模板的 groupId 字段） ======
+function groupSelection() {
+  if (selection.value.length < 2) return
+  const gid = 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
+  const t = JSON.parse(JSON.stringify(templateObj.value))
+  for (const [b, i] of selection.value) {
+    const el = t.bands?.[b]?.elements?.[i]
+    if (el) el.groupId = gid
+  }
+  templateJsonText.value = JSON.stringify(t, null, 2)
+  commit()
+}
+
+function ungroupSelection() {
+  const t = JSON.parse(JSON.stringify(templateObj.value))
+  for (const [b, i] of selection.value) {
+    const el = t.bands?.[b]?.elements?.[i]
+    if (el) delete el.groupId
+  }
+  templateJsonText.value = JSON.stringify(t, null, 2)
+  commit()
+}
+
+const hasGroup = computed(() => {
+  if (!currentElement.value) return false
+  return !!currentElement.value.groupId
+})
+
+// ====== 锁定 / 解锁 ======
+function toggleLock() {
+  const t = JSON.parse(JSON.stringify(templateObj.value))
+  const keys = selection.value.length ? selection.value : ([[selectedBandIdx.value, selectedElementIdx.value]] as Array<[number, number]>)
+  // 全部锁定 → 全部解锁；否则全部锁定
+  const els = keys.map(([b, i]) => t.bands?.[b]?.elements?.[i]).filter(Boolean)
+  if (!els.length) return
+  const allLocked = els.every(e => e.locked)
+  for (const e of els) e.locked = !allLocked
+  templateJsonText.value = JSON.stringify(t, null, 2)
+  commit()
+}
+
+// ====== 格式刷 ======
+const formatPainterActive = ref(false)
+const formatPainterSource = ref<any>(null)
+
+function toggleFormatPainter() {
+  formatPainterActive.value = !formatPainterActive.value
+  formatPainterSource.value = null
+}
+
+function onFormatPaint(bi: number, ei: number) {
+  const t = JSON.parse(JSON.stringify(templateObj.value))
+  const el = t.bands?.[bi]?.elements?.[ei]
+  if (!el) return
+  if (!formatPainterSource.value) {
+    // 第一次点击：捕获样式源
+    formatPainterSource.value = JSON.parse(JSON.stringify(el))
+    return
+  }
+  // 第二次及以后：把源样式套到目标
+  const src = formatPainterSource.value
+  const STYLE_KEYS = ['font', 'alignment', 'backgroundColor', 'border', 'borderColor', 'lineWidth', 'lineColor', 'fillColor', 'borderRadius']
+  for (const k of STYLE_KEYS) {
+    if (src[k] !== undefined) el[k] = JSON.parse(JSON.stringify(src[k]))
+  }
+  templateJsonText.value = JSON.stringify(t, null, 2)
+  commit()
+}
 </script>
 
 <style scoped>

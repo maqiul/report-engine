@@ -42,7 +42,7 @@
               v-for="(el, ei) in band.elements || []"
               :key="ei"
               class="element"
-              :class="{ selected: isSelected(Number(bi), Number(ei)) }"
+              :class="{ selected: isSelected(Number(bi), Number(ei)), locked: el.locked }"
               :style="getElementBox(Number(bi), Number(ei))"
               @mousedown.stop="onElementMouseDown($event, el, Number(bi), Number(ei))"
               @click.stop="selectElement(Number(bi), Number(ei))"
@@ -64,6 +64,12 @@
               <div v-else-if="el.type === 'chart'" class="el-render" data-kind="chart" :data-cfg="chartCfg(el)"></div>
               <div v-else-if="el.type === 'subreport'" class="el-ph el-subreport">⧉ 子报表 {{ el.templateRef || '(未指定)' }}</div>
               <div v-else class="el-other">{{ el.type }}</div>
+
+              <!-- 锁定标记 -->
+              <span v-if="el.locked" class="lock-badge">🔒</span>
+
+              <!-- 组合标记：显示组号 -->
+              <span v-if="el.groupId" class="group-badge">G</span>
 
               <!-- 选中时显示 8 个调节手柄 -->
               <template v-if="isSelected(Number(bi), Number(ei))">
@@ -97,12 +103,14 @@ const props = defineProps<{
   zoom: number
   data?: Record<string, any[]>
   showGrid?: boolean
+  formatPainterActive?: boolean
 }>()
 
 const emit = defineEmits<{
   (e: 'selectBand', i: number): void
   (e: 'selectElement', bandIndex: number, elementIndex: number): void
   (e: 'selectionChange', keys: Array<[number, number]>): void
+  (e: 'formatPaint', bandIndex: number, elementIndex: number): void
   (e: 'canvasClick'): void
   (e: 'update'): void
 }>()
@@ -424,7 +432,14 @@ interface DragState {
 const dragState = ref<DragState | null>(null)
 
 function onElementMouseDown(e: MouseEvent, el: any, bi: number, ei: number) {
+  // 格式刷模式：点击目标元素 → 上抛 formatPaint（不进入选择/拖拽）
+  if (props.formatPainterActive) {
+    emit('formatPaint', bi, ei)
+    return
+  }
   applySelection(bi, ei, e)
+  // 锁定元素：可选中但不可拖动
+  if (el.locked) return
   // 记录所有选中元素的原始位置（多选整体拖动）
   const moving = selectedKeys.value.map(k => {
     const [b, i] = parseKey(k)
@@ -681,6 +696,31 @@ function onKey(e: KeyboardEvent) {
 .element.selected {
   border: 1px solid #2563eb;
   background: rgba(37, 99, 235, 0.04);
+}
+
+.element.locked {
+  cursor: not-allowed;
+  border-style: dashed;
+}
+
+.lock-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  font-size: 10px;
+  pointer-events: none;
+}
+
+.group-badge {
+  position: absolute;
+  top: -8px;
+  left: -6px;
+  font-size: 9px;
+  color: #fff;
+  background: #7c3aed;
+  border-radius: 3px;
+  padding: 0 3px;
+  pointer-events: none;
 }
 
 .el-text {
