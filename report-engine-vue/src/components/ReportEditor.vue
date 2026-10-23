@@ -55,6 +55,7 @@
           :show-grid="showGrid"
           @selectBand="(i: number) => (selectedBandIdx = i)"
           @selectElement="(bi: number, ei: number) => { selectedBandIdx = bi; selectedElementIdx = ei }"
+          @selectionChange="onSelectionChange"
           @update="commit"
         />
       </div>
@@ -176,6 +177,12 @@ watch(() => props.modelValue, (val) => {
 
 const selectedBandIdx = ref(0)
 const selectedElementIdx = ref(-1)
+// 多选集合：[bandIndex, elementIndex][]
+const selection = ref<Array<[number, number]>>([])
+
+function onSelectionChange(keys: Array<[number, number]>) {
+  selection.value = keys
+}
 
 const currentElement = computed(() =>
   templateObj.value.bands?.[selectedBandIdx.value]?.elements?.[selectedElementIdx.value] ?? null)
@@ -233,9 +240,22 @@ function handleRemoveBand(idx: number) {
 
 function handleDeleteCurrent() {
   const t = JSON.parse(JSON.stringify(templateObj.value))
-  if (!t.bands[selectedBandIdx.value]?.elements) return
-  t.bands[selectedBandIdx.value].elements.splice(selectedElementIdx.value, 1)
+  const keys = selection.value.length ? selection.value : ([[selectedBandIdx.value, selectedElementIdx.value]] as Array<[number, number]>)
+  // 按 band 分组倒序删除，避免索引错位
+  const byBand = new Map<number, number[]>()
+  for (const [b, i] of keys) {
+    if (!byBand.has(b)) byBand.set(b, [])
+    byBand.get(b)!.push(i)
+  }
+  for (const [b, idxs] of byBand) {
+    const els = t.bands?.[b]?.elements
+    if (!els) continue
+    for (const i of idxs.sort((x, y) => y - x)) {
+      if (i >= 0 && i < els.length) els.splice(i, 1)
+    }
+  }
   selectedElementIdx.value = -1
+  selection.value = []
   templateJsonText.value = JSON.stringify(t, null, 2)
   commit()
 }
@@ -266,24 +286,28 @@ function zoomIn() { zoom.value = Math.min(3, Math.round((zoom.value + 0.25) * 10
 function zoomOut() { zoom.value = Math.max(0.5, Math.round((zoom.value - 0.25) * 100) / 100) }
 function zoomFit() { zoom.value = 1 }
 
-// ====== 对齐（选中元素对齐到页面宽 / 带区高） ======
-function mutateCurrent(fn: (el: any, pageW: number, bandH: number) => void) {
-  if (!currentElement.value) return
+// ====== 对齐（单选时对齐到页面宽/带区高；多选时按整体包围盒对齐） ======
+function mutateSelected(fn: (el: any, pageW: number, bandH: number, box: { minX: number; minY: number; maxX: number; maxY: number; w: number; h: number }) => void) {
   const t = JSON.parse(JSON.stringify(templateObj.value))
-  const el = t.bands[selectedBandIdx.value]?.elements?.[selectedElementIdx.value]
-  if (!el) return
+  const keys = selection.value.length ? selection.value : ([[selectedBandIdx.value, selectedElementIdx.value]] as Array<[number, number]>)
+  const targets = keys.map(([b, i]) => ({ b, i, el: t.bands?.[b]?.elements?.[i] })).filter(x => x.el)
+  if (!targets.length) return
   const pageW = Number(t.page?.width || 210)
-  const bandH = Number(t.bands[selectedBandIdx.value]?.height || 0)
-  fn(el, pageW, bandH)
+  const minX = Math.min(...targets.map(x => Number(x.el.x || 0)))
+  const minY = Math.min(...targets.map(x => Number(x.el.y || 0)))
+  const maxX = Math.max(...targets.map(x => Number(x.el.x || 0) + Number(x.el.width || 0)))
+  const maxY = Math.max(...targets.map(x => Number(x.el.y || 0) + Number(x.el.height || 0)))
+  const box = { minX, minY, maxX, maxY, w: maxX - minX, h: maxY - minY }
+  for (const x of targets) fn(x.el, pageW, Number(t.bands?.[x.b]?.height || 0), box)
   templateJsonText.value = JSON.stringify(t, null, 2)
   commit()
 }
-const alignLeft = () => mutateCurrent((el) => { el.x = 0 })
-const alignHCenter = () => mutateCurrent((el, w) => { el.x = (w - Number(el.width || 0)) / 2 })
-const alignRight = () => mutateCurrent((el, w) => { el.x = w - Number(el.width || 0) })
-const alignTop = () => mutateCurrent((el) => { el.y = 0 })
-const alignVCenter = () => mutateCurrent((el, _w, h) => { el.y = (h - Number(el.height || 0)) / 2 })
-const alignBottom = () => mutateCurrent((el, _w, h) => { el.y = h - Number(el.height || 0) })
+const alignLeft = () => mutateSelected((el, _w, _h, box) => { el.x = box.minX })
+const alignHCenter = () => mutateSelected((el, w, _h, box) => { el.x = box.minX + (w - box.w) / 2 })
+const alignRight = () => mutateSelected((el, w, _h, box) => { el.x = w - box.w })
+const alignTop = () => mutateSelected((el, _w, _h, box) => { el.y = box.minY })
+const alignVCenter = () => mutateSelected((el, _w, h, box) => { el.y = box.minY + (h - box.h) / 2 })
+const alignBottom = () => mutateSelected((el, _w, h, box) => { el.y = h - box.h })
 </script>
 
 <style scoped>

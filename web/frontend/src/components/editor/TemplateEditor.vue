@@ -15,8 +15,14 @@
               : '#fff'
           }"
           @click="onCanvasClick"
+          @mousedown="onCanvasMouseDown"
         >
           <!-- Band 区域 -->
+          <div
+            v-if="marquee.visible"
+            class="marquee"
+            :style="{ left: marquee.left + 'px', top: marquee.top + 'px', width: marquee.width + 'px', height: marquee.height + 'px' }"
+          ></div>
           <div
             v-for="(band, bi) in template.bands || []"
             :key="bi"
@@ -96,11 +102,22 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'selectBand', i: number): void
   (e: 'selectElement', bandIndex: number, elementIndex: number): void
+  (e: 'selectionChange', keys: Array<[number, number]>): void
   (e: 'canvasClick'): void
   (e: 'update'): void
 }>()
 
 const rootRef = ref<HTMLElement | null>(null)
+
+// ===== 多选集合（key = "bi:ei"）；主选中仍由 props.selectedElementIndex 驱动 =====
+const selectedKeys = ref<string[]>([])
+const lastAnchor = ref<[number, number] | null>(null)
+
+function keyOf(bi: number, ei: number): string { return bi + ':' + ei }
+function parseKey(k: string): [number, number] {
+  const p = k.split(':')
+  return [Number(p[0]), Number(p[1])]
+}
 
 // 1mm = 3.7795px (96 DPI)，用 mm * zoom * 0.5 让 A4 适合屏幕
 const MM_TO_PX = 3.7795
@@ -213,7 +230,7 @@ function bandLabel(type: string): string {
 }
 
 function isSelected(bi: number, ei: number) {
-  return props.selectedBandIndex === bi && props.selectedElementIndex === ei
+  return selectedKeys.value.includes(keyOf(bi, ei))
 }
 
 // 类型安全 helper：把 number 转 string，给模板用
@@ -268,12 +285,123 @@ function selectBand(i: number) {
   emit('selectBand', i)
 }
 
-function selectElement(bi: number, ei: number) {
+function notifySelection() {
+  emit('selectionChange', selectedKeys.value.map(parseKey))
+}
+
+function applySelection(bi: number, ei: number, e?: MouseEvent) {
+  const k = keyOf(bi, ei)
+  if (e && (e.ctrlKey || e.metaKey)) {
+    // Ctrl/Cmd+点击：切换选中
+    const idx = selectedKeys.value.indexOf(k)
+    if (idx >= 0) selectedKeys.value.splice(idx, 1)
+    else selectedKeys.value.push(k)
+    if (selectedKeys.value.includes(k)) emit('selectElement', bi, ei)
+    notifySelection()
+    return
+  }
+  if (e && e.shiftKey && lastAnchor.value) {
+    // Shift+点击：同 band 内范围选
+    const [abi, aei] = lastAnchor.value
+    if (abi === bi) {
+      const els = props.template?.bands?.[bi]?.elements || []
+      const lo = Math.min(aei, ei)
+      const hi = Math.max(aei, ei)
+      const next: string[] = []
+      for (let i = lo; i <= hi; i++) next.push(keyOf(bi, i))
+      selectedKeys.value = next
+      emit('selectElement', bi, ei)
+      notifySelection()
+      return
+    }
+  }
+  // 普通单击：单选
+  selectedKeys.value = [k]
+  lastAnchor.value = [bi, ei]
   emit('selectElement', bi, ei)
+  notifySelection()
+}
+
+function selectElement(bi: number, ei: number) {
+  applySelection(bi, ei)
 }
 
 function onCanvasClick() {
+  selectedKeys.value = []
+  lastAnchor.value = null
+  notifySelection()
   emit('canvasClick')
+}
+
+// ===== 框选（marquee）=====
+const marquee = ref({ visible: false, left: 0, top: 0, width: 0, height: 0 })
+let marqueeStart: { x: number; y: number } | null = null
+
+function onCanvasMouseDown(e: MouseEvent) {
+  // 只在空白处（无 ctrl/shift）开始框选；元素上的 mousedown 由元素自己 stop
+  if (e.button !== 0) return
+  const target = e.target as HTMLElement
+  if (target.closest('.element')) return
+  const canvasEl = target.closest('.canvas') as HTMLElement | null
+  if (!canvasEl) return
+  const rect = canvasEl.getBoundingClientRect()
+  marqueeStart = { x: e.clientX - rect.left, y: e.clientY - rect.top }
+  marquee.value = { visible: true, left: marqueeStart.x, top: marqueeStart.y, width: 0, height: 0 }
+  document.addEventListener('mousemove', onMarqueeMove)
+  document.addEventListener('mouseup', onMarqueeUp)
+}
+
+function onMarqueeMove(e: MouseEvent) {
+  if (!marqueeStart) return
+  const canvasEl = rootRef.value?.querySelector('.canvas') as HTMLElement | null
+  if (!canvasEl) return
+  const rect = canvasEl.getBoundingClientRect()
+  const x = e.clientX - rect.left
+  const y = e.clientY - rect.top
+  marquee.value = {
+    visible: true,
+    left: Math.min(marqueeStart.x, x),
+    top: Math.min(marqueeStart.y, y),
+    width: Math.abs(x - marqueeStart.x),
+    height: Math.abs(y - marqueeStart.y)
+  }
+}
+
+function onMarqueeUp() {
+  document.removeEventListener('mousemove', onMarqueeMove)
+  document.removeEventListener('mouseup', onMarqueeUp)
+  if (!marqueeStart) return
+  const m = marquee.value
+  marquee.value = { visible: false, left: 0, top: 0, width: 0, height: 0 }
+  // 拖动距离过小视为点击空白
+  if (m.width < 3 && m.height < 3) { marqueeStart = null; return }
+  const u = Number(MM_TO_PX) * Number(props.zoom) * 0.5
+  const picked: string[] = []
+  const bands = props.template?.bands || []
+  for (let bi = 0; bi < bands.length; bi++) {
+    const bandTop = bandOffsetPx(bi)
+    const els = bands[bi]?.elements || []
+    for (let ei = 0; ei < els.length; ei++) {
+      const el = els[ei]
+      const ex = Number(el.x || 0) * u
+      const ey = bandTop + Number(el.y || 0) * u
+      const ew = Number(el.width || 0) * u
+      const eh = Number(el.height || 0) * u
+      if (ex + ew >= m.left && ex <= m.left + m.width && ey + eh >= m.top && ey <= m.top + m.height) {
+        picked.push(keyOf(bi, ei))
+      }
+    }
+  }
+  if (picked.length) {
+    selectedKeys.value = picked
+    const lastKey = picked[picked.length - 1]
+    if (lastKey) {
+      const [pb, pe] = parseKey(lastKey)
+      emit('selectElement', pb, pe)
+    }
+    notifySelection()
+  }
+  marqueeStart = null
 }
 
 // ============== 拖拽 ==============
@@ -290,12 +418,19 @@ interface DragState {
   origY: number
   origW: number
   origH: number
+  moving?: Array<{ b: number; i: number; el: any; x: number; y: number }>
 }
 
 const dragState = ref<DragState | null>(null)
 
 function onElementMouseDown(e: MouseEvent, el: any, bi: number, ei: number) {
-  selectElement(bi, ei)
+  applySelection(bi, ei, e)
+  // 记录所有选中元素的原始位置（多选整体拖动）
+  const moving = selectedKeys.value.map(k => {
+    const [b, i] = parseKey(k)
+    const e2 = props.template?.bands?.[b]?.elements?.[i]
+    return { b, i, el: e2, x: Number(e2?.x || 0), y: Number(e2?.y || 0) }
+  }).filter(m => m.el)
   dragState.value = {
     type: 'move',
     el,
@@ -306,8 +441,9 @@ function onElementMouseDown(e: MouseEvent, el: any, bi: number, ei: number) {
     origX: el.x || 0,
     origY: el.y || 0,
     origW: el.width || 10,
-    origH: el.height || 5
-  }
+    origH: el.height || 5,
+    moving
+  } as any
   document.addEventListener('mousemove', onMouseMove)
   document.addEventListener('mouseup', onMouseUp)
 }
@@ -340,8 +476,16 @@ function onMouseMove(e: MouseEvent) {
   const dy: number = (e.clientY - s.startY) / unit
 
   if (s.type === 'move') {
-    s.el.x = Math.max(0, Number(s.origX) + dx)
-    s.el.y = Math.max(0, Number(s.origY) + dy)
+    if (s.moving && s.moving.length > 1) {
+      // 多选整体移动
+      for (const m of s.moving) {
+        m.el.x = Math.max(0, m.x + dx)
+        m.el.y = Math.max(0, m.y + dy)
+      }
+    } else {
+      s.el.x = Math.max(0, Number(s.origX) + dx)
+      s.el.y = Math.max(0, Number(s.origY) + dy)
+    }
   } else {
     const h = s.handle!
     if (h.includes('e')) s.el.width = Math.max(1, Number(s.origW) + dx)
@@ -596,6 +740,14 @@ function onKey(e: KeyboardEvent) {
   font-size: 10px;
   color: #888;
   background: #fafafa;
+}
+
+.marquee {
+  position: absolute;
+  border: 1px dashed #2563eb;
+  background: rgba(37, 99, 235, 0.1);
+  pointer-events: none;
+  z-index: 10;
 }
 
 .handle {
