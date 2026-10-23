@@ -71,6 +71,7 @@
           v-if="currentElement"
           :element="currentElement"
           :dataSources="templateObj.dataSources || []"
+          :data="data"
           @delete="handleDeleteCurrent"
           @update="commit"
         />

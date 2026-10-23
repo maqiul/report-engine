@@ -13,7 +13,36 @@
         </div>
       </fieldset>
 
-      <!-- ===== text 家族：静态 / 字段 / 统计 / 系统变量 ===== -->
+      <!-- ===== 通用属性：名称/背景/边框/可见性 ===== -->
+      <fieldset>
+        <legend>通用</legend>
+        <label>名称 <input type="text" v-model="element.name" placeholder="自定义名称" @change="emit('update')" /></label>
+        <label>背景色 <input type="color" :value="element.backgroundColor || '#ffffff'" @input="element.backgroundColor = ($event.target as HTMLInputElement).value; emit('update')" /></label>
+        <label class="inline"><input type="checkbox" v-model="element.visible" @change="emit('update')" /> 可见</label>
+        <label v-if="element.locked" class="hint">🔒 该元素已锁定（画布上可解锁）</label>
+      </fieldset>
+
+      <fieldset>
+        <legend>边框</legend>
+        <div class="grid-2">
+          <label>线宽 <input type="number" v-model.number="border.width" step="0.1" @change="emit('update')" /></label>
+          <label>样式
+            <select v-model="border.style" @change="emit('update')">
+              <option value="solid">实线</option><option value="dashed">虚线</option>
+              <option value="dotted">点线</option><option value="none">无</option>
+            </select>
+          </label>
+        </div>
+        <label>颜色 <input type="color" :value="border.color || '#000000'" @input="border.color = ($event.target as HTMLInputElement).value; emit('update')" /></label>
+        <div class="checks">
+          <label><input type="checkbox" v-model="border.top" @change="emit('update')" /> 上</label>
+          <label><input type="checkbox" v-model="border.bottom" @change="emit('update')" /> 下</label>
+          <label><input type="checkbox" v-model="border.left" @change="emit('update')" /> 左</label>
+          <label><input type="checkbox" v-model="border.right" @change="emit('update')" /> 右</label>
+        </div>
+      </fieldset>
+
+      <!-- ===== text 家族 ===== -->
       <template v-if="element.type === 'text'">
         <fieldset>
           <legend>框类型</legend>
@@ -31,7 +60,9 @@
         </fieldset>
         <fieldset v-else-if="boxType === 'field'">
           <legend>字段绑定</legend>
-          <label>数据字段 <input type="text" v-model="element.dataField" placeholder="如 currentRow.customer" @change="emit('update')" /></label>
+          <label>数据字段
+            <input type="text" v-model="element.dataField" list="report-fields" placeholder="如 customer" @change="emit('update')" />
+          </label>
           <label>格式
             <select v-model="element.format" @change="emit('update')">
               <option v-for="f in FORMATS" :key="f" :value="f">{{ f || '(原样)' }}</option>
@@ -45,7 +76,7 @@
               <option v-for="s in SUMMARY_FUNCTIONS" :key="s">{{ s }}</option>
             </select>
           </label>
-          <label>字段 <input type="text" v-model="element.summaryField" placeholder="如 amount" @change="emit('update')" /></label>
+          <label>字段 <input type="text" v-model="element.summaryField" list="report-fields" placeholder="如 amount" @change="emit('update')" /></label>
           <label>格式
             <select v-model="element.format" @change="emit('update')">
               <option v-for="f in FORMATS" :key="f" :value="f">{{ f || '(原样)' }}</option>
@@ -78,6 +109,11 @@
               <option value="left">左</option><option value="center">中</option><option value="right">右</option>
             </select>
           </label>
+          <label>超链接 <input type="text" v-model="element.hyperlink" placeholder="https:// 或 {{...}}" @change="emit('update')" /></label>
+          <div class="grid-2">
+            <label>最大行数 <input type="number" v-model.number="element.maxLines" min="0" @change="emit('update')" /></label>
+            <label class="inline"><input type="checkbox" v-model="element.canGrow" @change="emit('update')" /> 可增长</label>
+          </div>
         </fieldset>
       </template>
 
@@ -119,13 +155,19 @@
       <!-- ===== barcode ===== -->
       <fieldset v-else-if="element.type === 'barcode'">
         <legend>条码 / 二维码</legend>
-        <label>内容 <input type="text" v-model="element.value" @change="emit('update')" /></label>
+        <label>内容
+          <input type="text" v-model="element.value" list="report-fields" placeholder="{{currentRow.code}}" @change="emit('update')" />
+        </label>
         <label>类型
           <select v-model="element.format" @change="emit('update')">
             <option v-for="f in BARCODE_FORMATS" :key="f">{{ f }}</option>
           </select>
         </label>
-        <label><input type="checkbox" v-model="element.showText" @change="emit('update')" /> 显示文字</label>
+        <div class="grid-2">
+          <label>前景 <input type="color" :value="element.foreColor || '#000000'" @input="element.foreColor = ($event.target as HTMLInputElement).value; emit('update')" /></label>
+          <label>背景 <input type="color" :value="element.backColor || '#ffffff'" @input="element.backColor = ($event.target as HTMLInputElement).value; emit('update')" /></label>
+        </div>
+        <label class="inline"><input type="checkbox" v-model="element.showText" @change="emit('update')" /> 显示文字</label>
       </fieldset>
 
       <!-- ===== table ===== -->
@@ -135,16 +177,21 @@
           <label>行数 <input type="number" v-model.number="element.rowCount" min="1" @change="emit('update')" /></label>
           <label>列数 <input type="number" v-model.number="element.colCount" min="1" @change="emit('update')" /></label>
         </div>
-        <label>边框宽 <input type="number" v-model.number="element.borderWidth" step="0.1" @change="emit('update')" /></label>
+        <label>列宽 (逗号分隔 mm) <input type="text" :value="(element.columnWidths || []).join(',')" @change="element.columnWidths = splitNums(($event.target as HTMLInputElement).value); emit('update')" /></label>
+        <label>行高 (逗号分隔 mm) <input type="text" :value="(element.rowHeights || []).join(',')" @change="element.rowHeights = splitNums(($event.target as HTMLInputElement).value); emit('update')" /></label>
+        <div class="grid-2">
+          <label>边框宽 <input type="number" v-model.number="element.borderWidth" step="0.1" @change="emit('update')" /></label>
+          <label>边框色 <input type="color" :value="element.borderColor || '#000000'" @input="element.borderColor = ($event.target as HTMLInputElement).value; emit('update')" /></label>
+        </div>
       </fieldset>
 
       <!-- ===== crosstab ===== -->
       <fieldset v-else-if="element.type === 'crosstab'">
         <legend>交叉表</legend>
-        <label>数据源 <input type="text" v-model="element.dataSource" @change="emit('update')" /></label>
+        <label>数据源 <input type="text" v-model="element.dataSource" list="report-datasources" @change="emit('update')" /></label>
         <label>行字段(逗号) <input type="text" :value="(element.rowFields || []).join(',')" @change="element.rowFields = splitList(($event.target as HTMLInputElement).value); emit('update')" /></label>
         <label>列字段 <input type="text" v-model="element.columnField" @change="emit('update')" /></label>
-        <label>值字段 <input type="text" v-model="element.valueField" @change="emit('update')" /></label>
+        <label>值字段 <input type="text" v-model="element.valueField" list="report-fields" @change="emit('update')" /></label>
         <label>汇总
           <select v-model="element.aggregate" @change="emit('update')">
             <option v-for="s in SUMMARY_FUNCTIONS" :key="s">{{ s }}</option>
@@ -160,27 +207,51 @@
             <option v-for="c in CHART_TYPES" :key="c">{{ c }}</option>
           </select>
         </label>
-        <label>数据源 <input type="text" v-model="element.dataSource" @change="emit('update')" /></label>
-        <label>分类字段 <input type="text" v-model="element.categoryField" @change="emit('update')" /></label>
+        <label>数据源 <input type="text" v-model="element.dataSource" list="report-datasources" @change="emit('update')" /></label>
+        <label>分类字段 <input type="text" v-model="element.categoryField" list="report-fields" @change="emit('update')" /></label>
         <label>标题 <input type="text" v-model="element.title" @change="emit('update')" /></label>
-        <div v-for="(s, i) in element.series" :key="i" class="series-row">
+        <div class="series-row" v-for="(s, i) in element.series" :key="i">
           <input type="text" v-model="s.name" placeholder="系列名" @change="emit('update')" />
-          <input type="text" v-model="s.valueField" placeholder="值字段" @change="emit('update')" />
+          <input type="text" v-model="s.valueField" list="report-fields" placeholder="值字段" @change="emit('update')" />
+          <input type="color" v-model="s.color" @change="emit('update')" />
+          <button class="mini" @click="removeSeries(Number(i))">×</button>
         </div>
+        <button class="mini add" @click="addSeries">+ 添加系列</button>
       </fieldset>
 
       <!-- ===== subreport ===== -->
       <fieldset v-else-if="element.type === 'subreport'">
         <legend>子报表</legend>
         <label>模板引用 <input type="text" v-model="element.templateRef" placeholder="如 order_detail.rptx" @change="emit('update')" /></label>
-        <label>数据绑定源 <input type="text" v-model="subSource" @change="emit('update')" /></label>
+        <label>数据绑定源 <input type="text" v-model="subSource" list="report-datasources" @change="emit('update')" /></label>
         <label>高度模式
           <select v-model="element.heightMode" @change="emit('update')">
             <option value="auto">auto</option><option value="fixed">fixed</option>
           </select>
         </label>
-        <label><input type="checkbox" v-model="element.repeatPerRow" @change="emit('update')" /> 每行重复</label>
+        <label class="inline"><input type="checkbox" v-model="element.repeatPerRow" @change="emit('update')" /> 每行重复</label>
       </fieldset>
+
+      <!-- ===== 条件格式 ===== -->
+      <fieldset>
+        <legend>条件格式</legend>
+        <div v-if="!(element.conditionalFormats || []).length" class="hint">无</div>
+        <div v-for="(cf, i) in element.conditionalFormats || []" :key="i" class="cf-row">
+          <input type="text" v-model="cf.expression" placeholder="[Amount] > 1000" @change="emit('update')" />
+          <input type="color" v-model="cf.backgroundColor" @change="emit('update')" />
+          <label class="inline"><input type="checkbox" v-model="cf.bold" @change="emit('update')" /> 粗</label>
+          <button class="mini" @click="removeCf(Number(i))">×</button>
+        </div>
+        <button class="mini add" @click="addCf">+ 添加规则</button>
+      </fieldset>
+
+      <!-- 字段下拉（表达式编辑器辅助） -->
+      <datalist id="report-fields">
+        <option v-for="f in fieldNames" :key="f" :value="f"></option>
+      </datalist>
+      <datalist id="report-datasources">
+        <option v-for="d in dataSourceNames" :key="d" :value="d"></option>
+      </datalist>
 
       <div class="actions">
         <button class="btn danger" @click="emit('delete')">删除元素</button>
@@ -196,17 +267,23 @@ import {
   CHART_TYPES, IMAGE_SIZING, SHAPE_TYPES, LINE_DIRECTIONS, FORMATS
 } from './elementTypes'
 
-const props = defineProps<{ element: any; dataSources?: any[] }>()
+const props = defineProps<{ element: any; dataSources?: any[]; data?: Record<string, any[]> }>()
 const emit = defineEmits<{ (e: 'delete'): void; (e: 'update'): void }>()
 
 const boxType = computed(() => textBoxType(props.element))
 
-// 确保 font 对象存在（副作用式补默认，首次访问时）
+// 确保 font / border 对象存在
 const font = computed(() => {
   if (!props.element.font) {
     props.element.font = { family: 'SimSun', size: 10, bold: false, italic: false, underline: false, color: '#000000' }
   }
   return props.element.font
+})
+const border = computed(() => {
+  if (!props.element.border) {
+    props.element.border = { width: 0.3, color: '#000000', style: 'solid', top: false, bottom: false, left: false, right: false }
+  }
+  return props.element.border
 })
 
 const subSource = computed({
@@ -215,6 +292,21 @@ const subSource = computed({
     if (!props.element.dataBinding) props.element.dataBinding = { source: '', paramMap: {} }
     props.element.dataBinding.source = v
   }
+})
+
+// 数据源名 + 字段名（表达式编辑器用）
+const dataSourceNames = computed(() => (props.dataSources || []).map((d: any) => d?.name).filter(Boolean))
+const fieldNames = computed(() => {
+  const names: string[] = []
+  for (const rows of Object.values(props.data || {})) {
+    const first = Array.isArray(rows) ? rows[0] : undefined
+    if (first && typeof first === 'object') {
+      for (const k of Object.keys(first as Record<string, unknown>)) {
+        if (!names.includes(k)) names.push(k)
+      }
+    }
+  }
+  return names
 })
 
 function setBoxType(t: string) {
@@ -233,6 +325,28 @@ function setBoxType(t: string) {
 function splitList(s: string): string[] {
   return s.split(',').map(x => x.trim()).filter(Boolean)
 }
+function splitNums(s: string): number[] {
+  return s.split(',').map(x => Number(x.trim())).filter(n => !isNaN(n))
+}
+
+function addSeries() {
+  if (!Array.isArray(props.element.series)) props.element.series = []
+  props.element.series.push({ name: '系列' + (props.element.series.length + 1), valueField: '', color: '#4e79a7' })
+  emit('update')
+}
+function removeSeries(i: number) {
+  props.element.series.splice(i, 1)
+  emit('update')
+}
+function addCf() {
+  if (!Array.isArray(props.element.conditionalFormats)) props.element.conditionalFormats = []
+  props.element.conditionalFormats.push({ expression: '', backgroundColor: '#ffff00', fontColor: undefined, bold: false })
+  emit('update')
+}
+function removeCf(i: number) {
+  props.element.conditionalFormats.splice(i, 1)
+  emit('update')
+}
 
 const typeLabel = computed(() => {
   const m: Record<string, string> = {
@@ -250,16 +364,23 @@ const typeLabel = computed(() => {
 fieldset { border: 1px solid var(--border); border-radius: 4px; padding: 8px 10px 10px; margin-bottom: 10px; }
 legend { font-size: 11px; font-weight: 600; color: var(--fg-muted); padding: 0 4px; }
 label { display: block; font-size: 11px; color: var(--fg-muted); margin-bottom: 6px; }
+label.inline { display: flex; align-items: center; gap: 4px; }
+.hint { font-size: 11px; color: var(--fg-muted); margin: 2px 0 6px; }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.checks { display: flex; gap: 10px; margin-bottom: 6px; }
+.checks { display: flex; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
 .checks label { display: flex; align-items: center; gap: 3px; margin: 0; }
-.series-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 4px; }
+.series-row { display: grid; grid-template-columns: 1fr 1fr 28px 20px; gap: 4px; margin-bottom: 4px; align-items: center; }
+.cf-row { display: grid; grid-template-columns: 1fr 28px auto 20px; gap: 4px; margin-bottom: 4px; align-items: center; }
+.mini { padding: 2px 6px; font-size: 11px; background: #fff; border: 1px solid var(--border-strong); border-radius: 3px; cursor: pointer; }
+.mini.add { width: 100%; margin-top: 4px; }
 input[type="number"], input[type="text"], textarea, select {
   display: block; width: 100%; margin-top: 2px; padding: 4px 6px; font-size: 12px;
   border: 1px solid var(--border-strong); border-radius: 3px; background: #fff; color: var(--fg); font-family: inherit;
 }
+.series-row input, .cf-row input { margin-top: 0; }
 textarea { resize: vertical; font-family: 'Cascadia Code', 'Consolas', monospace; }
 input[type="color"] { width: 100%; height: 24px; padding: 1px; cursor: pointer; }
+.series-row input[type="color"], .cf-row input[type="color"] { height: 22px; }
 input:focus, textarea:focus, select:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
 .actions { margin-top: 12px; }
 .btn { display: block; width: 100%; padding: 6px 12px; font-size: 12px; background: #fff; border: 1px solid var(--border-strong); border-radius: 4px; cursor: pointer; color: var(--fg); }
