@@ -1,6 +1,8 @@
 <template>
   <div class="template-editor" ref="rootRef">
-    <div class="ruler">{{ Math.round(zoom * 100) }}%</div>
+    <div class="ruler-corner">{{ Math.round(zoom * 100) }}%</div>
+    <div class="ruler ruler-h" :style="rulerHStyle"></div>
+    <div class="ruler ruler-v" :style="rulerVStyle"></div>
 
     <div class="canvas-scroll" @scroll="onScroll">
       <div class="canvas-wrap" :style="{ width: pageWidthPx + 'px' }">
@@ -17,6 +19,15 @@
           @click="onCanvasClick"
           @mousedown="onCanvasMouseDown"
         >
+          <!-- 吸附辅助线 -->
+          <div
+            v-for="(g, gi) in guides"
+            :key="'g' + gi"
+            class="snap-guide"
+            :class="g.type"
+            :style="g.type === 'v' ? { left: g.pos + 'px' } : { top: g.pos + 'px' }"
+          ></div>
+
           <!-- Band 区域 -->
           <div
             v-if="marquee.visible"
@@ -43,6 +54,7 @@
               :key="ei"
               class="element"
               :class="{ selected: isSelected(Number(bi), Number(ei)), locked: el.locked }"
+              @contextmenu.prevent="onContextMenu($event, Number(bi), Number(ei))"
               :style="getElementBox(Number(bi), Number(ei))"
               @mousedown.stop="onElementMouseDown($event, el, Number(bi), Number(ei))"
               @click.stop="selectElement(Number(bi), Number(ei))"
@@ -86,6 +98,27 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- 右键菜单 -->
+    <div
+      v-if="ctxMenu.visible"
+      class="ctx-menu"
+      :style="{ left: ctxMenu.x + 'px', top: ctxMenu.y + 'px' }"
+      @mousedown.stop
+      @contextmenu.prevent
+    >
+      <button class="ctx-item" @click="ctxCopy">复制</button>
+      <button class="ctx-item" @click="ctxDelete">删除</button>
+      <div class="ctx-sep"></div>
+      <button class="ctx-item" @click="ctxToggleLock">{{ ctxMenu.locked ? '解锁' : '锁定' }}</button>
+      <button class="ctx-item" @click="ctxGroup">组合</button>
+      <button class="ctx-item" @click="ctxUngroup">取消组合</button>
+      <div class="ctx-sep"></div>
+      <button class="ctx-item" @click="ctxMove('front')">置于顶层</button>
+      <button class="ctx-item" @click="ctxMove('up')">上移一层</button>
+      <button class="ctx-item" @click="ctxMove('down')">下移一层</button>
+      <button class="ctx-item" @click="ctxMove('back')">置于底层</button>
     </div>
   </div>
 </template>
@@ -492,14 +525,21 @@ function onMouseMove(e: MouseEvent) {
 
   if (s.type === 'move') {
     if (s.moving && s.moving.length > 1) {
-      // 多选整体移动
-      for (const m of s.moving) {
-        m.el.x = Math.max(0, m.x + dx)
-        m.el.y = Math.max(0, m.y + dy)
+      // 多选整体移动（主元素吸附，整组跟随）
+      const main = s.moving.find(m => m.b === s.bi && m.i === s.ei) || s.moving[0]
+      if (main) {
+        const snapped = computeSnap(main.b, main.i, Number(main.x) + dx, Number(main.y) + dy)
+        const adjX = snapped.x - (Number(main.x) + dx)
+        const adjY = snapped.y - (Number(main.y) + dy)
+        for (const m of s.moving) {
+          m.el.x = Math.max(0, m.x + dx + adjX)
+          m.el.y = Math.max(0, m.y + dy + adjY)
+        }
       }
     } else {
-      s.el.x = Math.max(0, Number(s.origX) + dx)
-      s.el.y = Math.max(0, Number(s.origY) + dy)
+      const snapped = computeSnap(s.bi, s.ei, Number(s.origX) + dx, Number(s.origY) + dy)
+      s.el.x = Math.max(0, snapped.x)
+      s.el.y = Math.max(0, snapped.y)
     }
   } else {
     const h = s.handle!
@@ -521,13 +561,35 @@ function onMouseMove(e: MouseEvent) {
 
 function onMouseUp() {
   dragState.value = null
+  guides.value = []
   document.removeEventListener('mousemove', onMouseMove)
   document.removeEventListener('mouseup', onMouseUp)
 }
 
 function onScroll() {
-  // 预留：ruler 联动
+  // 标尺随画布滚动同步偏移
+  const sc = rootRef.value?.querySelector('.canvas-scroll') as HTMLElement | null
+  if (sc) {
+    scrollLeft.value = sc.scrollLeft
+    scrollTop.value = sc.scrollTop
+  }
 }
+
+// ===== 标尺刻度（10mm 一格）+ 滚动偏移 =====
+const scrollLeft = ref(0)
+const scrollTop = ref(0)
+const unitPx = computed(() => Number(MM_TO_PX) * Number(props.zoom) * 0.5)
+const tickPx = computed(() => 10 * unitPx.value)
+
+const rulerHStyle = computed(() => ({
+  backgroundImage: `repeating-linear-gradient(90deg, rgba(255,255,255,0.35) 0, rgba(255,255,255,0.35) 1px, transparent 1px, transparent ${tickPx.value}px)`,
+  backgroundPosition: `${-scrollLeft.value}px 0`
+}))
+
+const rulerVStyle = computed(() => ({
+  backgroundImage: `repeating-linear-gradient(0deg, rgba(255,255,255,0.35) 0, rgba(255,255,255,0.35) 1px, transparent 1px, transparent ${tickPx.value}px)`,
+  backgroundPosition: `0 ${-scrollTop.value}px`
+}))
 
 // ===== 编辑画布真渲染（图表/条形码/二维码/表格），与预览一致 =====
 function isQr(el: any): boolean {
@@ -577,9 +639,146 @@ function renderWidgets() {
   })
 }
 
-onMounted(() => { nextTick(renderWidgets); window.addEventListener('keydown', onKey) })
-onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
+onMounted(() => {
+  nextTick(renderWidgets)
+  window.addEventListener('keydown', onKey)
+  document.addEventListener('mousedown', onDocMouseDown)
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onKey)
+  document.removeEventListener('mousedown', onDocMouseDown)
+})
+
+function onDocMouseDown(e: MouseEvent) {
+  if (!ctxMenu.value.visible) return
+  const t = e.target as HTMLElement
+  if (t.closest && t.closest('.ctx-menu')) return
+  closeCtxMenu()
+}
 watch(() => [props.template, props.zoom, props.selectedElementIndex], () => nextTick(renderWidgets))
+
+// ===== 吸附（拖动时靠近其他元素/页边距自动对齐 + 黄色辅助线）=====
+const guides = ref<Array<{ type: 'v' | 'h'; pos: number }>>([])
+const SNAP_MM = 1.5
+
+function snapAxis(value: number, size: number, cands: number[]): { v: number; guide: number | null; dist: number } {
+  let best = { v: value, guide: null as number | null, dist: Infinity }
+  for (const c of cands) {
+    for (const anchor of [0, size / 2, size]) {
+      const d = Math.abs((value + anchor) - c)
+      if (d < best.dist) best = { v: value + (c - anchor), guide: c, dist: d }
+    }
+  }
+  return best
+}
+
+function computeSnap(bi: number, ei: number, nx: number, ny: number) {
+  const u = unitPx.value
+  const threshPx = SNAP_MM * u
+  const band = props.template?.bands?.[bi]
+  const els = band?.elements || []
+  const pageW = Number(props.template?.page?.width || 210)
+  const margin = props.template?.page?.margin || {}
+  const self = els[ei] || {}
+  const w = Number(self.width || 0)
+  const h = Number(self.height || 0)
+
+  const xCands: number[] = [0, pageW]
+  if (margin.left !== undefined) xCands.push(Number(margin.left))
+  if (margin.right !== undefined) xCands.push(pageW - Number(margin.right))
+  const yCands: number[] = [0]
+  if (margin.top !== undefined) yCands.push(Number(margin.top))
+  for (let i = 0; i < els.length; i++) {
+    if (i === ei) continue
+    const e2 = els[i]
+    const ex = Number(e2.x || 0), ew = Number(e2.width || 0)
+    const ey = Number(e2.y || 0), eh = Number(e2.height || 0)
+    xCands.push(ex, ex + ew, ex + ew / 2)
+    yCands.push(ey, ey + eh, ey + eh / 2)
+  }
+
+  const rx = snapAxis(nx, w, xCands)
+  const ry = snapAxis(ny, h, yCands)
+  const out: Array<{ type: 'v' | 'h'; pos: number }> = []
+  let fx = nx, fy = ny
+  if (rx.guide !== null && rx.dist <= threshPx) {
+    fx = rx.v
+    out.push({ type: 'v', pos: rx.guide * u })
+  }
+  if (ry.guide !== null && ry.dist <= threshPx) {
+    fy = ry.v
+    out.push({ type: 'h', pos: bandOffsetPx(bi) + ry.guide * u })
+  }
+  guides.value = out
+  return { x: fx, y: fy }
+}
+// ===== 右键菜单 =====
+const ctxMenu = ref({ visible: false, x: 0, y: 0, bi: -1, ei: -1, locked: false })
+
+function closeCtxMenu() { ctxMenu.value = { ...ctxMenu.value, visible: false } }
+
+function onContextMenu(e: MouseEvent, bi: number, ei: number) {
+  const el = props.template?.bands?.[bi]?.elements?.[ei]
+  ctxMenu.value = { visible: true, x: e.clientX, y: e.clientY, bi, ei, locked: !!el?.locked }
+  if (!isSelected(bi, ei)) applySelection(bi, ei)
+}
+
+function ctxCopy() {
+  const el = props.template?.bands?.[ctxMenu.value.bi]?.elements?.[ctxMenu.value.ei]
+  if (!el) { closeCtxMenu(); return }
+  const els = props.template?.bands?.[ctxMenu.value.bi]?.elements
+  if (!els) { closeCtxMenu(); return }
+  const copy = JSON.parse(JSON.stringify(el))
+  copy.x = Number(el.x || 0) + 5
+  copy.y = Number(el.y || 0) + 5
+  els.push(copy)
+  emit('update')
+  closeCtxMenu()
+}
+
+function ctxDelete() {
+  const els = props.template?.bands?.[ctxMenu.value.bi]?.elements
+  if (els) els.splice(ctxMenu.value.ei, 1)
+  emit('update')
+  closeCtxMenu()
+}
+
+function ctxToggleLock() {
+  const el = props.template?.bands?.[ctxMenu.value.bi]?.elements?.[ctxMenu.value.ei]
+  if (el) el.locked = !el.locked
+  emit('update')
+  closeCtxMenu()
+}
+
+function ctxGroup() {
+  const els = props.template?.bands?.[ctxMenu.value.bi]?.elements
+  if (!els) { closeCtxMenu(); return }
+  const gid = 'g' + Date.now().toString(36)
+  for (const e2 of els) e2.groupId = gid
+  emit('update')
+  closeCtxMenu()
+}
+
+function ctxUngroup() {
+  const els = props.template?.bands?.[ctxMenu.value.bi]?.elements
+  if (els) for (const e2 of els) delete e2.groupId
+  emit('update')
+  closeCtxMenu()
+}
+
+function ctxMove(mode: 'front' | 'up' | 'down' | 'back') {
+  const els = props.template?.bands?.[ctxMenu.value.bi]?.elements
+  const i = ctxMenu.value.ei
+  if (!els || i < 0 || i >= els.length) { closeCtxMenu(); return }
+  const [el] = els.splice(i, 1)
+  if (mode === 'front') els.push(el)
+  else if (mode === 'back') els.unshift(el)
+  else if (mode === 'up' && i < els.length) els.splice(i + 1, 0, el)
+  else if (mode === 'down' && i > 0) els.splice(i - 1, 0, el)
+  else els.splice(i, 0, el)
+  emit('update')
+  closeCtxMenu()
+}
 
 // ===== 键盘：方向键微调 / Delete 删除 / Ctrl+D 复制 =====
 function currentSelEl(): any {
@@ -612,26 +811,36 @@ function onKey(e: KeyboardEvent) {
 .template-editor {
   position: relative;
   height: 100%;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  grid-template-rows: 24px 1fr;
   background: #f3f3f3;
   overflow: hidden;
 }
 
-.ruler {
-  height: 24px;
+.ruler-corner {
+  grid-area: 1 / 1;
   background: #2d2d30;
-  color: #d4d4d4;
+  color: #aaa;
+  font-size: 9px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
   font-family: 'Cascadia Code', 'Consolas', monospace;
+  border-right: 1px solid #1e1e1e;
   border-bottom: 1px solid #1e1e1e;
 }
 
+.ruler {
+  background-color: #2d2d30;
+  overflow: hidden;
+  position: relative;
+}
+.ruler-h { grid-area: 1 / 2; border-bottom: 1px solid #1e1e1e; }
+.ruler-v { grid-area: 2 / 1; border-right: 1px solid #1e1e1e; }
+
 .canvas-scroll {
-  flex: 1;
+  grid-area: 2 / 2;
   overflow: auto;
   padding: 24px;
 }
@@ -781,6 +990,43 @@ function onKey(e: KeyboardEvent) {
   color: #888;
   background: #fafafa;
 }
+
+.ctx-menu {
+  position: fixed;
+  z-index: 999;
+  background: #fff;
+  border: 1px solid #c8c8c8;
+  border-radius: 4px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  padding: 4px 0;
+  min-width: 130px;
+  user-select: none;
+}
+
+.ctx-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 5px 14px;
+  font-size: 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #333;
+  font-family: inherit;
+}
+
+.ctx-item:hover { background: #0e639c; color: #fff; }
+.ctx-sep { height: 1px; background: #e0e0e0; margin: 3px 0; }
+
+.snap-guide {
+  position: absolute;
+  background: #f59e0b;
+  pointer-events: none;
+  z-index: 20;
+}
+.snap-guide.v { top: 0; bottom: 0; width: 1px; }
+.snap-guide.h { left: 0; right: 0; height: 1px; }
 
 .marquee {
   position: absolute;
