@@ -75,6 +75,24 @@ export {
 } from './editor'
 
 export type { ElementKind, ElementTypeDef } from './editor'
+
+// ===== 纯前端渲染核心（可独立用于一致性校验/服务端渲染）=====
+export {
+  renderTemplate,
+  toSummary,
+  evalExpression,
+  evalSummary,
+  buildChartConfig,
+  MM_TO_PX
+} from './render/renderCore'
+
+export type {
+  RenderedItem,
+  RenderedBand,
+  RenderedBox,
+  RenderTextStyle,
+  RenderOptions
+} from './render/renderCore'
 export type {
   RenderRequest,
   RenderResponse,
