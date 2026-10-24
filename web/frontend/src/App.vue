@@ -153,13 +153,17 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import ReportViewer from './components/ReportViewer.vue'
-import PreviewCanvas from './components/editor/PreviewCanvas.vue'
 import Login from './components/Login.vue'
-import Toolbox from './components/editor/Toolbox.vue'
-import BandTree from './components/editor/BandTree.vue'
-import PropertyPanel from './components/editor/PropertyPanel.vue'
-import TemplateEditor from './components/editor/TemplateEditor.vue'
-import { findTypeDef, type ElementKind } from './components/editor/elementTypes'
+// 设计器组件统一从库引用（不再在业务项目里拷贝一份，避免重复维护）
+import {
+  Toolbox,
+  BandTree,
+  PropertyPanel,
+  TemplateEditor,
+  PreviewCanvas,
+  findTypeDef
+} from '@reportengine/vue'
+import type { ElementKind } from '@reportengine/vue'
 import { exportPdf, exportExcel } from './api/report'
 import { useAuthStore } from './stores/auth'
 

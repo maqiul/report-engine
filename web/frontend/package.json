@@ -11,6 +11,7 @@
     "type-check": "vue-tsc --build"
   },
   "dependencies": {
+    "@reportengine/vue": "file:../../report-engine-vue",
     "axios": "^1.18.0",
     "echarts": "^6.1.0",
     "jsbarcode": "^3.12.3",

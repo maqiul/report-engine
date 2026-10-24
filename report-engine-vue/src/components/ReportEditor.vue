@@ -1,6 +1,12 @@
 <template>
   <div class="report-editor">
     <div class="editor-toolbar">
+      <button class="tbtn" @click="newTemplate" title="新建模板">📄 新建</button>
+      <button class="tbtn" @click="triggerOpen" title="打开 .rptx">📂 打开</button>
+      <button class="tbtn" @click="saveTemplate" title="保存为 .rptx">💾 保存</button>
+      <button class="tbtn" @click="toggleRecent" title="最近文件">🕘 最近</button>
+      <input ref="fileInput" type="file" accept=".rptx,.json,application/json" class="hidden-file" @change="onFilePicked" />
+      <span class="sep"></span>
       <button class="tab" :class="{ active: mode === 'code' }" @click="mode = 'code'">代码</button>
       <button class="tab" :class="{ active: mode === 'visual' }" @click="mode = 'visual'">可视化</button>
       <button class="tab" :class="{ active: mode === 'preview' }" @click="mode = 'preview'">预览</button>
@@ -29,6 +35,20 @@
       <span class="sep"></span>
       <button class="tbtn" :disabled="histIdx <= 0" @click="undo" title="撤销 (Ctrl+Z)">↶ 撤销</button>
       <button class="tbtn" :disabled="histIdx >= history.length - 1" @click="redo" title="重做 (Ctrl+Y)">↷ 重做</button>
+    </div>
+
+    <!-- 最近文件面板 -->
+    <div v-if="recentOpen" class="recent-panel">
+      <div class="recent-head">
+        <span>最近文件</span>
+        <button class="tbtn mini" @click="clearRecent" title="清空">清空</button>
+        <button class="tbtn mini" @click="recentOpen = false">×</button>
+      </div>
+      <div v-if="!recent.length" class="recent-empty">暂无记录</div>
+      <button v-for="(r, i) in recent" :key="i" class="recent-item" @click="loadRecent(r)">
+        <span class="rn">{{ r.name }}</span>
+        <span class="rt">{{ formatTime(r.at) }}</span>
+      </button>
     </div>
 
     <!-- 代码模式 -->
@@ -271,6 +291,97 @@ function handleDeleteCurrent() {
   commit()
 }
 
+// ====== 模板文件管理（纯前端：File 读 / Blob 下载） ======
+const fileInput = ref<HTMLInputElement | null>(null)
+const recentOpen = ref(false)
+interface RecentItem { name: string; json: string; at: number }
+const recent = ref<RecentItem[]>([])
+const RECENT_KEY = 'report-engine.recent'
+
+function loadRecentStore() {
+  try {
+    const raw = localStorage.getItem(RECENT_KEY)
+    if (raw) recent.value = JSON.parse(raw)
+  } catch { recent.value = [] }
+}
+function saveRecentStore() {
+  try { localStorage.setItem(RECENT_KEY, JSON.stringify(recent.value.slice(0, 10))) } catch { /* ignore */ }
+}
+function pushRecent(name: string, json: string) {
+  recent.value = recent.value.filter(r => r.name !== name)
+  recent.value.unshift({ name, json, at: Date.now() })
+  if (recent.value.length > 10) recent.value = recent.value.slice(0, 10)
+  saveRecentStore()
+}
+function toggleRecent() {
+  if (!recentOpen.value) loadRecentStore()
+  recentOpen.value = !recentOpen.value
+}
+function clearRecent() {
+  recent.value = []
+  saveRecentStore()
+}
+function loadRecent(r: RecentItem) {
+  templateJsonText.value = r.json
+  recentOpen.value = false
+  emit('update:modelValue', r.json)
+}
+function formatTime(at: number): string {
+  const d = new Date(at)
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
+function newTemplate() {
+  templateJsonText.value = defaultTemplate()
+  selectedBandIdx.value = 0
+  selectedElementIdx.value = -1
+  selection.value = []
+  history.value = []
+  histIdx.value = -1
+  pushHistory()
+  emit('update:modelValue', templateJsonText.value)
+}
+
+function triggerOpen() {
+  fileInput.value?.click()
+}
+
+function onFilePicked(e: Event) {
+  const input = e.target as HTMLInputElement
+  const f = input.files?.[0]
+  if (!f) return
+  const reader = new FileReader()
+  reader.onload = () => {
+    const text = String(reader.result || '')
+    try {
+      JSON.parse(text) // 校验合法性
+      templateJsonText.value = text
+      emit('update:modelValue', text)
+      pushHistory()
+      pushRecent(f.name, text)
+    } catch {
+      window.alert('文件不是合法的模板 JSON')
+    }
+  }
+  reader.readAsText(f)
+  input.value = ''
+}
+
+function saveTemplate() {
+  const name = 'template-' + new Date().toISOString().slice(0, 10) + '.rptx'
+  const blob = new Blob([templateJsonText.value], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = name
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+  pushRecent(name, templateJsonText.value)
+}
+
 // ====== 复制 / 粘贴 / 剪切 ======
 const copied = ref<any>(null)
 function handleCopy() {
@@ -391,7 +502,7 @@ function onFormatPaint(bi: number, ei: number) {
 </script>
 
 <style scoped>
-.report-editor { display: flex; flex-direction: column; height: 100%; font-family: 'Microsoft YaHei', 'PingFang SC', system-ui, sans-serif; }
+.report-editor { display: flex; flex-direction: column; height: 100%; position: relative; font-family: 'Microsoft YaHei', 'PingFang SC', system-ui, sans-serif; }
 .editor-toolbar { display: flex; gap: 4px; padding: 8px 12px; background: #1e1e1e; border-bottom: 1px solid #2d2d2d; align-items: center; }
 .tab { background: transparent; border: none; color: #969696; padding: 6px 14px; cursor: pointer; font-size: 13px; border-radius: 3px; }
 .tab:hover { background: #2d2d2d; color: #cccccc; }
@@ -403,6 +514,37 @@ function onFormatPaint(bi: number, ei: number) {
 .tbtn:hover:not(:disabled) { background: #3c3c3c; }
 .tbtn:disabled { opacity: 0.4; cursor: not-allowed; }
 .tbtn.on { background: #0e639c; color: #fff; border-color: #0e639c; }
+.tbtn.mini { padding: 1px 6px; font-size: 11px; }
+.hidden-file { display: none; }
+
+.recent-panel {
+  position: absolute;
+  top: 40px;
+  left: 12px;
+  z-index: 50;
+  min-width: 260px;
+  background: #252526;
+  border: 1px solid #3c3c3c;
+  border-radius: 4px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  padding: 6px;
+}
+.recent-head {
+  display: flex; align-items: center; gap: 6px;
+  color: #ccc; font-size: 12px; padding: 2px 4px 6px;
+  border-bottom: 1px solid #3c3c3c; margin-bottom: 4px;
+}
+.recent-head span { flex: 1; }
+.recent-empty { color: #777; font-size: 12px; padding: 10px 6px; }
+.recent-item {
+  display: flex; width: 100%; gap: 8px; align-items: center;
+  background: transparent; border: none; cursor: pointer;
+  color: #ddd; font-size: 12px; padding: 5px 6px; border-radius: 3px; text-align: left;
+}
+.recent-item:hover { background: #0e639c; color: #fff; }
+.rn { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rt { color: #888; font-size: 11px; }
+.recent-item:hover .rt { color: #ddd; }
 .pane { flex: 1; overflow: hidden; }
 .code-pane { padding: 12px; background: #1e1e1e; }
 .code-editor { width: 100%; height: 100%; background: #1e1e1e; color: #d4d4d4; border: 1px solid #2d2d2d; font-family: 'Cascadia Code', 'Consolas', monospace; font-size: 13px; padding: 12px; resize: none; outline: none; box-sizing: border-box; }

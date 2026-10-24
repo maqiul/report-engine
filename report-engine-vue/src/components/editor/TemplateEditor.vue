@@ -125,9 +125,15 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
-import * as echarts from 'echarts'
+// ECharts 按需引入
+import * as echarts from 'echarts/core'
+import { BarChart, LineChart, PieChart, ScatterChart } from 'echarts/charts'
+import { GridComponent, TooltipComponent, TitleComponent, LegendComponent } from 'echarts/components'
+import { CanvasRenderer } from 'echarts/renderers'
 import JsBarcode from 'jsbarcode'
 import QRCode from 'qrcode'
+
+echarts.use([BarChart, LineChart, PieChart, ScatterChart, GridComponent, TooltipComponent, TitleComponent, LegendComponent, CanvasRenderer])
 
 const props = defineProps<{
   template: any

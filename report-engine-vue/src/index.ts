@@ -52,6 +52,29 @@ export default { install }
 /** 命名导出 */
 export { ReportViewer, ReportEditor }
 export { ReportClient, downloadBlob } from './api/report'
+
+// ===== 设计器子组件导出 =====
+// 供使用方（如 web/frontend）直接复用，避免在业务项目里再拷贝一份造成重复维护
+export {
+  Toolbox,
+  PropertyPanel,
+  TemplateEditor,
+  PreviewCanvas,
+  BandTree,
+  ELEMENT_TYPES,
+  findTypeDef,
+  textBoxType,
+  SUMMARY_FUNCTIONS,
+  SYSTEM_VARIABLES,
+  BARCODE_FORMATS,
+  CHART_TYPES,
+  IMAGE_SIZING,
+  SHAPE_TYPES,
+  LINE_DIRECTIONS,
+  FORMATS
+} from './editor'
+
+export type { ElementKind, ElementTypeDef } from './editor'
 export type {
   RenderRequest,
   RenderResponse,

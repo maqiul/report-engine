@@ -30,9 +30,15 @@
 // 纯前端真渲染：图表 ECharts / 条形码 JsBarcode / 二维码 qrcode / 表格真网格 / 图像真图。
 // 命令式渲染在 onMounted + watch(layout) 后遍历 .render-box 完成。
 import { computed, onMounted, nextTick, watch, ref } from 'vue'
-import * as echarts from 'echarts'
+// ECharts 按需引入：只打包用到的图表与组件，减小 bundle
+import * as echarts from 'echarts/core'
+import { BarChart, LineChart, PieChart, ScatterChart } from 'echarts/charts'
+import { GridComponent, TooltipComponent, TitleComponent, LegendComponent } from 'echarts/components'
+import { CanvasRenderer } from 'echarts/renderers'
 import JsBarcode from 'jsbarcode'
 import QRCode from 'qrcode'
+
+echarts.use([BarChart, LineChart, PieChart, ScatterChart, GridComponent, TooltipComponent, TitleComponent, LegendComponent, CanvasRenderer])
 
 const props = defineProps<{ template: any; data?: Record<string, any[]>; scale?: number }>()
 const rootRef = ref<HTMLElement | null>(null)

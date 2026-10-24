@@ -19,7 +19,7 @@
     "./style.css": "./dist/style.css"
   },
   "scripts": {
-    "build": "vue-tsc --emitDeclarationOnly && vite build",
+    "build": "vite build && vue-tsc --emitDeclarationOnly",
     "type-check": "vue-tsc --noEmit",
     "dev": "vite",
     "pack": "npm pack"
