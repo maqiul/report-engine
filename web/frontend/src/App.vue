@@ -5,7 +5,7 @@
       <div class="brand">
         <span class="logo">RE</span>
         <span class="name">ReportEngine</span>
-        <span class="version">v0.4.0-auth</span>
+        <span class="version">v{{ pkg.version }}</span>
       </div>
       <nav class="topnav">
         <span class="status">Java 后端 : 5000</span>
@@ -124,6 +124,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
+import pkg from '../package.json'
 import ReportViewer from './components/ReportViewer.vue'
 import Login from './components/Login.vue'
 // 设计器直接用库组件（能力与库保持同步，不再在 web 里维护第二份）

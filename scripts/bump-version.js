@@ -40,6 +40,20 @@ const targets = [
     // 先匹配整段（含 closing quote），再字面量替换
     pattern: /"version":\s*"[^"]+"/,
     replacement: `"version": "${version}"`
+  },
+  {
+    name: 'npm: web/frontend/package.json',
+    file: path.join(repoRoot, 'web', 'frontend', 'package.json'),
+    pattern: /"version":\s*"[^"]+"/,
+    replacement: `"version": "${version}"`
+  },
+  {
+    name: 'npm: web/frontend/package-lock.json',
+    file: path.join(repoRoot, 'web', 'frontend', 'package-lock.json'),
+    pattern: /"version":\s*"[^"]+"/,
+    replacement: `"version": "${version}"`,
+    // lock 文件里顶层 + 根包两处 version 都要改
+    all: true
   }
 ];
 
@@ -63,7 +77,10 @@ for (const t of targets) {
     continue;
   }
 
-  const newContent = content.replace(t.pattern, t.replacement);
+  // all=true 时替换所有匹配（package-lock.json 顶层 + 根包两处）
+  const newContent = t.all
+    ? content.replace(new RegExp(t.pattern.source, 'g'), t.replacement)
+    : content.replace(t.pattern, t.replacement);
   fs.writeFileSync(t.file, newContent, 'utf8');
   console.log(`[OK]   ${t.name}  →  ${match[0]}  =>  ${t.replacement}`);
   updatedCount++;

@@ -1,6 +1,6 @@
 {
   "name": "@reportengine/vue",
-  "version": "0.3.0",
+  "version": "0.7.0",
   "description": "Vue 3 components for ReportEngine: viewer + visual editor + template editor",
   "type": "module",
   "main": "dist/report-engine-vue.umd.js",

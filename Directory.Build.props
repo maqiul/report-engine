@@ -5,7 +5,7 @@
     <LangVersion>latest</LangVersion>
 
     <!-- NuGet 包公共信息 -->
-    <Version>0.2.0-alpha</Version>
+    <Version>0.7.0</Version>
     <Authors>maqiul</Authors>
     <RepositoryUrl>https://github.com/maqiul/report-engine</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
