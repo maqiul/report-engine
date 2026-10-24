@@ -79,38 +79,10 @@
         </section>
       </template>
 
-      <!-- ===== 可视化模式：拖拽编辑器 ===== -->
+      <!-- ===== 可视化模式：直接用库的设计器组件（能力与库保持同步） ===== -->
       <template v-else-if="mode === 'visual'">
-        <aside class="panel">
-          <Toolbox @add="addElement" @add-band="addBand" />
-          <BandTree
-            :bands="parsedTemplate.bands || []"
-            :selected-band-index="selectedBandIndex"
-            @select="onSelectBand"
-            @move-up="moveBandUp"
-            @move-down="moveBandDown"
-            @duplicate="duplicateBand"
-            @remove="removeBand"
-          />
-          <PropertyPanel
-            :element="selectedElement"
-            :data-sources="parsedTemplate.dataSources || []"
-            @delete="deleteElement"
-            @update="syncTemplateJson"
-          />
-        </aside>
-        <section class="stage">
-          <TemplateEditor
-            :template="parsedTemplate"
-            :selected-band-index="selectedBandIndex"
-            :selected-element-index="selectedElementIndex"
-            :zoom="scale"
-            :data="parsedData"
-            @select-band="onSelectBand"
-            @select-element="onSelectElement"
-            @canvas-click="onCanvasClick"
-            @update="syncTemplateJson"
-          />
+        <section class="stage full">
+          <ReportEditor v-model="templateJson" :data="parsedData" />
         </section>
       </template>
 
@@ -154,16 +126,8 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import ReportViewer from './components/ReportViewer.vue'
 import Login from './components/Login.vue'
-// 设计器组件统一从库引用（不再在业务项目里拷贝一份，避免重复维护）
-import {
-  Toolbox,
-  BandTree,
-  PropertyPanel,
-  TemplateEditor,
-  PreviewCanvas,
-  findTypeDef
-} from '@reportengine/vue'
-import type { ElementKind } from '@reportengine/vue'
+// 设计器直接用库组件（能力与库保持同步，不再在 web 里维护第二份）
+import { ReportEditor, PreviewCanvas } from '@reportengine/vue'
 import { exportPdf, exportExcel } from './api/report'
 import { useAuthStore } from './stores/auth'
 
@@ -229,127 +193,14 @@ const parsedData = computed(() => {
   }
 })
 
-// 可视化模式共享同一份 JSON
-const parsedTemplate = computed({
-  get: () => {
-    try {
-      return JSON.parse(templateJson.value || '{}')
-    } catch {
-      return { bands: [] }
-    }
-  },
-  set: (v) => {
-    templateJson.value = JSON.stringify(v, null, 2)
+// 模板对象（预览模式用，只读）
+const parsedTemplate = computed(() => {
+  try {
+    return JSON.parse(templateJson.value || '{}')
+  } catch {
+    return { bands: [] }
   }
 })
-
-watch(parsedTemplate, (val) => {
-  if (!val.bands) val.bands = []
-  if (!val.page) {
-    val.page = { width: 210, height: 297, margin: { top: 15, bottom: 15, left: 10, right: 10 } }
-  }
-}, { deep: true })
-
-// ===== 选中状态 =====
-const selectedBandIndex = ref<number>(-1)
-const selectedElementIndex = ref<number>(-1)
-
-const selectedElement = computed(() => {
-  if (selectedBandIndex.value < 0) return null
-  const band = parsedTemplate.value.bands?.[selectedBandIndex.value]
-  if (!band) return null
-  if (selectedElementIndex.value < 0) return null
-  return band.elements?.[selectedElementIndex.value] || null
-})
-
-function onSelectBand(i: number) {
-  selectedBandIndex.value = i
-  selectedElementIndex.value = -1
-}
-
-function onSelectElement(bi: number, ei: number) {
-  selectedBandIndex.value = bi
-  selectedElementIndex.value = ei
-}
-
-function onCanvasClick() {
-  selectedBandIndex.value = -1
-  selectedElementIndex.value = -1
-}
-
-// ===== 添加操作 =====
-function addBand(type: string) {
-  if (!parsedTemplate.value.bands) parsedTemplate.value.bands = []
-  const newBand: any = {
-    type,
-    height: type === 'detail' ? 10 : 20,
-    elements: []
-  }
-  if (type === 'detail') newBand.dataSource = 'orders'
-  parsedTemplate.value.bands.push(newBand)
-  selectedBandIndex.value = parsedTemplate.value.bands.length - 1
-  selectedElementIndex.value = -1
-  syncTemplateJson()
-}
-
-function addElement(kind: ElementKind) {
-  const def = findTypeDef(kind)
-  if (!def) return
-  if (selectedBandIndex.value < 0) {
-    addBand('detail')
-  }
-  const band = parsedTemplate.value.bands[selectedBandIndex.value]
-  if (!band.elements) band.elements = []
-  band.elements.push(def.create())
-  selectedElementIndex.value = band.elements.length - 1
-  syncTemplateJson()
-}
-
-function deleteElement() {
-  if (selectedBandIndex.value < 0 || selectedElementIndex.value < 0) return
-  const band = parsedTemplate.value.bands[selectedBandIndex.value]
-  band.elements.splice(selectedElementIndex.value, 1)
-  selectedElementIndex.value = -1
-  syncTemplateJson()
-}
-
-// ===== Band 操作 =====
-function moveBandUp(i: number) {
-  if (i <= 0) return
-  const arr = parsedTemplate.value.bands
-  ;[arr[i - 1], arr[i]] = [arr[i], arr[i - 1]]
-  selectedBandIndex.value = i - 1
-  syncTemplateJson()
-}
-
-function moveBandDown(i: number) {
-  const arr = parsedTemplate.value.bands
-  if (i >= arr.length - 1) return
-  ;[arr[i + 1], arr[i]] = [arr[i], arr[i + 1]]
-  selectedBandIndex.value = i + 1
-  syncTemplateJson()
-}
-
-function duplicateBand(i: number) {
-  const arr = parsedTemplate.value.bands
-  const copy = JSON.parse(JSON.stringify(arr[i]))
-  copy.elements = (copy.elements || []).map((e: any) => ({ ...e, y: (e.y || 0) + 5 }))
-  arr.splice(i + 1, 0, copy)
-  selectedBandIndex.value = i + 1
-  syncTemplateJson()
-}
-
-function removeBand(i: number) {
-  parsedTemplate.value.bands.splice(i, 1)
-  if (selectedBandIndex.value === i) selectedBandIndex.value = -1
-  else if (selectedBandIndex.value > i) selectedBandIndex.value--
-  syncTemplateJson()
-}
-
-function syncTemplateJson() {
-  // 触发 parsedTemplate.setter
-  templateJson.value = JSON.stringify(parsedTemplate.value, null, 2)
-}
 
 // ===== 示例加载 =====
 function loadSampleTemplate() {
@@ -586,4 +437,5 @@ html, body, #app { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI',
   flex-direction: column;
   min-width: 0;
 }
+.stage.full { padding: 0; }
 </style>
