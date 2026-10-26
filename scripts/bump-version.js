@@ -5,6 +5,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
 const version = process.argv[2];
 if (!version) {
@@ -37,23 +38,38 @@ const targets = [
   {
     name: 'npm: report-engine-vue/package.json',
     file: path.join(repoRoot, 'report-engine-vue', 'package.json'),
-    // 先匹配整段（含 closing quote），再字面量替换
-    pattern: /"version":\s*"[^"]+"/,
-    replacement: `"version": "${version}"`
+    // 用 npm version 同步 package.json + package-lock.json（只改根包版本，格式规范）
+    npmVersion: true
   },
   {
     name: 'npm: web/frontend/package.json',
     file: path.join(repoRoot, 'web', 'frontend', 'package.json'),
-    pattern: /"version":\s*"[^"]+"/,
-    replacement: `"version": "${version}"`
+    npmVersion: true
+  },
+  // ===== 依赖坐标里的版本（保持与被依赖模块一致，否则 CI 解析到旧版本）=====
+  {
+    name: 'Java: web/backend 依赖 java-lib',
+    file: path.join(repoRoot, 'web', 'backend', 'build.gradle'),
+    pattern: /(com\.reportengine:java-lib):[0-9][^'"]*/,
+    replacement: `$1:${version}`
   },
   {
-    name: 'npm: web/frontend/package-lock.json',
-    file: path.join(repoRoot, 'web', 'frontend', 'package-lock.json'),
-    pattern: /"version":\s*"[^"]+"/,
-    replacement: `"version": "${version}"`,
-    // lock 文件里顶层 + 根包两处 version 都要改
-    all: true
+    name: 'Java: starter 依赖 java-lib',
+    file: path.join(repoRoot, 'report-engine-starter', 'build.gradle'),
+    pattern: /(com\.reportengine:java-lib):[0-9][^'"]*/,
+    replacement: `$1:${version}`
+  },
+  {
+    name: 'Java: demo-backend 依赖 starter',
+    file: path.join(repoRoot, 'report-engine-demo-backend', 'build.gradle'),
+    pattern: /(com\.reportengine:report-engine-spring-boot-starter):[0-9][^'"]*/,
+    replacement: `$1:${version}`
+  },
+  {
+    name: 'Java: starter-sample 依赖 starter',
+    file: path.join(repoRoot, 'report-engine-starter-sample', 'build.gradle'),
+    pattern: /(com\.reportengine:report-engine-spring-boot-starter):[0-9][^'"]*/,
+    replacement: `$1:${version}`
   }
 ];
 
@@ -70,7 +86,24 @@ for (const t of targets) {
   }
 
   const content = fs.readFileSync(t.file, 'utf8');
-  const match = content.match(t.pattern);
+  const match = content.match(t.pattern || /"version":\s*"[^"]+"/);
+
+  // npm 项目：交给 npm version 处理（会同步 package-lock.json 的根包版本）
+  if (t.npmVersion) {
+    try {
+      execSync(`npm version ${version} --no-git-tag-version --allow-same-version`, {
+        cwd: path.dirname(t.file),
+        stdio: 'pipe'
+      });
+      console.log(`[OK]   ${t.name}  →  npm version ${version}`);
+      updatedCount++;
+    } catch (e) {
+      console.log(`[SKIP] ${t.name} (npm version failed: ${e.message.split('\n')[0]})`);
+      skippedCount++;
+    }
+    continue;
+  }
+
   if (!match) {
     console.log(`[SKIP] ${t.name} (pattern not found)`);
     skippedCount++;

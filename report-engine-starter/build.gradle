@@ -30,7 +30,7 @@ repositories {
 
 dependencies {
     // 依赖核心库
-    api 'com.reportengine:java-lib:0.3.0'
+    api 'com.reportengine:java-lib:0.7.0'
 
     // Spring Boot Starter（最小集）
     api 'org.springframework.boot:spring-boot-starter:3.2.0'

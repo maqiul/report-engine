@@ -22,7 +22,7 @@ dependencies {
     implementation 'com.h2database:h2'
 
     // 核心：第三方 starter
-    implementation 'com.reportengine:report-engine-spring-boot-starter:0.3.0'
+    implementation 'com.reportengine:report-engine-spring-boot-starter:0.7.0'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
