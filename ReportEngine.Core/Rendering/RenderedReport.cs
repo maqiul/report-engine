@@ -74,4 +74,6 @@ public abstract class RenderedElement
     public double Height { get; set; }
     public string? BackgroundColor { get; set; }
     public BorderDef? Border { get; set; }
+    /// <summary>绕自身中心旋转角度（度）。0 = 不旋转。各导出器/前端按此渲染。</summary>
+    public double Rotation { get; set; }
 }

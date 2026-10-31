@@ -8,6 +8,22 @@ public class RenderedTextElement : RenderedElement
     public FontDef Font { get; set; } = new FontDef();
     public TextAlignment Alignment { get; set; } = TextAlignment.Left;
     public string? Hyperlink { get; set; }
+
+    /// <summary>
+    /// 按元素宽度自动换行后的文本行（长文本/自动换行场景）。
+    /// 为空表示未做换行处理，各端直接用 Text 单行渲染。
+    /// </summary>
+    public List<string> Lines { get; set; } = new List<string>();
+
+    /// <summary>
+    /// 换行计算后的行高（mm）。0 表示未做换行处理。
+    /// </summary>
+    public double LineHeight { get; set; }
+
+    /// <summary>
+    /// 因自动换行而撑高后的元素高度（mm）。0 表示未撑高。
+    /// </summary>
+    public double GrownHeight { get; set; }
 }
 
 public class RenderedImageElement : RenderedElement

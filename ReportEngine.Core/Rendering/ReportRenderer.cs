@@ -415,41 +415,41 @@ public class ReportRenderer
             case RenderedTextElement t:
                 return new RenderedTextElement
                 {
-                    Id = t.Id, X = t.X + dx, Y = t.Y + dy, Width = t.Width, Height = t.Height,
+                    Id = t.Id, X = t.X + dx, Y = t.Y + dy, Width = t.Width, Height = t.Height, Rotation = t.Rotation,
                     BackgroundColor = t.BackgroundColor, Border = t.Border,
-                    Text = t.Text, Font = t.Font, Alignment = t.Alignment, Hyperlink = t.Hyperlink,
+                    Text = t.Text, Font = t.Font, Alignment = t.Alignment, Hyperlink = t.Hyperlink, Lines = t.Lines, LineHeight = t.LineHeight, GrownHeight = t.GrownHeight,
                 };
             case RenderedImageElement i:
                 return new RenderedImageElement
                 {
-                    Id = i.Id, X = i.X + dx, Y = i.Y + dy, Width = i.Width, Height = i.Height,
+                    Id = i.Id, X = i.X + dx, Y = i.Y + dy, Width = i.Width, Height = i.Height, Rotation = i.Rotation,
                     BackgroundColor = i.BackgroundColor, Border = i.Border, Source = i.Source,
                 };
             case RenderedLineElement l:
                 return new RenderedLineElement
                 {
-                    Id = l.Id, X = l.X + dx, Y = l.Y + dy, Width = l.Width, Height = l.Height,
+                    Id = l.Id, X = l.X + dx, Y = l.Y + dy, Width = l.Width, Height = l.Height, Rotation = l.Rotation,
                     BackgroundColor = l.BackgroundColor, Border = l.Border,
                     Direction = l.Direction, LineWidth = l.LineWidth, LineColor = l.LineColor,
                 };
             case RenderedShapeElement s:
                 return new RenderedShapeElement
                 {
-                    Id = s.Id, X = s.X + dx, Y = s.Y + dy, Width = s.Width, Height = s.Height,
+                    Id = s.Id, X = s.X + dx, Y = s.Y + dy, Width = s.Width, Height = s.Height, Rotation = s.Rotation,
                     BackgroundColor = s.BackgroundColor, Border = s.Border,
                     Shape = s.Shape, FillColor = s.FillColor, BorderRadius = s.BorderRadius,
                 };
             case RenderedBarcodeElement bc:
                 return new RenderedBarcodeElement
                 {
-                    Id = bc.Id, X = bc.X + dx, Y = bc.Y + dy, Width = bc.Width, Height = bc.Height,
+                    Id = bc.Id, X = bc.X + dx, Y = bc.Y + dy, Width = bc.Width, Height = bc.Height, Rotation = bc.Rotation,
                     BackgroundColor = bc.BackgroundColor, Border = bc.Border,
                     Value = bc.Value, Format = bc.Format, ForeColor = bc.ForeColor, BackColor = bc.BackColor, ShowText = bc.ShowText,
                 };
             case RenderedTableElement tbl:
                 return new RenderedTableElement
                 {
-                    Id = tbl.Id, X = tbl.X + dx, Y = tbl.Y + dy, Width = tbl.Width, Height = tbl.Height,
+                    Id = tbl.Id, X = tbl.X + dx, Y = tbl.Y + dy, Width = tbl.Width, Height = tbl.Height, Rotation = tbl.Rotation,
                     BackgroundColor = tbl.BackgroundColor, Border = tbl.Border,
                     RowCount = tbl.RowCount, ColCount = tbl.ColCount,
                     ColumnWidths = tbl.ColumnWidths, RowHeights = tbl.RowHeights,
@@ -458,7 +458,7 @@ public class ReportRenderer
             case RenderedCrossTabElement ctab:
                 return new RenderedCrossTabElement
                 {
-                    Id = ctab.Id, X = ctab.X + dx, Y = ctab.Y + dy, Width = ctab.Width, Height = ctab.Height,
+                    Id = ctab.Id, X = ctab.X + dx, Y = ctab.Y + dy, Width = ctab.Width, Height = ctab.Height, Rotation = ctab.Rotation,
                     BackgroundColor = ctab.BackgroundColor, Border = ctab.Border,
                     RowCount = ctab.RowCount, ColCount = ctab.ColCount,
                     ColumnWidths = ctab.ColumnWidths, RowHeights = ctab.RowHeights,
@@ -651,6 +651,7 @@ public class ReportRenderer
             {
                 Id = img.Id, X = img.X, Y = img.Y,
                 Width = img.Width, Height = img.Height,
+                Rotation = img.Rotation,
                 Source = img.Source,
                 BackgroundColor = img.BackgroundColor,
                 Border = img.Border,
@@ -659,6 +660,7 @@ public class ReportRenderer
             {
                 Id = line.Id, X = line.X, Y = line.Y,
                 Width = line.Width, Height = line.Height,
+                Rotation = line.Rotation,
                 Direction = line.Direction,
                 LineWidth = line.LineWidth,
                 LineColor = line.LineColor,
@@ -667,6 +669,7 @@ public class ReportRenderer
             {
                 Id = shape.Id, X = shape.X, Y = shape.Y,
                 Width = shape.Width, Height = shape.Height,
+                Rotation = shape.Rotation,
                 Shape = shape.Shape,
                 FillColor = shape.FillColor,
                 BorderRadius = shape.BorderRadius,
@@ -675,6 +678,7 @@ public class ReportRenderer
             {
                 Id = barcode.Id, X = barcode.X, Y = barcode.Y,
                 Width = barcode.Width, Height = barcode.Height,
+                Rotation = barcode.Rotation,
                 Value = _expressionEngine.Evaluate(barcode.Value, context),
                 Format = barcode.Format,
                 ForeColor = barcode.ForeColor,
@@ -693,6 +697,7 @@ public class ReportRenderer
         {
             Id = table.Id, X = table.X, Y = table.Y,
             Width = table.Width, Height = table.Height,
+            Rotation = table.Rotation,
             RowCount = table.RowCount, ColCount = table.ColCount,
             ColumnWidths = table.ColumnWidths.Count > 0 ? table.ColumnWidths : EqualSplit(table.Width, table.ColCount),
             RowHeights = table.RowHeights.Count > 0 ? table.RowHeights : EqualSplit(table.Height, table.RowCount),
@@ -853,7 +858,7 @@ public class ReportRenderer
 
         return new RenderedCrossTabElement
         {
-            Id = ct.Id, X = ct.X, Y = ct.Y, Width = ct.Width, Height = ct.Height,
+            Id = ct.Id, X = ct.X, Y = ct.Y, Rotation = ct.Rotation, Width = ct.Width, Height = ct.Height,
             BackgroundColor = ct.BackgroundColor, Border = ct.Border,
             RowCount = totalRowCount, ColCount = totalColCount,
             ColumnWidths = colWidths, RowHeights = rowHeights,
@@ -945,6 +950,15 @@ public class ReportRenderer
         var renderedText = _expressionEngine.Evaluate(text.Text, context);
         context.FieldFormat = null;
 
+        // 长文本自动换行（canGrow 撑高 / maxLines 截断）
+        var (lines, lineHeight, grownHeight) = TextWrapper.WrapAndGrow(
+            renderedText,
+            text.Width,
+            text.Height,
+            text.Font?.Size ?? 10,
+            text.CanGrow,
+            text.MaxLines);
+
         return new RenderedTextElement
         {
             Id = text.Id,
@@ -952,12 +966,16 @@ public class ReportRenderer
             Y = text.Y,
             Width = text.Width,
             Height = text.Height,
+            Rotation = text.Rotation,
             Text = renderedText,
-            Font = text.Font,
+            Font = text.Font ?? new FontDef(),
             Alignment = text.Alignment,
             BackgroundColor = text.BackgroundColor,
             Border = text.Border,
             Hyperlink = text.Hyperlink,
+            Lines = lines,
+            LineHeight = lineHeight,
+            GrownHeight = grownHeight,
         };
     }
 
