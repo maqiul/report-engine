@@ -2,22 +2,23 @@
 
 > 一个跨平台、可视化、可打包分发的报表引擎：JSON 模板 + 核心渲染 + Excel/PDF 导出 + WPF/WinForms/Web 多端预览与设计器。
 
-![status](https://img.shields.io/badge/status-v0.3.0-brightgreen)
+![status](https://img.shields.io/badge/status-v0.7.0-brightgreen)
 ![.net](https://img.shields.io/badge/.NET-net462%20%7C%20netstandard2.0%20%7C%20net8.0-blue)
 ![java](https://img.shields.io/badge/Java-Spring%20Boot%204.1-orange)
 ![npm](https://img.shields.io/badge/npm-%40reportengine%2Fvue-red)
 ![docker](https://img.shields.io/badge/docker-compose-blue)
 ![license](https://img.shields.io/badge/license-MIT-blue)
-![tests](https://img.shields.io/badge/tests-4794%2F4794-brightgreen)
+![tests](https://img.shields.io/badge/tests-CI%20green-brightgreen)
+![consistency](https://img.shields.io/badge/cross--platform-.NET%20%7C%20Java%20%7C%20web-blue)
 
 ---
 
 ## ✨ 特性
 
 - **三件套 npm/Maven 生态**（让别人项目 4 步集成）：
-  - ☕ **后端 starter** `com.reportengine:report-engine-spring-boot-starter:0.3.0` —— Spring Boot 3 一行 `@Autowired ReportEngine`
-  - 📦 **前端组件包** `@reportengine/vue@0.3.0` —— Vue 3 一行 `app.use(ReportEngineVue)`，`<ReportViewer>` + `<ReportEditor>` 即用
-  - 🔧 **核心库** `com.reportengine:java-lib:0.3.0` —— 无 Spring 依赖的纯 JVM 库
+  - ☕ **后端 starter** `com.reportengine:report-engine-spring-boot-starter:0.7.0` —— Spring Boot 3 一行 `@Autowired ReportEngine`
+  - 📦 **前端组件包** `@reportengine/vue@0.7.0` —— Vue 3 一行 `app.use(ReportEngineVue)`，`<ReportViewer>` + `<ReportEditor>` 即用
+  - 🔧 **核心库** `com.reportengine:java-lib:0.7.0` —— 无 Spring 依赖的纯 JVM 库
 - **跨平台核心库**：
   - .NET 端：`ReportEngine.Core` 同时支持 `net462` / `netstandard2.0` / `net8.0`，可直接打包为 NuGet 包嵌入到现有 WinForms/WPF/控制台业务系统中。
   - Java 端：`com.reportengine:java-lib` 独立库，发布到 Maven Local，可被任意 JVM 项目依赖。
@@ -25,7 +26,7 @@
 - **多端渲染**：
   - 桌面运行时预览 —— WPF / WinForms
   - Web 端运行时预览 —— Vue 3 + Spring Boot
-  - 模板设计器 —— WPF（基础）/ Web（可视化拖拽）
+  - 模板设计器 —— **Web（功能最全：13 种元素 / 多选 / 吸附 / 旋转 / 组合 / 条件格式 / 纯前端零后端）**、WPF、WinForms
 - **多格式导出**：
   - Excel —— .NET 端用 [ClosedXML](https://github.com/ClosedXML/ClosedXML)，Java 端用 [Apache POI](https://poi.apache.org/)
   - PDF —— .NET 端用 [PdfSharpCore](https://github.com/ststeiger/PdfSharpCore)，Java 端用 [iText 7](https://itextpdf.com/)
@@ -33,6 +34,9 @@
 - **容器化部署** —— `docker compose up -d` 一键启动前后端
 - **OpenAPI 文档** —— Springdoc OpenAPI 自动生成 API 契约
 - **数据库持久化** —— Spring Data JPA + H2 嵌入式数据库，模板 CRUD
+- **三端渲染一致性** —— 同一份 `.rptx` 在 .NET / Java / 前端 三套实现渲染结果一致（文本、横向布局、字号、对齐、旋转），由 `Cross-Platform Consistency` workflow 持续校验
+- **Web 可视化设计器（纯前端，零后端依赖）** —— 13 种元素、拖拽移动、8 向缩放、框选/多选、吸附辅助线、真标尺、旋转手柄、组合/锁定、格式刷、撤销重做、6 向对齐、条件格式、表达式编辑器（字段下拉）、模板新建/打开/保存/最近文件
+- **元素旋转 + 长文本自动换行** —— 绕元素中心旋转（度）；`canGrow` 按宽度自动换行并撑高，`maxLines` 截断加省略号；换行算法为**三端一致规范 v1**（.NET/Java/前端 同一实现）
 
 ---
 
@@ -63,28 +67,28 @@ docker compose down
 
 ---
 
-## 📦 包与产物（v0.3.0）
+## 📦 包与产物（v0.7.0）
 
 ### ☕ Java Maven 库（发布到 Maven Local）
 
 | 包 | 版本 | 说明 |
 |----|------|------|
-| `com.reportengine:java-lib` | `0.3.0` | 核心库（无 Spring 依赖），含 ReportEngine 门面 + TemplateStore SPI |
-| `com.reportengine:report-engine-spring-boot-starter` | `0.3.0` | Spring Boot 3 starter，自动配置 + ReportEngine Bean + REST 端点 |
+| `com.reportengine:java-lib` | `0.7.0` | 核心库（无 Spring 依赖），含 ReportEngine 门面 + TemplateStore SPI |
+| `com.reportengine:report-engine-spring-boot-starter` | `0.7.0` | Spring Boot 3 starter，自动配置 + ReportEngine Bean + REST 端点 |
 
 ### 📦 前端 npm 包
 
 | 包 | 版本 | 说明 |
 |----|------|------|
-| `@reportengine/vue` | `0.3.0` | Vue 3 组件包，Plugin install + `<ReportViewer>` + `<ReportEditor>` |
+| `@reportengine/vue` | `0.7.0` | Vue 3 组件包，Plugin install + `<ReportViewer>` + `<ReportEditor>` |
 
-### 🟦 .NET NuGet 包（0.2.0-alpha）
+### 🟦 .NET NuGet 包（0.7.0）
 
 | 包 | 版本 | 目标框架 | 说明 |
 |----|------|----------|------|
-| `ReportEngine.Core` | `0.2.0-alpha` | net462 / netstandard2.0 / net8.0 | 核心引擎：模板解析、渲染、表达式、子报表、条码 |
-| `ReportEngine.Export.Pdf` | `0.2.0-alpha` | net462 / netstandard2.0 / net8.0 | PDF 导出器（基于 PdfSharpCore） |
-| `ReportEngine.Export.Excel` | `0.2.0-alpha` | net462 / netstandard2.0 / net8.0 | Excel 导出器（基于 ClosedXML） |
+| `ReportEngine.Core` | `0.7.0` | net462 / netstandard2.0 / net8.0 | 核心引擎：模板解析、渲染、表达式、子报表、条码 |
+| `ReportEngine.Export.Pdf` | `0.7.0` | net462 / netstandard2.0 / net8.0 | PDF 导出器（基于 PdfSharpCore） |
+| `ReportEngine.Export.Excel` | `0.7.0` | net462 / netstandard2.0 / net8.0 | Excel 导出器（基于 ClosedXML） |
 
 ### 发布到 Maven Local
 
@@ -97,8 +101,8 @@ cd ../report-engine-starter && gradlew publishToMavenLocal
 
 | 镜像 | 标签 | 大小 |
 |------|------|------|
-| `reportengine-backend` | `0.2.0` | ~280MB（Eclipse Temurin 17 JRE） |
-| `reportengine-frontend` | `0.2.0` | ~50MB（nginx alpine） |
+| `reportengine-backend` | `0.7.0` | ~280MB（Eclipse Temurin 17 JRE） |
+| `reportengine-frontend` | `0.7.0` | ~50MB（nginx alpine） |
 
 ---
 
@@ -112,9 +116,9 @@ report-engine/
 ├── ReportEngine.Export.Excel/     ← .NET Excel 导出
 ├── ReportEngine.Viewer.Wpf/       ← WPF 运行时预览
 ├── ReportEngine.Viewer.WinForms/  ← WinForms 运行时预览
-├── ReportEngine.Designer.Wpf/     ← WPF 可视化设计器（180 行 MainWindow）
+├── ReportEngine.Designer.Wpf/     ← WPF 可视化设计器（拆为 16 个 partial 文件）
 ├── ReportEngine.Desktop/          ← 桌面启动器
-├── tests/                         ← .NET 测试（4693 个）
+├── tests/                         ← .NET 测试（Core 4576 + Pdf 71）
 ├── java-lib/                      ← Java 核心库（无 Spring 依赖）
 │   ├── src/main/java/com/reportengine/lib/
 │   │   ├── model/        RenderRequest / RenderResponse / PageInfo / ElementInfo
@@ -122,7 +126,7 @@ report-engine/
 │   │   ├── exporter/     PdfExporter / ExcelExporter
 │   │   ├── store/        TemplateStore SPI
 │   │   └── ReportEngine  ← 门面类
-│   └── src/test/java/    ← JUnit 5 + Mockito + AssertJ（64 个测试）
+│   └── src/test/java/    ← JUnit 5 + Mockito + AssertJ（88 个测试 + 跨端一致性 dump）
 ├── report-engine-starter/         ← ☕ Spring Boot 3 starter（让别人 @Autowired）
 │   ├── src/main/java/com/reportengine/starter/
 │   │   ├── ReportEngineAutoConfiguration
@@ -134,11 +138,21 @@ report-engine/
 │   └── src/test/java/    ← 10 个 starter 集成测试
 ├── report-engine-starter-sample/  ← 模拟'第三方 Spring Boot 项目'集成验证
 ├── report-engine-vue/             ← 📦 Vue 3 前端组件包（npm @reportengine/vue）
-│   ├── src/index.ts     ← Vue Plugin install
-│   ├── src/api/report.ts  ← ReportClient
-│   ├── src/components/   ← ReportViewer + ReportEditor + editor/*
-│   └── src/types.ts
-├── report-engine-vue-sample/      ← 模拟'第三方 Vue 项目'集成验证
+│   ├── src/index.ts     ← Plugin install + 导出 Viewer/Editor/设计器子组件/renderCore
+│   ├── src/api/report.ts  ← ReportClient（可选后端：render / export pdf / export excel）
+│   ├── src/render/renderCore.ts ← 纯函数渲染核心（表达式/换行/定位，无 Vue 依赖，可用于一致性校验）
+│   ├── src/components/ReportViewer.vue + ReportEditor.vue
+│   └── src/components/editor/  ← Toolbox / BandTree / PropertyPanel / TemplateEditor / PreviewCanvas / elementTypes
+├── report-engine-vue-sample/      ← 📖 标准集成示例（README 含完整集成指南）
+├── report-engine-wpf-sample/      ← WPF 集成示例（加载/渲染/导出 PDF+Excel）
+├── report-engine-wpf-sample.Tests/        ← WPF 集成测试（Xunit.StaFact）
+├── report-engine-winforms-sample/         ← WinForms 集成示例
+├── report-engine-winforms-sample.Tests/   ← WinForms 集成测试
+├── report-engine-demo-backend/            ← 销售订单业务 demo（Spring Boot）
+├── report-engine-demo-frontend/           ← 销售订单业务 demo（Vue 3）
+├── tests/cross-consistency/     ← 三端渲染一致性校验（dump + check.js + run.sh/cmd）
+├── scripts/bump-version.js      ← 一键 bump 10 处版本号
+└── docs/RELEASE.md              ← NuGet / Maven Central / npm 三件套发布指南
 ├── web/                           ← Web 版本（Docker 一键部署）
 │   ├── frontend/         ← Vue 3 + Vite + TypeScript（开发版）
 │   ├── backend/          ← Java Spring Boot 4.1 + Gradle（开发版）
@@ -236,7 +250,7 @@ byte[] excelBytes = new ExcelExporter().export(request);
 <dependency>
     <groupId>com.reportengine</groupId>
     <artifactId>report-engine-spring-boot-starter</artifactId>
-    <version>0.3.0</version>
+    <version>0.7.0</version>
 </dependency>
 ```
 
@@ -280,7 +294,7 @@ createApp(App)
 <!-- 任何 .vue 文件 -->
 <template>
   <ReportViewer :templateJson="tpl" :data="data" :scale="0.8" />
-  <ReportEditor v-model:template="tpl" :data="data" />
+  <ReportEditor v-model="tpl" :data="data" />
 </template>
 ```
 
@@ -339,17 +353,20 @@ createApp(App)
 
 ## ✅ 测试
 
-**4794 个测试 + 集成验证，全部通过。**
+**.NET + Java + 前端 全量测试与集成验证，CI 4 条流水线全绿。**
 
 | 项目 | 数量 | 说明 |
 |------|------|------|
-| `ReportEngine.Core.Tests` | 4575 | .NET 核心 |
-| `ReportEngine.Export.Pdf.Tests` | 67 | .NET PDF（含 17 个 E2E） |
+| `ReportEngine.Core.Tests` | 4576 | .NET 核心（含旋转/长文本 14 个、跨端一致性 dump） |
+| `ReportEngine.Export.Pdf.Tests` | 71 | .NET PDF（含旋转/长文本导出 4 个） |
 | `ReportEngine.Export.Excel.Tests` | 51 | .NET Excel（含 16 个 E2E） |
-| `java-lib` (JUnit 5) | 64 | Java 核心（模型/渲染/PDF/Excel） |
+| `java-lib` (JUnit 5) | 88 | Java 核心（模型/渲染/PDF/Excel）+ 一致性 dump |
 | `report-engine-starter` (Spring Boot Test) | 10 | starter 集成测试（自动配置 + REST 端点） |
 | `report-engine-starter-sample` | 5 | 模拟第三方 Spring Boot 项目集成 |
 | `web/backend` (Spring Boot Test) | 22 | Java 后端 E2E（11 render + 11 template CRUD） |
+| `report-engine-wpf-sample.Tests` | 10 | WPF 集成（9 通过 + 1 Skip 带原因） |
+| `report-engine-winforms-sample.Tests` | 10 | WinForms 集成（全部通过） |
+| `tests/cross-consistency` | 3 端比对 | .NET / Java / 前端 渲染一致性（文本·布局·字号·对齐·旋转） |
 
 覆盖率（java-lib JaCoCo）：**90%**（model 100% / renderer 97% / exporter 86%）
 
@@ -392,24 +409,39 @@ npm install && npx vite build   # 验证组件可被外部项目正常导入
 
 ## 🗓️ 版本与路线图
 
-当前版本：**v0.3.0**
+当前版本：**v0.7.0**
 
 | 阶段 | 内容 | 状态 |
 |------|------|------|
 | 0.1.x | .NET 核心 + Excel/PDF 导出 + ZXing 条码 + NuGet pack + 代码重构 | ✅ |
 | 0.2.x | Java 后端 + Web 前端 + Docker + 可视化编辑器 + OpenAPI | ✅ |
 | **0.3.x** | **数据库持久化 + Spring Boot Starter（@Autowired ReportEngine）+ 前端 npm 包（app.use）** | ✅ |
-| 0.4.x | 用户/权限/多租户（spring-security）+ 登录页 | ⏳ |
+| 0.4.x | 用户/权限（spring-security + JWT）+ 前端登录页 | ✅ |
+| 0.5.x | 销售订单业务 demo（前后端）+ WPF / WinForms 集成示例与测试 | ✅ |
+| 0.6.x | 公网 Registry 发布准备（RELEASE.md + 跨平台 bump 脚本） | ✅ |
+| **0.7.x** | **Web 设计器完整重构（真渲染 / 多选 / 吸附 / 旋转 / 全属性 / 纯前端零后端）+ 三端渲染一致性 CI + 版本统一 0.7.0** | ✅ |
 | 1.0   | 文档站 + 首版稳定 NuGet/Maven/npm 发布 | 🚧 |
+
+### v0.7 里程碑
+
+| 指标 | 成果 |
+|------|------|
+| **Web 设计器完整重构** | 4 阶段：真渲染（ECharts 图表 / JsBarcode 条形码 / qrcode 二维码 / 真表格 / 真图像）→ 画布交互（多选·框选·吸附辅助线·真标尺·旋转手柄·组合·锁定·格式刷·右键菜单）→ 全属性 + 条件格式 + 表达式编辑器 → 统一组件源 + 模板管理 |
+| **纯前端零后端** | 设计器与预览完全在浏览器内运行（`renderCore` 纯函数渲染核心），可独立集成到任意 Vue 项目；导出 PDF/Excel 才需后端 |
+| **元素旋转 + 长文本自动换行** | 绕元素中心旋转；`canGrow` 按宽度换行并撑高、`maxLines` 截断加省略号；换行算法为**三端一致规范 v1** |
+| **三端渲染一致性** | .NET / Java / 前端 三端 dump 逐项比对（文本·横向布局·字号·对齐·旋转），`Cross-Platform Consistency` workflow 持续校验 |
+| **CI 4 条流水线全绿** | CI(.NET) / Java CI / Frontend CI / Cross-Platform Consistency |
+| **工程性修复** | 桌面项目移出跨平台 CI、gradle wrapper jar 入库、gradlew 补 +x、culture/zip 长度 flaky 测试、echarts 按需引入（bundle −41%） |
+| **版本统一** | .NET / Java / npm / web 全部对齐 `0.7.0`，`bump-version.js` 一次管 10 处 |
 
 ### v0.3 里程碑
 
 | 指标 | 成果 |
 |------|------|
 | **数据库持久化** | Spring Data JPA + H2 嵌入式，Template CRUD + 版本号自增 + 11 个 E2E 测试 |
-| **后端 starter** | `com.reportengine:report-engine-spring-boot-starter:0.3.0` 自动配置 + 自动 REST 端点 + ReportEngine 门面 Bean |
-| **前端 npm 包** | `@reportengine/vue@0.3.0` Vue Plugin + `<ReportViewer>` + `<ReportEditor>` + ReportClient + 完整 .d.ts |
-| **核心库升级** | `com.reportengine:java-lib:0.3.0` 新增 ReportEngine 门面 + TemplateStore SPI |
+| **后端 starter** | `com.reportengine:report-engine-spring-boot-starter:0.7.0` 自动配置 + 自动 REST 端点 + ReportEngine 门面 Bean |
+| **前端 npm 包** | `@reportengine/vue@0.7.0` Vue Plugin + `<ReportViewer>` + `<ReportEditor>` + ReportClient + 完整 .d.ts |
+| **核心库升级** | `com.reportengine:java-lib:0.7.0` 新增 ReportEngine 门面 + TemplateStore SPI |
 | **别人集成方式** | 后端 `implementation` + 前端 `npm install` + `app.use(ReportEngineVue)` 4 步搞定 |
 | **测试** | java-lib 64 + starter 10 + starter-sample 5 + 后端 E2E 22 = **101 Java 全绿**（.NET 4693 + Web E2E 11 + 新增 sample 验证共 **4875+**） |
 
@@ -448,8 +480,9 @@ npm install && npx vite build   # 验证组件可被外部项目正常导入
 
 ### Web 前端
 - Vue 3 + Vite + TypeScript
-- 原生 HTML5 鼠标事件（拖拽/缩放）
-- 无第三方 UI 框架
+- 原生鼠标事件（拖拽 / 8 向缩放 / 框选多选 / 旋转手柄 / 吸附）
+- 无第三方 UI 组件库（设计器全自绘）
+- 渲染库：ECharts（图表，按需引入）、JsBarcode（条形码）、qrcode（二维码）
 
 ### 部署
 - Docker 29 + Docker Compose v2
@@ -470,4 +503,4 @@ npm install && npx vite build   # 验证组件可被外部项目正常导入
 
 ---
 
-<sub>Built with ❤️ using .NET 8 + Java 17 + Vue 3 + Docker · v0.2.0-web</sub>
+<sub>Built with ❤️ using .NET 8 + Java 17 + Vue 3 + Docker · v0.7.0</sub>

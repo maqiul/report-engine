@@ -92,10 +92,19 @@ const data = ref({ items: [{ name: '张三', amount: 100 }] })
 > 字段框/统计框/系统变量框都是 `type: "text"`，靠 `dataField` / `summaryFunction` / `systemVariable` 区分。
 
 **画布**
-- 拖拽移动、8 向缩放手柄、框选多选（Ctrl 切换 / Shift 范围选）
+- 拖拽移动、8 向缩放手柄、**旋转手柄（绕元素中心）**、框选多选（Ctrl 切换 / Shift 范围选）
 - 多选整体拖动、6 向对齐（按整体包围盒）
 - 吸附（1.5mm 阈值，自动对齐其他元素边缘/中心/页边距 + 辅助线）
 - 真标尺（顶/左 10mm 刻度，随滚动同步）、网格显示
+
+**元素旋转**
+- `rotation`（度）绕元素自身中心；属性面板可输入角度或点 0°/90°/180°/270° 快捷按钮
+- 与 .NET PDF 导出语义一致（Y 向下坐标系，正角度为顺时针）
+
+**长文本自动换行**
+- `canGrow: true` 时按元素宽度自动换行并撑高
+- `maxLines` 限制最大行数，超出末行加 `…`
+- 换行算法为**三端一致规范 v1**（.NET / Java / 前端 同一实现，由 CI 校验保证不分叉）
 
 **编辑**
 - 撤销/重做（Ctrl+Z / Ctrl+Y）、复制/粘贴/剪切（Ctrl+C/V/X）
@@ -148,6 +157,12 @@ downloadBlob(blob, 'report.pdf')
 | `{{field}}` | ✅ | ❌ | 仅 .NET（裸字段） |
 
 系统变量：`PageNumber` / `TotalPages` / `PrintDate` / `PrintTime` / `ReportTitle`
+
+## 已知限制
+
+1. **Excel 导出忽略元素旋转** —— Excel 单元格不支持旋转（长文本换行支持）
+2. **Java PDF 导出忽略 Rotation** —— iText 为流式布局非绝对定位；**.NET PDF 与前端预览支持旋转**
+3. 长文本换行使用**估算字符宽度**（CJK 全角 1em / 其余 0.5em），非真实字体度量 —— 三端一致但与实际排版可能有细微差异
 
 ## 开发
 
