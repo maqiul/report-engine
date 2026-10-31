@@ -64,8 +64,7 @@
                 <template v-else-if="el.summaryFunction">Σ {{ el.summaryFunction }}({{ el.summaryField }})</template>
                 <template v-else-if="el.dataField">⛁ {{ el.dataField }}</template>
                 <template v-else>{{ el.text || '(空文本)' }}</template>
-              </div>
-              <div v-else-if="el.type === 'line'" class="el-line" :style="getLineStyle(Number(bi), Number(ei))"></div>
+              </div>              <div v-else-if="el.type === 'line'" class="el-line" :style="getLineStyle(Number(bi), Number(ei))"></div>
               <div v-else-if="el.type === 'shape'" class="el-shape" :style="getShapeStyle(Number(bi), Number(ei))"></div>
               <img v-else-if="el.type === 'image' && el.source" :src="el.source" class="el-render" style="object-fit:contain" />
               <div v-else-if="el.type === 'image'" class="el-ph el-image">🖼 图像(未设置)</div>
@@ -76,6 +75,14 @@
               <div v-else-if="el.type === 'chart'" class="el-render" data-kind="chart" :data-cfg="chartCfg(el)"></div>
               <div v-else-if="el.type === 'subreport'" class="el-ph el-subreport">⧉ 子报表 {{ el.templateRef || '(未指定)' }}</div>
               <div v-else class="el-other">{{ el.type }}</div>
+
+              <!-- 旋转手柄（顶部中间圆点）：仅选中时显示 -->
+              <div
+                v-if="isSelected(Number(bi), Number(ei))"
+                class="handle rotate"
+                title="拖动旋转"
+                @mousedown.stop="startRotate($event, el, Number(bi), Number(ei))"
+              ></div>
 
               <!-- 锁定标记 -->
               <span v-if="el.locked" class="lock-badge">🔒</span>
@@ -292,7 +299,19 @@ function getBandStyle(bi: number): Record<string, string> {
 function getElementBox(bi: number, ei: number): Record<string, string> {
   const s = elementStyles.value[bi]?.[ei]
   if (!s) return {}
-  return { left: String(s.left) + 'px', top: String(s.top) + 'px', width: String(s.width) + 'px', height: String(s.height) + 'px' }
+  const box: Record<string, string> = {
+    left: String(s.left) + 'px',
+    top: String(s.top) + 'px',
+    width: String(s.width) + 'px',
+    height: String(s.height) + 'px'
+  }
+  // 旋转：绕元素自身中心（与 PDF / 后端一致）
+  const rot = Number(props.template?.bands?.[bi]?.elements?.[ei]?.rotation || 0)
+  if (rot !== 0) {
+    box.transform = 'rotate(' + rot + 'deg)'
+    box.transformOrigin = 'center center'
+  }
+  return box
 }
 
 function getTextStyle(bi: number, ei: number): Record<string, string> {
@@ -786,6 +805,43 @@ function ctxMove(mode: 'front' | 'up' | 'down' | 'back') {
   closeCtxMenu()
 }
 
+// ===== 旋转：拖动旋转手柄改变 rotation（绕元素中心）=====
+let rotateState: { el: any; centerX: number; centerY: number; startAngle: number; origRotation: number } | null = null
+
+function startRotate(e: MouseEvent, el: any, bi: number, ei: number) {
+  const s = elementStyles.value[bi]?.[ei]
+  if (!s) return
+  rotateState = {
+    el,
+    centerX: s.left + s.width / 2,
+    centerY: s.top + s.height / 2,
+    startAngle: Math.atan2(e.clientY - s.top - s.height / 2, e.clientX - s.left - s.width / 2),
+    origRotation: Number(el.rotation || 0)
+  }
+  document.addEventListener('mousemove', onRotateMove)
+  document.addEventListener('mouseup', onRotateUp)
+}
+
+function onRotateMove(e: MouseEvent) {
+  const st = rotateState
+  if (!st) return
+  const canvasEl = rootRef.value?.querySelector('.canvas') as HTMLElement | null
+  if (!canvasEl) return
+  const rect = canvasEl.getBoundingClientRect()
+  const cur = Math.atan2(e.clientY - rect.top - st.centerY, e.clientX - rect.left - st.centerX)
+  let deg = st.origRotation + ((cur - st.startAngle) * 180 / Math.PI)
+  // 归一化到 -180~180
+  deg = ((deg + 180) % 360 + 360) % 360 - 180
+  st.el.rotation = Math.round(deg * 10) / 10
+  emit('update')
+}
+
+function onRotateUp() {
+  rotateState = null
+  document.removeEventListener('mousemove', onRotateMove)
+  document.removeEventListener('mouseup', onRotateUp)
+}
+
 // ===== 键盘：方向键微调 / Delete 删除 / Ctrl+D 复制 =====
 function currentSelEl(): any {
   if (props.selectedBandIndex < 0 || props.selectedElementIndex < 0) return null
@@ -916,6 +972,16 @@ function onKey(e: KeyboardEvent) {
 .element.locked {
   cursor: not-allowed;
   border-style: dashed;
+}
+
+.handle.rotate {
+  top: -22px;
+  left: 50%;
+  margin-left: -5px;
+  border-radius: 50%;
+  background: #f59e0b;
+  border-color: #fff;
+  cursor: grab;
 }
 
 .lock-badge {

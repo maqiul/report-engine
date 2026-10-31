@@ -118,6 +118,7 @@ public class ReportRenderer {
         el.setY((element.has("y") ? element.get("y").asDouble() : 0) + offsetY);
         el.setWidth(element.has("width") ? element.get("width").asDouble() : 100);
         el.setHeight(element.has("height") ? element.get("height").asDouble() : 10);
+        el.setRotation(element.has("rotation") ? element.get("rotation").asDouble() : 0);
         
         if ("text".equals(type)) {
             String text = element.has("text") ? element.get("text").asText() : "";
@@ -127,6 +128,20 @@ public class ReportRenderer {
             text = replaceGlobalVariables(text, currentPage, totalPages);
             el.setText(text);
             el.setAlignment(element.has("alignment") ? element.get("alignment").asText() : "left");
+
+            // 长文本自动换行（canGrow 撑高 / maxLines 截断）— 与 .NET/前端同一规范
+            boolean canGrow = element.has("canGrow") && element.get("canGrow").asBoolean();
+            int maxLines = element.has("maxLines") ? element.get("maxLines").asInt() : 0;
+            double fontSize = 10;
+            if (element.has("font") && element.get("font").has("size")) {
+                fontSize = element.get("font").get("size").asDouble();
+            }
+            double elWidth = element.has("width") ? element.get("width").asDouble() : 100;
+            double elHeight = element.has("height") ? element.get("height").asDouble() : 10;
+            TextWrapper.WrapResult wrap = TextWrapper.wrapAndGrow(text, elWidth, elHeight, fontSize, canGrow, maxLines);
+            el.setLines(wrap.lines);
+            el.setLineHeight(wrap.lineHeight);
+            el.setGrownHeight(wrap.grownHeight);
             
             if (element.has("font")) {
                 JsonNode font = element.get("font");

@@ -89,6 +89,7 @@ function compare(a, b) {
       if (!numEq(ea.w, eb.w)) failures.push(`[${ea.text}] 宽度 w 不一致: ${a.label}=${ea.w} ${b.label}=${eb.w}`)
       if (!numEq(ea.size, eb.size)) failures.push(`[${ea.text}] 字号 size 不一致: ${a.label}=${ea.size} ${b.label}=${eb.size}`)
       if ((ea.align || '') !== (eb.align || '')) failures.push(`[${ea.text}] 对齐 align 不一致: ${a.label}=${ea.align} ${b.label}=${eb.align}`)
+      if (!numEq(ea.rotation, eb.rotation)) failures.push(`[${ea.text}] 旋转 rotation 不一致: ${a.label}=${ea.rotation} ${b.label}=${eb.rotation}`)
     }
   }
 

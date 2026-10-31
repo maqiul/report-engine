@@ -8,7 +8,12 @@
         :style="{ top: band.top + 'px', height: band.height + 'px' }"
       >
         <div v-for="(el, ei) in band.els" :key="ei" class="el" :style="css(el.box)">
-          <span v-if="el.kind === 'text'" :style="css(el.textStyle)">{{ el.content }}</span>
+          <div v-if="el.kind === 'text'" class="el-text" :style="css(el.textStyle)">
+            <template v-if="el.lines && el.lines.length > 1">
+              <div v-for="(ln, i) in el.lines" :key="i" class="el-line-text">{{ ln }}</div>
+            </template>
+            <template v-else>{{ el.content }}</template>
+          </div>
           <div v-else-if="el.kind === 'line'" :style="css(el.lineStyle)"></div>
           <div v-else-if="el.kind === 'shape'" :style="css(el.shapeStyle)"></div>
           <img v-else-if="el.kind === 'image' && el.content" :src="el.content" style="width:100%;height:100%;object-fit:contain" />
@@ -102,7 +107,9 @@ watch(layout, () => nextTick(renderWidgets))
 .preview-scroll { height: 100%; overflow: auto; background: #888; padding: 20px; display: flex; justify-content: center; }
 .page { background: #fff; position: relative; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3); flex-shrink: 0; }
 .band { position: absolute; left: 0; right: 0; }
-.el { position: absolute; overflow: hidden; }
+.el { position: absolute; overflow: hidden; transform-origin: center center; }
+.el-text { width: 100%; height: 100%; box-sizing: border-box; }
+.el-line-text { white-space: pre-wrap; word-break: break-all; }
 .render-box { width: 100%; height: 100%; display: block; }
 .real-table { width: 100%; height: 100%; border-collapse: collapse; table-layout: fixed; }
 .real-table td { border: 1px solid #999; }

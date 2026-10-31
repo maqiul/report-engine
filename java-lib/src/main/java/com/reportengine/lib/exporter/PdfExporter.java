@@ -121,7 +121,12 @@ public class PdfExporter {
     
     private void renderElement(Document document, com.reportengine.lib.model.RenderResponse.RenderedElementInfo el, PdfFont font) {
         if ("text".equals(el.getType())) {
-            Paragraph p = new Paragraph(el.getText() != null ? el.getText() : "")
+            // 长文本：用自动换行结果分行写入（Paragraph 支持 \n 换行）
+            // 注：iText 流式布局不支持绝对定位元素旋转，Rotation 在 Java PDF 导出中忽略 —— 已知限制
+            String textContent = (el.getLines() != null && el.getLines().size() > 1)
+                    ? String.join("\n", el.getLines())
+                    : (el.getText() != null ? el.getText() : "");
+            Paragraph p = new Paragraph(textContent)
                 .setFont(font)
                 .setFontSize(11);
             

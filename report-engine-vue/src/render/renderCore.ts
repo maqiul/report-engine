@@ -23,6 +23,10 @@ export interface RenderedBox {
   top: string
   width: string
   height: string
+  /** 绕自身中心旋转角度（度）。0 = 不旋转。 */
+  rotation: number
+  /** CSS transform (rotation), e.g. rotate(30deg) */
+  transform?: string
 }
 
 export interface RenderedItem {
@@ -35,6 +39,10 @@ export interface RenderedItem {
   shapeStyle?: Record<string, string>
   imgStyle?: Record<string, string>
   cfg?: any
+  /** 长文本自动换行后的文本行 */
+  lines?: string[]
+  /** 换行行高（mm） */
+  lineHeight?: number
 }
 
 export interface RenderedBand {
@@ -44,6 +52,86 @@ export interface RenderedBand {
 }
 
 export const MM_TO_PX = 3.7795
+
+/**
+ * 长文本自动换行（三端一致规范 v1）
+ * 必须与 .NET ReportEngine.Core.Rendering.TextWrapper / Java TextWrapper 完全一致，
+ * 否则跨端一致性校验会失败。
+ *
+ * 规范：
+ *   1. fontMm = fontSize(pt) * 25.4 / 72
+ *   2. 字符宽度（em）：CJK / 全角标点 = 1.0，其余 = 0.5
+ *   3. 行容量（em）= widthMm / fontMm（最小 1）
+ *   4. 逐字符累加，超出容量则换行
+ *   5. 行高 lineHeightMm = fontMm * 1.2
+ *   6. 显式换行先按行拆分，再各自软换行
+ *   7. maxLines > 0 时截断到 maxLines 行，末行末尾用 "…" 结尾
+ */
+export const LINE_HEIGHT_FACTOR = 1.2
+export const ELLIPSIS = '…'
+
+export function fontMm(fontSizePt: number): number {
+  const mm = (Number(fontSizePt) || 0) * 25.4 / 72
+  return mm > 0 ? mm : 1
+}
+
+export function lineHeightMm(fontSizePt: number): number {
+  return fontMm(fontSizePt) * LINE_HEIGHT_FACTOR
+}
+
+/** 是否全角字符（CJK / 全角标点） */
+export function isFullWidth(ch: string): boolean {
+  const c = ch.charCodeAt(0)
+  return c >= 0x1100 && (
+    c <= 0x115f ||
+    c === 0x2329 || c === 0x232a ||
+    (c >= 0x2e80 && c <= 0xa4cf) ||
+    (c >= 0xac00 && c <= 0xd7a3) ||
+    (c >= 0xf900 && c <= 0xfaff) ||
+    (c >= 0xfe10 && c <= 0xfe19) ||
+    (c >= 0xfe30 && c <= 0xfe6f) ||
+    (c >= 0xff00 && c <= 0xff60) ||
+    (c >= 0xffe0 && c <= 0xffe6) ||
+    (c >= 0x3000 && c <= 0x303e)
+  )
+}
+
+/** 自动换行，返回文本行集合 */
+export function wrap(text: string, widthMm: number, fontSizePt: number, maxLines = 0): string[] {
+  const lines: string[] = []
+  if (!text) {
+    lines.push('')
+    return lines
+  }
+  const fm = fontMm(fontSizePt)
+  let capacity = widthMm / fm
+  if (capacity <= 0) capacity = 1
+
+  const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+  for (const rawLine of normalized.split('\n')) {
+    let cur = ''
+    let curWidth = 0
+    for (const ch of Array.from(rawLine)) {
+      const w = isFullWidth(ch) ? 1.0 : 0.5
+      if (curWidth + w > capacity && cur.length > 0) {
+        lines.push(cur)
+        cur = ''
+        curWidth = 0
+      }
+      cur += ch
+      curWidth += w
+    }
+    lines.push(cur)
+  }
+
+  if (maxLines > 0 && lines.length > maxLines) {
+    const cut = lines.slice(0, maxLines)
+    const last = cut[cut.length - 1]
+    cut[cut.length - 1] = last.length > 0 ? last.slice(0, last.length - 1) + ELLIPSIS : ELLIPSIS
+    return cut
+  }
+  return lines
+}
 
 export interface RenderOptions {
   /** mm → px 的缩放系数（默认 0.5，屏幕友好） */
@@ -112,7 +200,12 @@ function buildItem(el: any, row: any, ds: string, bandTop: number, u: number, da
     left: (Number(el.x || 0) * u) + 'px',
     top: (bandTop + Number(el.y || 0) * u) + 'px',
     width: (Number(el.width || 10) * u) + 'px',
-    height: (Number(el.height || 5) * u) + 'px'
+    height: (Number(el.height || 5) * u) + 'px',
+    rotation: Number(el.rotation || 0)
+  }
+  const rot = Number(el.rotation || 0)
+  if (rot !== 0) {
+    box.transform = 'rotate(' + rot + 'deg)'
   }
   const f = el.font || {}
 
@@ -122,7 +215,16 @@ function buildItem(el: any, row: any, ds: string, bandTop: number, u: number, da
     else if (el.summaryFunction) content = evalSummary(el.summaryFunction, el.summaryField, data?.[ds] || [])
     else if (el.dataField) content = evalExpression('{{currentRow.' + el.dataField + '}}', row)
     else content = evalExpression(el.text || '', row)
-    const item: RenderedItem = { box, kind: 'text', content }
+
+    // 长文本自动换行（canGrow 撑高 / maxLines 截断）
+    const fontSize = Number(f.size || 10)
+    const lines = wrap(content, Number(el.width || 10), fontSize, Number(el.maxLines || 0))
+    const lh = lineHeightMm(fontSize)
+    if (el.canGrow) {
+      box.height = (lines.length * lh) * u + 'px'
+    }
+
+    const item: RenderedItem = { box, kind: 'text', content, lines, lineHeight: lh }
     if (withStyle) {
       item.textStyle = {
         fontFamily: f.family || 'Microsoft YaHei, sans-serif',
@@ -221,7 +323,8 @@ export function toSummary(template: any, data: Record<string, any[]>, engine: st
         x: Math.round(parseFloat(el.box.left) * 100) / 100,
         w: Math.round(parseFloat(el.box.width) * 100) / 100,
         size: el.textStyle ? Math.round(parseFloat(el.textStyle.fontSize) * 100) / 100 : 0,
-        align: el.textStyle?.textAlign || ''
+        align: el.textStyle?.textAlign || '',
+        rotation: el.box.rotation || 0
       })
     }
   }

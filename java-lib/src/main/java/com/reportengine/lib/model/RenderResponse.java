@@ -54,6 +54,14 @@ public class RenderResponse {
         private String backgroundColor;
         private String borderColor;
         private Double borderWidth;
+        /** 绕自身中心旋转角度（度）。0 = 不旋转。 */
+        private double rotation;
+        /** 长文本自动换行后的文本行（空表示未换行）。 */
+        private List<String> lines;
+        /** 换行行高（mm）。 */
+        private double lineHeight;
+        /** 因自动换行撑高后的高度（mm）。 */
+        private double grownHeight;
 
         public String getType() { return type; }
         public void setType(String type) { this.type = type; }
@@ -87,6 +95,18 @@ public class RenderResponse {
 
         public Double getBorderWidth() { return borderWidth; }
         public void setBorderWidth(Double borderWidth) { this.borderWidth = borderWidth; }
+
+        public double getRotation() { return rotation; }
+        public void setRotation(double rotation) { this.rotation = rotation; }
+
+        public List<String> getLines() { return lines; }
+        public void setLines(List<String> lines) { this.lines = lines; }
+
+        public double getLineHeight() { return lineHeight; }
+        public void setLineHeight(double lineHeight) { this.lineHeight = lineHeight; }
+
+        public double getGrownHeight() { return grownHeight; }
+        public void setGrownHeight(double grownHeight) { this.grownHeight = grownHeight; }
     }
 
     public static class FontInfo {

@@ -37,7 +37,7 @@ public class CrossConsistencyDumpTest
         { "type": "detail", "height": 8, "dataSource": "orders", "elements": [
           { "type": "text", "text": "{{currentRow.id}}",       "x": 0,   "y": 0, "width": 30, "height": 6, "font": { "size": 12 }, "alignment": "left" },
           { "type": "text", "text": "{{currentRow.customer}}", "x": 35,  "y": 0, "width": 70, "height": 6, "font": { "size": 12 }, "alignment": "left" },
-          { "type": "text", "text": "{{currentRow.status}}",   "x": 110, "y": 0, "width": 70, "height": 6, "font": { "size": 12 }, "alignment": "left" }
+          { "type": "text", "text": "{{currentRow.status}}",   "x": 110, "y": 0, "width": 70, "height": 6, "font": { "size": 12 }, "alignment": "left", "rotation": 15 }
         ] }
       ]
     }
@@ -132,7 +132,8 @@ public class CrossConsistencyDumpTest
             X = Round(el.X),
             W = Round(el.Width),
             Size = Round(size),
-            Align = align
+            Align = align,
+            Rotation = Round(el.Rotation)
         };
     }
 
@@ -146,6 +147,7 @@ public class CrossConsistencyDumpTest
         public double W { get; set; }
         public double Size { get; set; }
         public string Align { get; set; } = "";
+        public double Rotation { get; set; }
     }
 
     private sealed class NullResolver : ITemplateResolver

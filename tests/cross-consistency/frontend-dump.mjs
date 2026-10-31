@@ -30,7 +30,7 @@ const TEMPLATE = {
       elements: [
         { type: 'text', text: '{{currentRow.id}}', x: 0, y: 0, width: 30, height: 6, font: { size: 12 }, alignment: 'left' },
         { type: 'text', text: '{{currentRow.customer}}', x: 35, y: 0, width: 70, height: 6, font: { size: 12 }, alignment: 'left' },
-        { type: 'text', text: '{{currentRow.status}}', x: 110, y: 0, width: 70, height: 6, font: { size: 12 }, alignment: 'left' }
+        { type: 'text', text: '{{currentRow.status}}', x: 110, y: 0, width: 70, height: 6, font: { size: 12 }, alignment: 'left', rotation: 15 }
       ]
     }
   ]

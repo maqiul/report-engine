@@ -44,7 +44,7 @@ class CrossConsistencyDumpTest {
         { "type": "detail", "height": 8, "dataSource": "orders", "elements": [
           { "type": "text", "text": "{{currentRow.id}}",       "x": 0,   "y": 0, "width": 30, "height": 6, "font": { "size": 12 }, "alignment": "left" },
           { "type": "text", "text": "{{currentRow.customer}}", "x": 35,  "y": 0, "width": 70, "height": 6, "font": { "size": 12 }, "alignment": "left" },
-          { "type": "text", "text": "{{currentRow.status}}",   "x": 110, "y": 0, "width": 70, "height": 6, "font": { "size": 12 }, "alignment": "left" }
+          { "type": "text", "text": "{{currentRow.status}}",   "x": 110, "y": 0, "width": 70, "height": 6, "font": { "size": 12 }, "alignment": "left", "rotation": 15 }
         ] }
       ]
     }
@@ -101,6 +101,7 @@ class CrossConsistencyDumpTest {
             m.put("w", round(e.getWidth()));
             m.put("size", e.getFont() != null ? round(e.getFont().getSize()) : 0.0);
             m.put("align", e.getAlignment() == null ? "" : e.getAlignment());
+            m.put("rotation", round(e.getRotation()));
             elements.add(m);
         }
         elements.sort(Comparator

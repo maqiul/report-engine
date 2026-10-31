@@ -11,6 +11,15 @@
           <label>宽 <input type="number" v-model.number="element.width" step="0.5" @change="emit('update')" /></label>
           <label>高 <input type="number" v-model.number="element.height" step="0.5" @change="emit('update')" /></label>
         </div>
+        <div class="grid-2">
+          <label>旋转角度 (度) <input type="number" v-model.number="element.rotation" step="5" @change="emit('update')" /></label>
+          <div class="rot-btns">
+            <button class="mini" @click="setRotation(0)" title="取消旋转">0°</button>
+            <button class="mini" @click="setRotation(90)" title="顺时针90°">90°</button>
+            <button class="mini" @click="setRotation(180)" title="180°">180°</button>
+            <button class="mini" @click="setRotation(270)" title="270°">270°</button>
+          </div>
+        </div>
       </fieldset>
 
       <!-- ===== 通用属性：名称/背景/边框/可见性 ===== -->
@@ -309,6 +318,11 @@ const fieldNames = computed(() => {
   return names
 })
 
+function setRotation(deg: number) {
+  props.element.rotation = deg
+  emit('update')
+}
+
 function setBoxType(t: string) {
   const el = props.element
   delete el.dataField
@@ -369,6 +383,7 @@ label.inline { display: flex; align-items: center; gap: 4px; }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .checks { display: flex; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
 .checks label { display: flex; align-items: center; gap: 3px; margin: 0; }
+.rot-btns { display: flex; gap: 4px; align-items: flex-end; }
 .series-row { display: grid; grid-template-columns: 1fr 1fr 28px 20px; gap: 4px; margin-bottom: 4px; align-items: center; }
 .cf-row { display: grid; grid-template-columns: 1fr 28px auto 20px; gap: 4px; margin-bottom: 4px; align-items: center; }
 .mini { padding: 2px 6px; font-size: 11px; background: #fff; border: 1px solid var(--border-strong); border-radius: 3px; cursor: pointer; }
