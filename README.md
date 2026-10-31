@@ -370,9 +370,24 @@ createApp(App)
 
 覆盖率（java-lib JaCoCo）：**90%**（model 100% / renderer 97% / exporter 86%）
 
+### CI/CD（GitHub Actions，4 条流水线）
+
+| Workflow | 内容 |
+|----------|------|
+| `ci.yml` | .NET 构建 + 测试（ubuntu + windows 双端跑 `ReportEngine.Core.slnx`）+ NuGet pack/publish |
+| `java-ci.yml` | java-lib 测试 + JaCoCo、Spring Boot E2E、Starter E2E + Maven Central publish |
+| `frontend-ci.yml` | `@reportengine/vue` 构建/类型检查、sample 构建、web/frontend 构建 + npm publish |
+| `consistency-ci.yml` | **三端渲染一致性**：.NET / Java / 前端 各自 dump 摘要后两两比对（文本·布局·字号·对齐·旋转） |
+
+发布需配置 6 个 Secrets（见 [`docs/RELEASE.md`](./docs/RELEASE.md)）：`NPM_TOKEN`、`NUGET_API_KEY`、`MAVEN_CENTRAL_USERNAME`、`MAVEN_CENTRAL_TOKEN`、`GPG_SIGNING_KEY`、`GPG_SIGNING_PASSWORD`。
+
 ### .NET 测试
 
 ```bash
+# 跨平台核心（Linux / CI 用这个，不含 WPF/WinForms 桌面项目）
+dotnet test ReportEngine.Core.slnx
+
+# 全部（含桌面项目，仅 Windows 可构建）
 dotnet test ReportEngine.slnx
 ```
 
