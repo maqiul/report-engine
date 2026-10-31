@@ -93,7 +93,7 @@ public class ClosedXmlExporter : IExcelExporter
             var y = rowAnchors[r];
             var heightsAtRow = textElements
                 .Where(e => Math.Abs(e.Y - y) <= ClusterTolerance)
-                .Select(e => e.Height);
+                .Select(e => Math.Max(e.Height, e is RenderedTextElement rt ? rt.GrownHeight : 0));
             if (!heightsAtRow.Any()) continue;
             var h = heightsAtRow.Max();
             ws.Row(r + 1).Height = Math.Max(14, h * MmToPoint);
@@ -107,7 +107,18 @@ public class ClosedXmlExporter : IExcelExporter
             if (col <= 0 || row <= 0) continue;
 
             var cell = ws.Cell(row, col);
-            cell.Value = t.Text ?? string.Empty;
+
+            // 长文本：多行写入 + 自动换行（Excel 用 \n 换行 + WrapText）
+            // 注：Excel 单元格不支持元素旋转（Rotation），此处忽略 —— 已知限制
+            if (t.Lines != null && t.Lines.Count > 1)
+            {
+                cell.Value = string.Join("\n", t.Lines);
+                cell.Style.Alignment.WrapText = true;
+            }
+            else
+            {
+                cell.Value = t.Text ?? string.Empty;
+            }
 
             ApplyTextStyle(cell, t);
         }
