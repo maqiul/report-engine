@@ -68,6 +68,28 @@ namespace ReportEngine.Export.Pdf
         {
             var rect = MmRect(el.X, el.Y, el.Width, el.Height);
 
+            // 旋转：绕元素自身中心旋转坐标系
+            // PDF 坐标系 Y 向下，正角度视觉为顺时针 —— 与前端 CSS rotate 语义一致
+            bool rotated = Math.Abs(el.Rotation) > 0.0001;
+            if (rotated)
+            {
+                gfx.Save();
+                var center = new XPoint(rect.Left + rect.Width / 2, rect.Top + rect.Height / 2);
+                gfx.RotateAtTransform(el.Rotation, center);
+            }
+
+            try
+            {
+                DrawElementContent(gfx, el, rect);
+            }
+            finally
+            {
+                if (rotated) gfx.Restore();
+            }
+        }
+
+        private static void DrawElementContent(XGraphics gfx, RenderedElement el, XRect rect)
+        {
             // 背景
             if (!string.IsNullOrEmpty(el.BackgroundColor))
             {
@@ -99,6 +121,7 @@ namespace ReportEngine.Export.Pdf
                     DrawTable(gfx, new RenderedTableElement
                     {
                         Id = ctab.Id, X = ctab.X, Y = ctab.Y, Width = ctab.Width, Height = ctab.Height,
+                        Rotation = ctab.Rotation,
                         RowCount = ctab.RowCount, ColCount = ctab.ColCount,
                         ColumnWidths = ctab.ColumnWidths, RowHeights = ctab.RowHeights,
                         Cells = ctab.Cells, BorderWidth = ctab.BorderWidth, BorderColor = ctab.BorderColor,
@@ -145,6 +168,30 @@ namespace ReportEngine.Export.Pdf
                 default:                   fmt.Alignment = XStringAlignment.Near; break;
             }
             fmt.LineAlignment = XLineAlignment.Near;
+
+            // 长文本：按自动换行结果逐行绘制
+            if (t.Lines != null && t.Lines.Count > 1)
+            {
+                double lineH = XUnit.FromMillimeter(t.LineHeight > 0 ? t.LineHeight : 5).Point;
+                double y = rect.Top;
+                foreach (var line in t.Lines)
+                {
+                    if (line.Length > 0)
+                    {
+                        try
+                        {
+                            gfx.DrawString(line, font, brush, new XRect(rect.Left, y, rect.Width, lineH), fmt);
+                        }
+                        catch
+                        {
+                            gfx.DrawString(line, new XFont("Arial", t.Font.Size, XFontStyle.Regular), brush,
+                                new XRect(rect.Left, y, rect.Width, lineH), fmt);
+                        }
+                    }
+                    y += lineH;
+                }
+                return;
+            }
 
             // PdfSharpCore DrawString(rect) 会按 LineAlignment 处理；为了兼容 Near，给 Y 偏移
             try
